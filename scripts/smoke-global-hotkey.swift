@@ -34,7 +34,19 @@ let modifiers: CGEventFlags = [.maskControl, .maskAlternate]
 keyDown.flags = modifiers
 keyUp.flags = modifiers
 keyDown.post(tap: .cghidEventTap)
-Thread.sleep(forTimeInterval: 0.6)
+
+if CommandLine.arguments.contains("--speak") {
+    Thread.sleep(forTimeInterval: 0.7)
+    let speaker = Process()
+    speaker.executableURL = URL(fileURLWithPath: "/usr/bin/say")
+    speaker.arguments = ["Guide Companion dictation test"]
+    try speaker.run()
+    speaker.waitUntilExit()
+    Thread.sleep(forTimeInterval: 1.0)
+} else {
+    Thread.sleep(forTimeInterval: 0.6)
+}
+
 keyUp.post(tap: .cghidEventTap)
 
 print("Posted Control-Option-D with TextEdit verified frontmost")
