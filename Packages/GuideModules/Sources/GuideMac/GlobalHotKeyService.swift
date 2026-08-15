@@ -1,4 +1,3 @@
-import AppKit
 import Carbon
 import CoreGraphics
 import Foundation
@@ -7,23 +6,6 @@ public struct GlobalHotKeyConfiguration: Codable, Equatable, Sendable {
     public let keyCode: UInt32
     public let modifiers: UInt32
     public let displayName: String
-
-    public var cocoaModifiers: UInt {
-        var result: UInt = 0
-        if modifiers & UInt32(controlKey) != 0 {
-            result |= NSEvent.ModifierFlags.control.rawValue
-        }
-        if modifiers & UInt32(optionKey) != 0 {
-            result |= NSEvent.ModifierFlags.option.rawValue
-        }
-        if modifiers & UInt32(cmdKey) != 0 {
-            result |= NSEvent.ModifierFlags.command.rawValue
-        }
-        if modifiers & UInt32(shiftKey) != 0 {
-            result |= NSEvent.ModifierFlags.shift.rawValue
-        }
-        return result
-    }
 
     public init(keyCode: UInt32, modifiers: UInt32, displayName: String) {
         self.keyCode = keyCode
@@ -40,48 +22,17 @@ public struct GlobalHotKeyConfiguration: Codable, Equatable, Sendable {
 
 public struct KeyboardEventSnapshot: Sendable {
     public let keyCode: UInt16
-    public let modifierFlags: UInt
     public let isKeyDown: Bool
 
-    public init(keyCode: UInt16, modifierFlags: UInt, isKeyDown: Bool) {
+    public init(keyCode: UInt16, isKeyDown: Bool) {
         self.keyCode = keyCode
-        self.modifierFlags = modifierFlags
         self.isKeyDown = isKeyDown
     }
 }
 
-public enum GlobalHotKeyTransition: Equatable, Sendable {
+private enum GlobalHotKeyTransition: Equatable, Sendable {
     case pressed
     case released
-}
-
-public struct GlobalHotKeyPressState: Sendable {
-    private var isPressed = false
-
-    public init() {}
-
-    public mutating func consume(
-        _ event: KeyboardEventSnapshot,
-        configuration: GlobalHotKeyConfiguration
-    ) -> GlobalHotKeyTransition? {
-        guard event.keyCode == UInt16(configuration.keyCode) else { return nil }
-
-        if event.isKeyDown {
-            let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
-            guard event.modifierFlags & significantMask == configuration.cocoaModifiers,
-                  !isPressed else { return nil }
-            isPressed = true
-            return .pressed
-        }
-
-        guard isPressed else { return nil }
-        isPressed = false
-        return .released
-    }
-
-    public mutating func reset() {
-        isPressed = false
-    }
 }
 
 @MainActor
@@ -97,7 +48,6 @@ public final class GlobalHotKeyService {
     private var hotKey: EventHotKeyRef?
     private var eventTap: CFMachPort?
     private var eventTapSource: CFRunLoopSource?
-    private var pressState = GlobalHotKeyPressState()
     private var deliveredIsPressed = false
 
     public init(
@@ -185,7 +135,6 @@ public final class GlobalHotKeyService {
             CFMachPortInvalidate(eventTap)
             self.eventTap = nil
         }
-        pressState.reset()
         deliveredIsPressed = false
     }
 
@@ -201,10 +150,7 @@ public final class GlobalHotKeyService {
     fileprivate func handle(_ event: KeyboardEventSnapshot) {
         if event.isKeyDown, event.keyCode == UInt16(kVK_Escape) {
             cancelled()
-            return
         }
-        guard let transition = pressState.consume(event, configuration: configuration) else { return }
-        deliver(transition)
     }
 
     private func deliver(_ transition: GlobalHotKeyTransition) {
@@ -275,23 +221,8 @@ private func guideKeyboardEventTapHandler(
         return Unmanaged.passUnretained(event)
     }
 
-    var modifierFlags: UInt = 0
-    if event.flags.contains(.maskControl) {
-        modifierFlags |= NSEvent.ModifierFlags.control.rawValue
-    }
-    if event.flags.contains(.maskAlternate) {
-        modifierFlags |= NSEvent.ModifierFlags.option.rawValue
-    }
-    if event.flags.contains(.maskCommand) {
-        modifierFlags |= NSEvent.ModifierFlags.command.rawValue
-    }
-    if event.flags.contains(.maskShift) {
-        modifierFlags |= NSEvent.ModifierFlags.shift.rawValue
-    }
-
     let snapshot = KeyboardEventSnapshot(
         keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
-        modifierFlags: modifierFlags,
         isKeyDown: type == .keyDown
     )
     let service = Unmanaged<GlobalHotKeyService>.fromOpaque(userData).takeUnretainedValue()

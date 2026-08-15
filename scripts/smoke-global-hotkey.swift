@@ -13,6 +13,7 @@ func argument(after flag: String) -> String? {
 
 let expectedFrontmostBundle = argument(after: "--bundle") ?? "com.apple.TextEdit"
 let spokenPhrase = argument(after: "--phrase") ?? "SERPy dictation test"
+let cancelInsteadOfInsert = CommandLine.arguments.contains("--cancel")
 let startupDelay = Double(argument(after: "--delay") ?? "0") ?? 0
 if startupDelay > 0 {
     Thread.sleep(forTimeInterval: startupDelay)
@@ -59,7 +60,24 @@ if CommandLine.arguments.contains("--speak") {
     Thread.sleep(forTimeInterval: 0.6)
 }
 
-keyDown.post(tap: .cghidEventTap)
-keyUp.post(tap: .cghidEventTap)
-
-print("Toggled Option-Space twice with \(expectedFrontmostBundle) verified frontmost")
+if cancelInsteadOfInsert {
+    guard let escapeDown = CGEvent(
+        keyboardEventSource: source,
+        virtualKey: CGKeyCode(kVK_Escape),
+        keyDown: true
+    ), let escapeUp = CGEvent(
+        keyboardEventSource: source,
+        virtualKey: CGKeyCode(kVK_Escape),
+        keyDown: false
+    ) else {
+        FileHandle.standardError.write(Data("FAIL: could not construct Escape events\n".utf8))
+        exit(4)
+    }
+    escapeDown.post(tap: .cghidEventTap)
+    escapeUp.post(tap: .cghidEventTap)
+    print("Started Option-Space and cancelled with Escape with \(expectedFrontmostBundle) verified frontmost")
+} else {
+    keyDown.post(tap: .cghidEventTap)
+    keyUp.post(tap: .cghidEventTap)
+    print("Toggled Option-Space twice with \(expectedFrontmostBundle) verified frontmost")
+}
