@@ -23,6 +23,8 @@ reference and possible donor for individually audited components.
 5. Read [PROVENANCE.md](PROVENANCE.md) before importing any code or assets.
 6. Read [AGENTS.md](AGENTS.md) before making changes.
 
+Private beta release procedure: [docs/RELEASING.md](docs/RELEASING.md).
+
 ## Current Gate
 
 Status: installed internal baseline. Public distribution remains separately

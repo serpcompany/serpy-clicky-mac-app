@@ -4,7 +4,12 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-dmg_path="${1:-dist/SERPy-0.1.0-22.dmg}"
+if [[ $# -ne 1 ]]; then
+  echo "Usage: scripts/verify-release.sh <path-to-dmg>" >&2
+  exit 2
+fi
+
+dmg_path="$1"
 [[ -f "${dmg_path}" ]] || {
   echo "ERROR: DMG not found: ${dmg_path}" >&2
   exit 1
