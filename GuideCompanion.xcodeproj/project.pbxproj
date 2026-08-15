@@ -31,8 +31,8 @@
 		402E6AB6BF038ED9D42B35CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GuideCompanion.entitlements; sourceTree = "<group>"; };
 		672808DCF70F3F649403697F /* GuideCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionUITests.swift; sourceTree = "<group>"; };
-		81CF39FA79A851F3A9ECC42A /* GuideCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GuideCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionApp.swift; sourceTree = "<group>"; };
+		92ABEB16055301DBFF398885 /* SERPy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SERPy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA1572F19C3E0D8130EEF6A4 /* GuideModules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GuideModules; path = Packages/GuideModules; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
@@ -61,8 +61,8 @@
 		17EFB257F5758A59B940B974 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				81CF39FA79A851F3A9ECC42A /* GuideCompanion.app */,
 				1A4519E3B22F16775F01BFEC /* GuideCompanionUITests.xctest */,
+				92ABEB16055301DBFF398885 /* SERPy.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -144,7 +144,7 @@
 				11CF664193125A6D4EDC0FAF /* GuideUI */,
 			);
 			productName = GuideCompanion;
-			productReference = 81CF39FA79A851F3A9ECC42A /* GuideCompanion.app */;
+			productReference = 92ABEB16055301DBFF398885 /* SERPy.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

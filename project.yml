@@ -23,6 +23,7 @@ targets:
   GuideCompanion:
     type: application
     platform: macOS
+    productName: SERPy
     sources:
       - path: App
     dependencies:
