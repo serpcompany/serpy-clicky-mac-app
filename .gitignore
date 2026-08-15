@@ -1,6 +1,7 @@
 .DS_Store
 .build/
 .derived/
+.release-derived/
 DerivedData/
 build/
 dist/
