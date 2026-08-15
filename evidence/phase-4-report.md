@@ -4,13 +4,13 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Artifact
 
-- Product: Guide Companion 0.1.0 (12)
+- Product: Guide Companion 0.1.0 (13)
 - Bundle ID: `com.serpcompany.guidecompanion.internal`
 - Team: tester-owned Developer ID team `847HR8U8D9`
-- Source commit: `65a5b96`
-- DMG: `dist/Guide-Companion-0.1.0-12.dmg`
-- SHA-256: `a03964fb9f67988cc8e63cea8afcdb0ccfd349b43d342f68d94242891044ea8f`
-- Notarization: accepted, submission `da2d06fc-1e91-4289-aeb0-8c174d7ccbaa`
+- Source commit: `ec71d87`
+- DMG: `dist/Guide-Companion-0.1.0-13.dmg`
+- SHA-256: `2a1de44786325acfa8c20b6caecf2fed455a2e43a928ec93980f41ac87cf6b9d`
+- Notarization: accepted, submission `443a5f36-2f8d-46d8-affd-451c55e9b1e9`
 - Stapling: passed and validated
 - Gatekeeper: DMG and mounted app accepted as Notarized Developer ID
 
@@ -23,7 +23,7 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Mechanical verification
 
-- Core, speech-lifecycle, callback-isolation, and text-replacement tests: 15 passing on 2026-08-16
+- Core, speech-lifecycle, callback-isolation, shortcut-collision, and text-replacement tests: 16 passing on 2026-08-16
 - Unsigned Debug build: passed
 - Apple Development interactive build: passed
 - Developer ID Release build: passed
@@ -34,11 +34,12 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Installed human journeys
 
-- Finder DMG mount and copy to Applications: passed for build 12; Finder replaced the older installed build
+- DMG mount and copy to Applications: passed for build 13; the prior installed build was moved recoverably to Trash
 - Launch without Xcode or Terminal: passed from `/Applications/Guide Companion.app`
 - Setup now keeps permission state visible without relying on the prior long form's scroll position
 - Microphone, Speech Recognition, Accessibility, and Screen Recording: granted and visibly reported on exact installed build
 - Global shortcut registration: visibly reported as registered
+- The owner observed that build 12's Control–Option–Space did nothing. The exact combination was independently found enabled in macOS as the “select next input source” system shortcut. Build 13 changes dictation to Control–Option–D without modifying the owner's system settings, and a regression test prevents returning to the two standard input-source combinations
 - Accessibility permission: granted and retained after refresh/relaunch
 - Two Swift concurrency crashes were reproduced and fixed: the speech-permission callback and the audio-tap/result callbacks no longer enter main-actor code from TCC/audio queues
 - Signed live-audio testing reached microphone recording and a speech callback without crashing; synthetic system speech did not produce a non-empty transcript
@@ -55,7 +56,7 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Remaining human check
 
-With an empty TextEdit document physically focused, hold Control–Option–Space,
+With an empty TextEdit document physically focused, hold Control–Option–D,
 speak one sentence, then release. Acceptance requires observing the sentence in
 the same field with no cloud/API configuration. If it fails, Settings > Setup
 now exposes attempt count, activation source, last stage, and a content-free

@@ -17,8 +17,11 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A8 | Clipboard content is preserved during fallback insertion | Deterministic test | unimplemented |
 | A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
 
-Build 12 visibly reports the four permission states and shortcut registration,
+Build 13 visibly reports the four permission states and shortcut registration,
 and its signed live-audio path records without the earlier callback crashes.
+Build 12's Control–Option–Space collided with this Mac's enabled input-source
+shortcut; build 13 uses Control–Option–D and regression-tests that the default
+is not either standard macOS input-source combination.
 A4 remains only `implemented` until the owner physically focuses an editable
 field, speaks through the installed app, and observes the resulting text.
 
