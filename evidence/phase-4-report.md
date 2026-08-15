@@ -1,16 +1,16 @@
 # Installed Product Evidence
 
-Status: installed release verified; live spoken-dictation HIL pending
+Status: installed release and acoustic system-wide dictation verified; owner-voice HIL pending
 
 ## Artifact
 
-- Product: Guide Companion 0.1.0 (14)
+- Product: Guide Companion 0.1.0 (15)
 - Bundle ID: `com.serpcompany.guidecompanion.internal`
 - Team: tester-owned Developer ID team `847HR8U8D9`
-- Source commit: `2199ea8`
-- DMG: `dist/Guide-Companion-0.1.0-14.dmg`
-- SHA-256: `f91cccadfbee1c2088508e3b9fe189f7091eb496e42089f92fa07d17cb1991ff`
-- Notarization: accepted, submission `739074b1-3f6a-404a-9296-5b94bf161d26`
+- Source commit: `0eb3b3f`
+- DMG: `dist/Guide-Companion-0.1.0-15.dmg`
+- SHA-256: `c76f9e1462d993151b2b221eadc4676e7045a929fef90960a6f65f6a59600378`
+- Notarization: accepted, submission `5ce8130b-1446-4994-98cc-ca19e435b512`
 - Stapling: passed and validated
 - Gatekeeper: DMG and mounted app accepted as Notarized Developer ID
 
@@ -34,14 +34,16 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Installed human journeys
 
-- DMG mount and copy to Applications: passed for build 14; the prior installed build was moved recoverably to Trash
+- DMG mount and copy to Applications: passed for build 15; the prior installed build was moved recoverably to Trash
 - Launch without Xcode or Terminal: passed from `/Applications/Guide Companion.app`
 - Setup now keeps permission state visible without relying on the prior long form's scroll position
 - Microphone, Speech Recognition, Accessibility, and Screen Recording: granted and visibly reported on exact installed build
 - Global shortcut registration: visibly reported as registered
 - The owner observed that build 12's Control–Option–Space did nothing. The exact combination was independently found enabled in macOS as the “select next input source” system shortcut. Build 13 changes dictation to Control–Option–D without modifying the owner's system settings, and a regression test prevents returning to the two standard input-source combinations
 - The owner then observed that build 13's Control–Option–D also did nothing, and installed diagnostics remained at zero attempts. This proved the Carbon registration result was a false-positive delivery signal rather than a remaining key collision
-- Build 14 retains Carbon as a compatibility path and adds narrowly filtered local/global NSEvent monitors with press/release deduplication. An installed app-targeted Control–Option–D test advanced Attempts from 0 to 1, recorded the activation, and reached transcription; with no speech in that automated test, it correctly ended with “No speech could be transcribed.” Physical delivery while another app is frontmost remains the required HIL
+- Build 14 retained Carbon and added NSEvent monitors. Its app-targeted local test reached transcription, but both the owner's physical test and an agent-run synthetic HID test with TextEdit verified frontmost left Attempts unchanged. That reproduced the exact system-wide failure without owner assistance
+- A standalone CGEvent-tap probe observed both system-wide D key-down and key-up events with the expected modifier flags. Build 15 replaces the failed NSEvent delivery path with that verified, listen-only CGEvent tap while retaining Carbon as a compatibility path and deduplicating deliveries
+- Exact installed/notarized build 15 end-to-end test: TextEdit was verified frontmost and empty; the harness posted Control–Option–D, audibly spoke “Guide Companion dictation test,” released the shortcut, and TextEdit contained “Guide companion dictation test.” This proves global activation, microphone capture, Apple on-device transcription, and Accessibility insertion on the packaged release
 - Accessibility permission: granted and retained after refresh/relaunch
 - Two Swift concurrency crashes were reproduced and fixed: the speech-permission callback and the audio-tap/result callbacks no longer enter main-actor code from TCC/audio queues
 - Signed live-audio testing reached microphone recording and a speech callback without crashing; synthetic system speech did not produce a non-empty transcript
@@ -58,8 +60,7 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Remaining human check
 
-With an empty TextEdit document physically focused, hold Control–Option–D,
-speak one sentence, then release. Acceptance requires observing the sentence in
-the same field with no cloud/API configuration. If it fails, Settings > Setup
-now exposes attempt count, activation source, last stage, and a content-free
-failure reason; its delayed manual test can separately bypass shortcut handling.
+The automated acoustic journey passes on the installed release. The remaining
+owner check is to focus TextEdit, hold Control–Option–D, speak naturally, and
+release. This is a human voice/usability confirmation rather than the first
+functional proof of the pipeline.

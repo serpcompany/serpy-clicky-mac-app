@@ -10,23 +10,24 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A1 | Fresh install explains permissions before prompting | Installed recording | installed-observed |
 | A2 | Declining permission does not trigger repeated prompts | Installed recording + state test | unimplemented |
 | A3 | Model download shows size, progress, cancellation, and checksum result | Integration test + installed recording | unimplemented |
-| A4 | Push-to-talk records and inserts into TextEdit | Offline installed recording | implemented |
+| A4 | Push-to-talk records and inserts into TextEdit | Offline installed recording | installed-observed |
 | A5 | Dictation works in Notes, browser, Slack, and code editor | Compatibility matrix | unimplemented |
 | A6 | Caret, selected-text replacement, multiline, punctuation, and undo work | Integration tests + observation | unimplemented |
 | A7 | Cancellation inserts nothing | State and integration tests | unit-tested |
 | A8 | Clipboard content is preserved during fallback insertion | Deterministic test | unimplemented |
 | A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
 
-Build 14 visibly reports the four permission states and shortcut registration,
+Build 15 visibly reports the four permission states and shortcut registration,
 and its signed live-audio path records without the earlier callback crashes.
 Build 12's Control–Option–Space collided with this Mac's enabled input-source
 shortcut; build 13 uses Control–Option–D and regression-tests that the default
 is not either standard macOS input-source combination.
 Build 13 still received zero activations because Carbon registration did not
-deliver events in the installed SwiftUI menu-bar lifecycle. Build 14 adds
-narrowly filtered local/global keyboard monitors. An installed local-monitor
-test advanced the activation counter and reached transcription; physical
-global delivery with TextEdit frontmost remains pending owner observation.
+deliver events in the installed SwiftUI menu-bar lifecycle. Build 14's NSEvent
+global monitor also failed with TextEdit frontmost. Build 15 uses a verified
+listen-only CGEvent tap. On the installed notarized build, a synthetic global
+shortcut plus an audible spoken phrase produced the expected on-device
+transcript in an empty TextEdit field. Owner-voice confirmation remains pending.
 A4 remains only `implemented` until the owner physically focuses an editable
 field, speaks through the installed app, and observes the resulting text.
 
