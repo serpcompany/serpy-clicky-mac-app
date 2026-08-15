@@ -2,6 +2,12 @@ import AppKit
 import ApplicationServices
 import Foundation
 import GuideCore
+import OSLog
+
+private let insertionLogger = Logger(
+    subsystem: "com.serpcompany.guidecompanion.internal",
+    category: "insertion"
+)
 
 public final class FocusedTextTarget: @unchecked Sendable {
     fileprivate let processIdentifier: pid_t
@@ -15,7 +21,44 @@ public final class FocusedTextTarget: @unchecked Sendable {
 
 public enum TextInsertionMethod: String, Equatable, Sendable {
     case accessibility
+    case accessibilityValue
     case paste
+}
+
+public enum TextValueReplacement {
+    public enum Error: Swift.Error, Equatable {
+        case invalidRange
+    }
+
+    public struct Result {
+        public let value: String
+        public let caret: CFRange
+    }
+
+    public static func inserting(
+        _ text: String,
+        into existing: String,
+        selectedRange: CFRange
+    ) throws -> Result {
+        let utf16Length = (existing as NSString).length
+        guard selectedRange.location >= 0,
+              selectedRange.length >= 0,
+              selectedRange.location <= utf16Length,
+              selectedRange.location + selectedRange.length <= utf16Length else {
+            throw Error.invalidRange
+        }
+
+        let mutable = NSMutableString(string: existing)
+        mutable.replaceCharacters(
+            in: NSRange(location: selectedRange.location, length: selectedRange.length),
+            with: text
+        )
+        let caretLocation = selectedRange.location + (text as NSString).length
+        return Result(
+            value: mutable as String,
+            caret: CFRange(location: caretLocation, length: 0)
+        )
+    }
 }
 
 @MainActor
@@ -23,13 +66,29 @@ public final class TextInsertionService {
     public init() {}
 
     public func captureFocusedTarget() throws -> FocusedTextTarget {
-        let systemWide = AXUIElementCreateSystemWide()
+        let frontmostApplication = NSWorkspace.shared.frontmostApplication
+        let frontmostPID = frontmostApplication?.processIdentifier ?? 0
+        insertionLogger.notice(
+            "Capturing target; frontmostBundle=\(frontmostApplication?.bundleIdentifier ?? "unknown", privacy: .public) pid=\(frontmostPID)"
+        )
+        let applicationElement = frontmostPID > 0
+            ? AXUIElementCreateApplication(frontmostPID)
+            : AXUIElementCreateSystemWide()
         var value: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(
-            systemWide,
+        var result = AXUIElementCopyAttributeValue(
+            applicationElement,
             kAXFocusedUIElementAttribute as CFString,
             &value
         )
+
+        if result != .success || value == nil {
+            let systemWide = AXUIElementCreateSystemWide()
+            result = AXUIElementCopyAttributeValue(
+                systemWide,
+                kAXFocusedUIElementAttribute as CFString,
+                &value
+            )
+        }
 
         guard result == .success,
               let value,
@@ -41,15 +100,23 @@ public final class TextInsertionService {
         }
 
         let element = unsafeDowncast(value, to: AXUIElement.self)
-        var processIdentifier: pid_t = 0
-        guard AXUIElementGetPid(element, &processIdentifier) == .success else {
+        let focusedRole = stringAttribute(kAXRoleAttribute as CFString, of: element) ?? "unknown"
+        insertionLogger.notice("Focused AX role=\(focusedRole, privacy: .public)")
+        guard isEditableTextTarget(element) else {
+            throw insertionFailure(
+                "No editable text field is focused.",
+                recovery: "Click directly inside the destination text field and try again."
+            )
+        }
+        var elementPID: pid_t = 0
+        guard AXUIElementGetPid(element, &elementPID) == .success else {
             throw insertionFailure(
                 "The focused application could not be identified.",
                 recovery: "Click in the destination field and try again."
             )
         }
 
-        return FocusedTextTarget(processIdentifier: processIdentifier, element: element)
+        return FocusedTextTarget(processIdentifier: elementPID, element: element)
     }
 
     public func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
@@ -57,32 +124,118 @@ public final class TextInsertionService {
             throw insertionFailure("The transcript was empty.", recovery: "Try dictating again.")
         }
 
-        if canSetSelectedText(on: target.element),
-           AXUIElementSetAttributeValue(
+        let selectedTextResult = AXUIElementSetAttributeValue(
                target.element,
                kAXSelectedTextAttribute as CFString,
                text as CFString
-           ) == .success {
+           )
+        insertionLogger.notice("AX selected-text write result=\(selectedTextResult.rawValue)")
+        if selectedTextResult == .success {
             return .accessibility
         }
 
-        try await paste(text, into: target.processIdentifier)
+        if let replacementMethod = try replaceAccessibilityValue(text, on: target.element) {
+            return replacementMethod
+        }
+
+        try await paste(text, into: target)
         return .paste
     }
 
-    private func canSetSelectedText(on element: AXUIElement) -> Bool {
+    private func canSet(attribute: CFString, on element: AXUIElement) -> Bool {
         var settable = DarwinBoolean(false)
         let result = AXUIElementIsAttributeSettable(
             element,
-            kAXSelectedTextAttribute as CFString,
+            attribute,
             &settable
         )
         return result == .success && settable.boolValue
     }
 
-    private func paste(_ text: String, into processIdentifier: pid_t) async throws {
+    private func isEditableTextTarget(_ element: AXUIElement) -> Bool {
+        let role = stringAttribute(kAXRoleAttribute as CFString, of: element)
+        return role == (kAXTextFieldRole as String)
+            || role == (kAXTextAreaRole as String)
+            || role == (kAXComboBoxRole as String)
+            || canSet(attribute: kAXSelectedTextAttribute as CFString, on: element)
+            || canSet(attribute: kAXValueAttribute as CFString, on: element)
+    }
+
+    private func replaceAccessibilityValue(
+        _ text: String,
+        on element: AXUIElement
+    ) throws -> TextInsertionMethod? {
+        guard let existing = stringValue(of: element),
+              let selectedRange = selectedTextRange(of: element) else {
+            return nil
+        }
+
+        let replacement: TextValueReplacement.Result
+        do {
+            replacement = try TextValueReplacement.inserting(
+                text,
+                into: existing,
+                selectedRange: selectedRange
+            )
+        } catch {
+            return nil
+        }
+
+        guard AXUIElementSetAttributeValue(
+            element,
+            kAXValueAttribute as CFString,
+            replacement.value as CFString
+        ) == .success else {
+            insertionLogger.notice("AX value replacement was rejected")
+            return nil
+        }
+        insertionLogger.notice("AX value replacement succeeded")
+
+        var caret = replacement.caret
+        if let caretValue = AXValueCreate(.cfRange, &caret) {
+            _ = AXUIElementSetAttributeValue(
+                element,
+                kAXSelectedTextRangeAttribute as CFString,
+                caretValue
+            )
+        }
+        return .accessibilityValue
+    }
+
+    private func stringValue(of element: AXUIElement) -> String? {
+        stringAttribute(kAXValueAttribute as CFString, of: element)
+    }
+
+    private func stringAttribute(_ attribute: CFString, of element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute,
+            &value
+        ) == .success else { return nil }
+        return value as? String
+    }
+
+    private func selectedTextRange(of element: AXUIElement) -> CFRange? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &value
+        ) == .success,
+              let value,
+              CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        var range = CFRange()
+        guard AXValueGetValue(unsafeDowncast(value, to: AXValue.self), .cfRange, &range) else {
+            return nil
+        }
+        return range
+    }
+
+    private func paste(_ text: String, into target: FocusedTextTarget) async throws {
         let pasteboard = NSPasteboard.general
         let snapshot = PasteboardSnapshot(pasteboard: pasteboard)
+        let valueBeforePaste = stringValue(of: target.element)
 
         pasteboard.clearContents()
         guard pasteboard.setString(text, forType: .string) else {
@@ -105,10 +258,19 @@ public final class TextInsertionService {
 
         keyDown.flags = .maskCommand
         keyUp.flags = .maskCommand
-        keyDown.postToPid(processIdentifier)
-        keyUp.postToPid(processIdentifier)
+        keyDown.postToPid(target.processIdentifier)
+        keyUp.postToPid(target.processIdentifier)
 
-        try await Task.sleep(for: .milliseconds(250))
+        try await Task.sleep(for: .milliseconds(350))
+        if let valueBeforePaste,
+           let valueAfterPaste = stringValue(of: target.element),
+           valueAfterPaste == valueBeforePaste {
+            snapshot.restore(to: pasteboard)
+            throw insertionFailure(
+                "The destination did not accept the transcript.",
+                recovery: "Click directly inside the text field and try again."
+            )
+        }
         if pasteboard.changeCount == injectedChangeCount {
             snapshot.restore(to: pasteboard)
         }

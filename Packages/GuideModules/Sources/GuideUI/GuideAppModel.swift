@@ -3,6 +3,7 @@ import Carbon
 import GuideCore
 import GuideMac
 import Observation
+import OSLog
 
 @MainActor
 @Observable
@@ -17,6 +18,11 @@ public final class GuideAppModel {
     public private(set) var lastInsertionMethod: TextInsertionMethod?
     public private(set) var guidancePhase: GuidancePhase = .idle
     public private(set) var guidanceAnswer = ""
+    public private(set) var hotKeyRegistered = false
+    public private(set) var dictationAttemptCount = 0
+    public private(set) var lastActivationMessage = "No dictation activation received yet."
+    public private(set) var lastDictationStage = "Waiting"
+    public private(set) var lastFailureMessage = "None"
     public var guidanceQuestion = "What should I do next?"
     public var companionEnabled: Bool {
         didSet {
@@ -41,6 +47,11 @@ public final class GuideAppModel {
     @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var started = false
+
+    @ObservationIgnored private static let logger = Logger(
+        subsystem: "com.serpcompany.guidecompanion.internal",
+        category: "dictation"
+    )
 
     private enum Keys {
         static let companionEnabled = "GuideCompanion.companionEnabled"
@@ -113,6 +124,8 @@ public final class GuideAppModel {
         hotKeyService = service
         do {
             try service.start()
+            hotKeyRegistered = true
+            Self.logger.notice("Global dictation shortcut registered")
             let guidanceService = GlobalHotKeyService(
                 keyCode: UInt32(kVK_ANSI_G),
                 identifier: 2,
@@ -138,6 +151,7 @@ public final class GuideAppModel {
                 }
             }
         } catch {
+            hotKeyRegistered = false
             presentFailure(
                 GuideFailure(
                     stage: .activation,
@@ -156,6 +170,7 @@ public final class GuideAppModel {
         guidanceHotKeyService = nil
         transcriber.cancel()
         companionController.hide()
+        hotKeyRegistered = false
     }
 
     public func refreshPermissions() {
@@ -294,13 +309,71 @@ public final class GuideAppModel {
         focusedTarget = nil
         partialTranscript = ""
         statusMessage = "Dictation cancelled."
+        lastDictationStage = "Cancelled"
+        Self.logger.notice("Dictation cancelled")
         presentation.mode = .ready
         presentation.caption = "Cancelled"
         companionController.refresh()
         scheduleReset()
     }
 
+    public func beginManualDictationTest() {
+        guard !phase.isActive else { return }
+        statusMessage = "Click the destination text field now. Listening starts in 4 seconds."
+        recoveryMessage = "After speaking, reopen Guide Companion and click Stop & Insert."
+        presentation.mode = .working
+        presentation.caption = "Click a text field — listening starts in 4…"
+        companionController.refresh()
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self else { return }
+            startDictation(source: "Manual test")
+        }
+    }
+
+    public func finishManualDictationTest() {
+        finishDictation(source: "Manual test button")
+    }
+
+    public func beginInsertionTest() {
+        guard !phase.isActive else { return }
+        statusMessage = "Click the destination text field now. The test phrase inserts in 4 seconds."
+        recoveryMessage = ""
+        lastDictationStage = "Waiting for insertion test target"
+        presentation.mode = .working
+        presentation.caption = "Click a text field — test inserts in 4…"
+        companionController.refresh()
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self else { return }
+            do {
+                lastDictationStage = "Testing text insertion"
+                let target = try insertionService.captureFocusedTarget()
+                lastInsertionMethod = try await insertionService.insert(
+                    "Guide Companion insertion test.",
+                    into: target
+                )
+                lastDictationStage = "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                statusMessage = "The insertion test succeeded."
+                presentation.mode = .success
+                presentation.caption = "Insertion works"
+                companionController.refresh()
+            } catch {
+                lastDictationStage = "Insertion test failed"
+                presentFailure(normalize(error, stage: .insertion))
+            }
+        }
+    }
+
     private func hotKeyPressed() {
+        startDictation(source: "Shortcut press")
+    }
+
+    private func startDictation(source: String) {
+        dictationAttemptCount += 1
+        lastActivationMessage = "\(source) received at \(Date.now.formatted(date: .omitted, time: .standard))"
+        lastDictationStage = "Checking permissions"
+        Self.logger.notice("Dictation activation received; source=\(source, privacy: .public)")
         refreshPermissions()
         guard dictationReady else {
             presentFailure(
@@ -310,6 +383,8 @@ public final class GuideAppModel {
                     recovery: "Open Guide Companion from the menu bar and complete Microphone, Speech Recognition, and Accessibility."
                 )
             )
+            lastDictationStage = "Blocked: setup incomplete"
+            Self.logger.error("Dictation blocked because setup is incomplete")
             return
         }
         guard !phase.isActive else { return }
@@ -318,30 +393,44 @@ public final class GuideAppModel {
             dictationMachine.reset()
             try dictationMachine.prepare()
             phase = dictationMachine.phase
+            lastDictationStage = "Capturing focused text field"
             focusedTarget = try insertionService.captureFocusedTarget()
             partialTranscript = ""
             recoveryMessage = ""
             try transcriber.start { [weak self] text in
                 self?.partialTranscript = text
+                if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self?.lastDictationStage = "Speech detected (\(text.count) characters)"
+                }
             }
             try dictationMachine.beginRecording()
             phase = dictationMachine.phase
             statusMessage = "Listening… release \(shortcutDescription) to insert."
+            lastDictationStage = "Listening"
+            Self.logger.notice("Microphone recording started")
             presentation.mode = .recording
             presentation.caption = "Listening…"
             companionController.refresh()
         } catch {
             focusedTarget = nil
+            lastDictationStage = "Failed before recording"
+            Self.logger.error("Dictation failed before recording: \(error.localizedDescription, privacy: .public)")
             presentFailure(normalize(error, stage: .recording))
         }
     }
 
     private func hotKeyReleased() {
+        finishDictation(source: "Shortcut release")
+    }
+
+    private func finishDictation(source: String) {
         guard phase == .recording, let focusedTarget else { return }
+        Self.logger.notice("Dictation finish received; source=\(source, privacy: .public)")
         do {
             try dictationMachine.beginTranscription()
             phase = dictationMachine.phase
             statusMessage = "Finishing local transcription…"
+            lastDictationStage = "Finishing transcription"
             presentation.mode = .working
             presentation.caption = "Transcribing…"
             companionController.refresh()
@@ -357,11 +446,14 @@ public final class GuideAppModel {
                 try dictationMachine.beginInsertion()
                 phase = dictationMachine.phase
                 statusMessage = "Inserting text…"
+                lastDictationStage = "Inserting text"
                 lastInsertionMethod = try await insertionService.insert(transcript, into: focusedTarget)
                 try dictationMachine.succeed()
                 phase = dictationMachine.phase
                 partialTranscript = transcript
                 statusMessage = "Dictation inserted locally."
+                lastDictationStage = "Succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                Self.logger.notice("Dictation inserted; method=\(self.lastInsertionMethod?.rawValue ?? "unknown", privacy: .public)")
                 recoveryMessage = ""
                 self.focusedTarget = nil
                 presentation.mode = .success
@@ -372,6 +464,8 @@ public final class GuideAppModel {
                 cancelDictation()
             } catch {
                 self.focusedTarget = nil
+                lastDictationStage = "Failed while finishing or inserting"
+                Self.logger.error("Dictation failed while finishing: \(error.localizedDescription, privacy: .public)")
                 presentFailure(normalize(error, stage: .transcription))
             }
         }
@@ -386,6 +480,10 @@ public final class GuideAppModel {
         }
         statusMessage = failure.message
         recoveryMessage = failure.recovery
+        lastFailureMessage = "\(failure.message) \(failure.recovery)"
+        if !lastDictationStage.hasPrefix("Failed") && !lastDictationStage.hasPrefix("Blocked") {
+            lastDictationStage = "Failed: \(failure.stage.rawValue)"
+        }
         presentation.mode = .error
         presentation.caption = failure.message
         companionController.refresh()

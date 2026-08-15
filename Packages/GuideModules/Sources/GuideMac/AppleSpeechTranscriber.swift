@@ -3,6 +3,43 @@ import Foundation
 import GuideCore
 import Speech
 
+private final class SpeechAudioSink: @unchecked Sendable {
+    private let request: SFSpeechAudioBufferRecognitionRequest
+
+    init(request: SFSpeechAudioBufferRecognitionRequest) {
+        self.request = request
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        request.append(buffer)
+    }
+}
+
+private struct SpeechResultPacket: @unchecked Sendable {
+    let result: SFSpeechRecognitionResult?
+    let error: Error?
+}
+
+private func installSpeechInputTap(
+    on inputNode: AVAudioInputNode,
+    format: AVAudioFormat,
+    sink: SpeechAudioSink
+) {
+    inputNode.installTap(onBus: 0, bufferSize: 1_024, format: format) { buffer, _ in
+        sink.append(buffer)
+    }
+}
+
+private func beginSpeechRecognition(
+    recognizer: SFSpeechRecognizer,
+    request: SFSpeechAudioBufferRecognitionRequest,
+    deliver: @escaping @Sendable (SpeechResultPacket) -> Void
+) -> SFSpeechRecognitionTask {
+    recognizer.recognitionTask(with: request) { result, error in
+        deliver(SpeechResultPacket(result: result, error: error))
+    }
+}
+
 @MainActor
 public final class AppleSpeechTranscriber {
     public typealias PartialHandler = @MainActor @Sendable (String) -> Void
@@ -67,16 +104,21 @@ public final class AppleSpeechTranscriber {
             throw speechFailure("The selected microphone has no usable audio format.", recovery: "Choose another input device and try again.")
         }
 
-        inputNode.installTap(onBus: 0, bufferSize: 1_024, format: format) { [weak request] buffer, _ in
-            request?.append(buffer)
-        }
+        installSpeechInputTap(
+            on: inputNode,
+            format: format,
+            sink: SpeechAudioSink(request: request)
+        )
         inputTapInstalled = true
 
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            Task { @MainActor in
-                self?.handle(result: result, error: error)
-            }
+        let deliver = MainActorCallbackBridge.make { [weak self] (packet: SpeechResultPacket) in
+            self?.handle(result: packet.result, error: packet.error)
         }
+        recognitionTask = beginSpeechRecognition(
+            recognizer: recognizer,
+            request: request,
+            deliver: deliver
+        )
 
         audioEngine.prepare()
         do {

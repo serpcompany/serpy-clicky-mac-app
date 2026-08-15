@@ -6,6 +6,20 @@ import Foundation
 import GuideCore
 import Speech
 
+/// Bridges Apple permission APIs, whose completion handlers may arrive on an
+/// arbitrary queue, without inheriting the caller's actor isolation.
+public enum PermissionCallbackBridge {
+    public nonisolated static func request(
+        _ register: @Sendable (@escaping @Sendable (Bool) -> Void) -> Void
+    ) async -> Bool {
+        await withCheckedContinuation(isolation: nil) { continuation in
+            register { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+    }
+}
+
 public struct PermissionSnapshot: Equatable, Sendable {
     public let microphone: PermissionState
     public let speechRecognition: PermissionState
@@ -47,9 +61,9 @@ public final class PermissionService {
     }
 
     public func requestSpeechRecognition() async -> Bool {
-        await withCheckedContinuation { continuation in
+        await PermissionCallbackBridge.request { completion in
             SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status == .authorized)
+                completion(status == .authorized)
             }
         }
     }

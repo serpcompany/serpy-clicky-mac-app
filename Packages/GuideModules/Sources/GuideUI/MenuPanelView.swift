@@ -125,7 +125,7 @@ public struct MenuPanelView: View {
     }
 
     private var readyCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Hold to dictate")
                 .font(.headline)
             Text(model.shortcutDescription)
@@ -133,6 +133,36 @@ public struct MenuPanelView: View {
             Text("Focus any text field, hold the shortcut, speak normally, then release. Guide Companion inserts the local transcript without sending it.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
+
+            Divider()
+
+            Label(
+                model.hotKeyRegistered ? "Global shortcut registered" : "Global shortcut unavailable",
+                systemImage: model.hotKeyRegistered ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+            )
+            .font(.callout)
+            .foregroundStyle(model.hotKeyRegistered ? .green : .orange)
+
+            Text("Last stage: \(model.lastDictationStage)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(model.lastActivationMessage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if model.phase == .recording {
+                Button("Stop & Insert") {
+                    model.finishManualDictationTest()
+                }
+                .buttonStyle(.borderedProminent)
+            } else if !model.phase.isActive {
+                Button("Manual dictation test") {
+                    model.beginManualDictationTest()
+                }
+                Text("Starts after 4 seconds so you can click the destination field. Reopen this menu to stop and insert.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(14)
         .background(.blue.opacity(0.10), in: .rect(cornerRadius: 12))
