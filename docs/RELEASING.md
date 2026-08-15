@@ -9,6 +9,17 @@ Release DMGs are not committed to Git. An annotated Git tag identifies the
 exact source, while the notarized DMG, SHA-256 file, and manifest are attached
 to a private GitHub prerelease.
 
+## Download naming
+
+Use the user-facing asset label `SERPy.dmg`. Do not expose implementation or
+verification language such as `Notarized SERPy DMG` as the download name.
+Signing and notarization belong in the release notes and evidence report, not
+in the product filename.
+
+The stored artifact may remain versioned as `SERPy-X.Y.Z-BUILD.dmg` so releases
+are unambiguous when downloaded or archived. Git tags, the release manifest,
+and the checksum are the sources of truth for its exact version and identity.
+
 ## Trusted-Mac pipeline
 
 Run releases on the registered Mac that holds the approved Developer ID

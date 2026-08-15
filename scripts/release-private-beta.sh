@@ -105,7 +105,7 @@ git tag -a "${tag}" "${head_commit}" -m "${release_title}"
 git push origin "refs/tags/${tag}"
 
 gh release create "${tag}" \
-  "${dmg_path}#Notarized SERPy DMG" \
+  "${dmg_path}#SERPy.dmg" \
   "${checksum_path}#SHA-256 checksum" \
   "${manifest_path}#Release manifest" \
   --repo "${repository}" \
