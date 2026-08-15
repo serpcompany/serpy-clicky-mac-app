@@ -200,4 +200,3 @@ Acceptance rows: D4, D5.
   quit/relaunch, and document uninstall.
 
 Acceptance rows: D1–D6 and final product gate.
-

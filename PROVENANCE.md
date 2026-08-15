@@ -50,4 +50,3 @@ copywriting, bundle identifiers, URL schemes, or marketing assets.
 
 MIT compliance does not itself clear third-party assets or trademarks. Every
 shipped asset must be original, commissioned, or separately licensed.
-

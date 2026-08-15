@@ -60,4 +60,3 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 The initial matrix is TextEdit, Notes, Chrome or Safari, Slack, and one code
 editor used by the owner. Additional applications become explicit rows rather
 than implied support claims.
-

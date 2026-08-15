@@ -105,4 +105,3 @@ Only after the installed baseline passes should the owner decide whether to add:
 - Accounts, sync, billing, updates, or additional platforms.
 
 Each is a separate product and risk decision, not an automatic continuation.
-

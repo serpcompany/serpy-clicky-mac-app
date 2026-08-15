@@ -34,4 +34,3 @@ References provide partial patterns, not an architecture to copy wholesale.
   the minimum OS may rise after the owner reviews measured impact.
 - If an OpenClicky component is genuinely isolated, well-tested, and smaller
   than a new implementation, its import can be approved through PROVENANCE.md.
-

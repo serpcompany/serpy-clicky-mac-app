@@ -100,4 +100,3 @@ an explicit owner decision.
 The product is not successful because it builds or displays a cursor. It is
 successful when a fresh, signed installation completes the user journeys in
 `ACCEPTANCE.md` without Xcode, Terminal, API keys, or undocumented workarounds.
-

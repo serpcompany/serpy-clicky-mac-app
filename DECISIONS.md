@@ -15,4 +15,3 @@
 
 Owner decisions must be recorded here before they become implementation
 assumptions.
-

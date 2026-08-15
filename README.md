@@ -43,4 +43,3 @@ scope before those probes begin.
   `https://github.com/devinschumacher/openclicky-internal-releases/issues`
 
 These locations are evidence inputs. They are not dependencies of this repo.
-

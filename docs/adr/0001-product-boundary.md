@@ -23,4 +23,3 @@ actions, shell/browser control, connected services, and agent orchestration.
 - Screen guidance can evolve behind an adapter without destabilizing dictation.
 - The first release will not reproduce every HeyClicky or OpenClicky feature.
 - Agent functionality requires a later architecture and security decision.
-

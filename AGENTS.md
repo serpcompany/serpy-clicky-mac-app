@@ -58,4 +58,3 @@ probe until the owner explicitly authorizes Phase 0.
 
 No phase is complete until every required acceptance row for that phase has the
 specified evidence and unresolved rows remain visibly red.
-

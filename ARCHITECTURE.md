@@ -214,4 +214,3 @@ the original clipboard unless the user explicitly changes that preference.
 | One giant observable manager | Reject | Recreates the coupling already observed |
 | Cloud-first assistant | Reject | Violates the no-key, offline core contract |
 | Many tiny packages | Reject | More build and ownership overhead than this app needs |
-
