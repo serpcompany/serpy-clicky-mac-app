@@ -35,7 +35,7 @@ struct GlobalHotKeyPressStateTests {
     func consumesOnlyConfiguredChord() {
         let policy = GlobalHotKeyEventPolicy()
         #expect(policy.shouldConsume(keyDown(), configuration: configuration))
-        #expect(policy.shouldConsume(
+        #expect(!policy.shouldConsume(
             KeyboardEventSnapshot(
                 keyCode: UInt16(configuration.keyCode),
                 modifierFlags: 0,
@@ -43,6 +43,7 @@ struct GlobalHotKeyPressStateTests {
             ),
             configuration: configuration
         ))
+        #expect(policy.shouldConsume(keyUp(), configuration: configuration))
         #expect(!policy.shouldConsume(
             KeyboardEventSnapshot(
                 keyCode: UInt16(kVK_ANSI_A),
@@ -56,6 +57,29 @@ struct GlobalHotKeyPressStateTests {
                 keyCode: UInt16(kVK_Space),
                 modifierFlags: 0,
                 isKeyDown: true
+            ),
+            configuration: configuration
+        ))
+    }
+
+    @Test("Command-Space passes through on both key down and key up")
+    func commandSpacePassesThrough() {
+        let policy = GlobalHotKeyEventPolicy()
+        let commandFlags = NSEvent.ModifierFlags.command.rawValue
+
+        #expect(!policy.shouldConsume(
+            KeyboardEventSnapshot(
+                keyCode: UInt16(kVK_Space),
+                modifierFlags: commandFlags,
+                isKeyDown: true
+            ),
+            configuration: configuration
+        ))
+        #expect(!policy.shouldConsume(
+            KeyboardEventSnapshot(
+                keyCode: UInt16(kVK_Space),
+                modifierFlags: commandFlags,
+                isKeyDown: false
             ),
             configuration: configuration
         ))

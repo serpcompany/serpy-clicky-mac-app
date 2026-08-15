@@ -82,9 +82,6 @@ public struct GlobalHotKeyEventPolicy: Sendable {
         configuration: GlobalHotKeyConfiguration
     ) -> Bool {
         guard event.keyCode == UInt16(configuration.keyCode) else { return false }
-        if !event.isKeyDown {
-            return true
-        }
         let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
         return event.modifierFlags & significantMask == configuration.cocoaModifiers
     }
