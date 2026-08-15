@@ -22,6 +22,8 @@ The evaluation is historical evidence, not a runtime or build dependency.
 - Evaluation date: 2026-08-15 to 2026-08-16
 - Artifact/evidence repository: private
   `devinschumacher/openclicky-internal-releases`
+- Source/evaluation archive: private
+  [`serpcompany/openclicky-evaluation-archive`](https://github.com/serpcompany/openclicky-evaluation-archive)
 
 The packaged build passed the internal Developer ID signing, notarization,
 stapling, browser-download quarantine, Finder installation, Gatekeeper, launch,
@@ -59,7 +61,14 @@ No OpenClicky source has been copied into SERPy. Any future import must pass the
 recorded gate in `PROVENANCE.md` and identify exact files, lines, license
 obligations, dependencies, tests, and removed upstream identity.
 
-The unique `phase1/internal-dmg` source commit should be preserved in a
-separate private archive remote with its upstream ancestry intact. It must not
-be pushed as an archived branch or tag in the SERPy repository. Once that
-archive is verified, the temporary local evaluation checkout can be removed.
+The unique source and wrapper histories are preserved in a separate private,
+read-only archive with their original ancestry intact:
+
+- [Final evaluation wrapper commit `d5be272`](https://github.com/serpcompany/openclicky-evaluation-archive/commit/d5be272411d11e4ea1ea7ec59c4ad82e62719c80)
+- [Tagged evaluation wrapper snapshot](https://github.com/serpcompany/openclicky-evaluation-archive/tree/evaluation-final-2026-08-16)
+- [Internal packaging source commit `4f31afc`](https://github.com/serpcompany/openclicky-evaluation-archive/commit/4f31afcc8d95b523da93a297c7b16414e0766d8d)
+- [Tagged internal packaging source snapshot](https://github.com/serpcompany/openclicky-evaluation-archive/tree/p1b-internal-2026-08-15)
+
+The OpenClicky history must not be pushed as an archived branch or tag in the
+SERPy repository. The temporary local evaluation checkout may be removed after
+the archive repository and these links have been verified.
