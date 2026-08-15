@@ -1,0 +1,17 @@
+.DS_Store
+.build/
+.derived/
+DerivedData/
+build/
+dist/
+*.xcuserstate
+xcuserdata/
+
+# Downloaded local models are versioned by manifest, not committed as binaries.
+Models/
+*.mlmodelc/
+
+# Runtime evidence may contain private screen or voice context. Curated,
+# redacted reports can be explicitly force-added after review.
+evidence/runtime/
+

@@ -1,0 +1,103 @@
+# Product Contract
+
+## Outcome
+
+A nontechnical Mac user can install the app, complete a short and understandable
+permission flow, dictate text anywhere, and optionally ask for visual guidance
+about the app currently on screen.
+
+The core experience remains useful offline and without an account, subscription,
+API key, or metered provider.
+
+## First Product Journeys
+
+### Journey A — First local dictation
+
+1. Install and launch the notarized app normally.
+2. The app explains and requests Microphone permission.
+3. The app explains and requests Accessibility permission only when insertion
+   requires it.
+4. If a speech model is required, the user sees its language, size, storage
+   destination, and download progress.
+5. The user focuses a text field, invokes the configurable shortcut, speaks,
+   and releases or stops recording.
+6. The exact transcript appears at the caret without sending the message or
+   invoking an assistant.
+7. The same journey works offline after model installation.
+
+### Journey B — Persistent companion
+
+1. The user enables the cursor companion.
+2. It appears immediately and remains present across ordinary app switches,
+   idle time, settings closure, and failed guidance requests.
+3. It does not cover menu-bar controls or intercept clicks outside its visible
+   controls.
+4. The user can hide it explicitly and the preference survives relaunch.
+
+### Journey C — Ask for screen guidance
+
+1. The user explicitly invokes the guide shortcut.
+2. The app explains and requests Screen Recording permission if it has not
+   already been granted.
+3. The app captures only the chosen window/display context for that request.
+4. A local guidance engine receives structured accessibility/OCR context and,
+   only when required, the transient image.
+5. The app answers in text and optionally speech, then points or captions a
+   validated location.
+6. It never clicks, types, runs shell commands, or performs the task itself.
+
+## Product Principles
+
+- **Dictation is independent.** Missing assistant configuration can never break
+  recording, transcription, or insertion.
+- **Local is the default.** Cloud processing is a later explicit opt-in, not a
+  silent fallback.
+- **Permissions follow intent.** Ask only when the user invokes a feature that
+  needs the permission.
+- **Visible state is truthful.** A control cannot appear enabled while a hidden
+  prerequisite prevents it from working.
+- **Failure is actionable.** Every failed turn identifies which stage failed
+  and provides a recovery action.
+- **The guide advises; it does not operate.** Autonomous agents are outside the
+  first product.
+- **Privacy is structural.** Audio, screenshots, and transcripts are transient
+  by default and are not used for analytics or training.
+
+## First-Product Scope
+
+Included:
+
+- Apple Silicon Mac.
+- Menu-bar application plus normal non-floating Settings window.
+- Configurable push-to-talk and toggle-dictation shortcuts.
+- Free on-device speech-to-text.
+- Focused-field insertion with clipboard-preserving fallback.
+- Persistent cursor companion and short captions.
+- Explicit, request-scoped screen guidance.
+- Local logs that redact dictated and captured content.
+- Direct-download Developer ID/notarized DMG.
+
+Deferred:
+
+- Wake word and always-listening microphone.
+- Autonomous computer use or browser control.
+- Shell/file tools, MCP, connected accounts, email, calendars, or child agents.
+- Accounts, sync, analytics, billing, collaboration, or hosted history.
+- Pets, widgets, galleries, workflow automation, and plugin marketplaces.
+- Cloud AI, BYOK, and paid-provider configuration.
+- Intel support, Windows, iOS, and Mac App Store distribution.
+- Automatic updates until the basic installed-product journey is stable.
+
+## Compatibility Assumption
+
+Plan for Apple Silicon and macOS 14.2 or newer, with acceptance performed first
+on the owner's current macOS 26 machine. Newer intelligence APIs must be runtime
+feature-gated. Phase 0 may raise the minimum OS only with measured evidence and
+an explicit owner decision.
+
+## Product Success
+
+The product is not successful because it builds or displays a cursor. It is
+successful when a fresh, signed installation completes the user journeys in
+`ACCEPTANCE.md` without Xcode, Terminal, API keys, or undocumented workarounds.
+
