@@ -1,16 +1,16 @@
 # Installed Product Evidence
 
-Status: installed release and acoustic cross-app dictation verified; owner-voice HIL pending
+Status: build 18 installed; acoustic cross-app dictation and durable recovery verified; owner-voice HIL pending
 
 ## Artifact
 
-- Product: Guide Companion 0.1.0 (16)
+- Product: Guide Companion 0.1.0 (18)
 - Bundle ID: `com.serpcompany.guidecompanion.internal`
 - Team: tester-owned Developer ID team `847HR8U8D9`
-- Source commit: `08045c5`
-- DMG: `dist/Guide-Companion-0.1.0-16.dmg`
-- SHA-256: `18189f2ff0cd36196391f20f133bf158eebf6973655e446811446a2d1ef97c73`
-- Notarization: accepted, submission `8919b9ba-e29e-4752-bad5-a991b57648c9`
+- Source commit: `01a016b`
+- DMG: `dist/Guide-Companion-0.1.0-18.dmg`
+- SHA-256: `3cc9f9749960621b3b28666fd662672e3debff6e69fadc0f013714fc9d4cd6f4`
+- Notarization: accepted, submission `0353c2c5-7a33-444e-9c92-dbb8691b3732`
 - Stapling: passed and validated
 - Gatekeeper: DMG and mounted app accepted as Notarized Developer ID
 
@@ -24,7 +24,8 @@ Status: installed release and acoustic cross-app dictation verified; owner-voice
 ## Mechanical verification
 
 - Core, speech-lifecycle, callback-isolation, shortcut-collision/delivery,
-  text-replacement, and transcript-recovery tests: 21 passing on 2026-08-16
+  text-replacement, pasteboard-ownership, and transcript-recovery tests: 31
+  passing on 2026-08-16
 - Unsigned Debug build: passed
 - Apple Development interactive build: passed
 - Developer ID Release build: passed
@@ -35,7 +36,7 @@ Status: installed release and acoustic cross-app dictation verified; owner-voice
 
 ## Installed human journeys
 
-- DMG mount and copy to Applications: passed for build 16; the prior installed build was moved recoverably to Trash
+- DMG mount and copy to Applications: passed for build 18; prior installed builds were moved recoverably to Trash
 - Launch without Xcode or Terminal: passed from `/Applications/Guide Companion.app`
 - Setup now keeps permission state visible without relying on the prior long form's scroll position
 - Microphone, Speech Recognition, Accessibility, and Screen Recording: granted and visibly reported on exact installed build
@@ -56,11 +57,25 @@ Status: installed release and acoustic cross-app dictation verified; owner-voice
   Each run verified the intended app was frontmost, posted Control–Option–D,
   spoke a unique phrase, released the shortcut, and observed the transcript in
   the intended field.
-- Build 16 preserves the last nonempty completed transcript in memory before
-  delivery and exposes Retry, Copy, and Clear in the menu and Settings. The
-  recovery slot is covered by tests and survives insertion failure, but is
-  deliberately cleared when the app quits; crash/relaunch recovery is not yet
-  claimed.
+- Build 17 introduced an atomic local Last Dictation written before delivery,
+  explicit confirmed/unconfirmed/failed states, bounded expiry, Copy/Retry/Delete,
+  optional 25-item text history, and a separate optional audio-history switch.
+  A forced TextEdit destination switch produced a failed record that survived
+  quit/relaunch; Copy recovered the exact text and Retry later inserted it.
+- Installed build 17's optional audio test produced an owner-only `0600` WAV,
+  linked it to the transcript, and removed the WAV when that entry was deleted.
+  Both history settings were then restored to off.
+- The initial VS Code run exposed a false-negative: the paste succeeded, but
+  VS Code's AX editor kept returning its stable accessibility placeholder.
+  Build 18 treats an unchanged or unreadable AX value as unconfirmed rather
+  than failed or confirmed.
+- Exact installed/notarized build 18 inserted an acoustic phrase into VS Code,
+  labeled delivery `pasteUnconfirmed`, displayed `Saved — verify paste`, and
+  retained Copy/Retry/Delete. The same unconfirmed record and exact transcript
+  were visible after quitting and relaunching Guide Companion.
+- Exact installed/notarized build 18 also produced a confirmed acoustic paste
+  in TextEdit. Build 17 had already confirmed Chrome plain input and
+  contenteditable targets through the same delivery implementation.
 - Accessibility permission: granted and retained after refresh/relaunch
 - Two Swift concurrency crashes were reproduced and fixed: the speech-permission callback and the audio-tap/result callbacks no longer enter main-actor code from TCC/audio queues
 - Signed live-audio testing reached microphone recording and a speech callback without crashing; synthetic system speech did not produce a non-empty transcript
@@ -73,8 +88,17 @@ Status: installed release and acoustic cross-app dictation verified; owner-voice
 - Quit/relaunch without permission loop: passed; all granted permissions remained granted
 - Early-final speech result lifecycle: regression-tested so a pause before hotkey release cannot discard the phrase
 - Installer collision prevention: volume name includes the build number
-- Network/storage audit: no network client code, network entitlement, transcript/screenshot file writer, or live app socket was found; diagnostics log stages and target metadata but not dictated text or field contents
-- Superseded build artifacts were moved recoverably to the user Trash; `dist/` contains only build 16
+- Storage audit: the default is one atomic Last Dictation only, expiring after
+  10 minutes when confirmed or 24 hours when failed/unconfirmed. The JSON and
+  opt-in WAV use `0600`; their directory uses `0700`; no screenshot is stored.
+  Full text history (25 items/30 days) and audio history are separate opt-ins.
+  Diagnostics log stages and target metadata but not dictated text or field
+  contents.
+- Network audit: no network client code, network entitlement, paid API, account,
+  or live app socket is part of dictation.
+- Test transcripts/audio and temporary TextEdit/VS Code documents were cleared.
+  History and audio settings are off. Superseded build 16/17 artifacts and apps
+  were moved recoverably to the user Trash; `dist/` contains only build 18.
 
 ## Remaining human check
 

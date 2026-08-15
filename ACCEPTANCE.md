@@ -16,9 +16,9 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A7 | Cancellation inserts nothing | State and integration tests | unit-tested |
 | A8 | Clipboard content is preserved during fallback insertion | Deterministic test | implemented |
 | A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
-| A10 | Failed delivery retains Last Dictation with Retry, Copy, and Clear | State test + installed observation | unit-tested |
-| A11 | Completed transcript survives crash/relaunch before delivery | Store test + installed crash/relaunch observation | unit-tested |
-| A12 | Unverifiable paste is labeled unconfirmed and remains recoverable | Deterministic test + installed observation | unit-tested |
+| A10 | Failed delivery retains Last Dictation with Retry, Copy, and Clear | State test + installed observation | installed-observed |
+| A11 | Completed transcript survives crash/relaunch before delivery | Store test + installed crash/relaunch observation | installed-observed |
+| A12 | Unverifiable paste is labeled unconfirmed and remains recoverable | Deterministic test + installed observation | installed-observed |
 
 Build 15 visibly reports the four permission states and shortcut registration,
 and its signed live-audio path records without the earlier callback crashes.
@@ -33,10 +33,12 @@ shortcut plus an audible spoken phrase produced the expected on-device
 transcript in an empty TextEdit field. Owner-voice confirmation remains pending.
 Build 16 changes delivery to focus-verified session paste and verifies the
 installed app acoustically in Chrome plain input, textarea, contenteditable,
-and TextEdit targets. Build 17 replaces the memory-only recovery path with an
-atomic local Last Dictation saved before delivery; installed verification is
-pending. A5 remains partial: Notes, Slack, and a code editor are not yet
-observed.
+and TextEdit targets. Build 18 replaces the memory-only recovery path with an
+atomic local Last Dictation saved before delivery. Installed TextEdit and Chrome
+targets report confirmed delivery. VS Code accepts the paste but exposes no
+readable document value, so the app truthfully reports unconfirmed and retains
+Copy/Retry/Delete; that record survived quit/relaunch. A5 remains partial:
+Notes and Slack are not yet observed.
 
 ## B — Companion
 
@@ -77,10 +79,10 @@ the current build.
 | D1 | Developer ID signed, notarized, stapled DMG | Mechanical report | accepted |
 | D2 | HTTPS download carries quarantine and passes Gatekeeper | Installed report | unimplemented |
 | D3 | Quit/relaunch does not cause permission loops | Installed recording | installed-observed |
-| D4 | Default storage is one bounded Last Dictation; screenshots/audio are not stored | Filesystem/log audit | unit-tested |
+| D4 | Default storage is one bounded Last Dictation; screenshots/audio are not stored | Filesystem/log audit | installed-observed |
 | D5 | Diagnostics redact captured and dictated content | Fixture tests + export audit | implemented |
 | D6 | No borrowed product identity, keys, feeds, or release destinations remain | Provenance/identity audit | implemented |
-| D7 | Full transcript history and audio history require separate explicit opt-ins and Clear removes both | State/store tests + installed observation | unit-tested |
+| D7 | Full transcript history and audio history require separate explicit opt-ins and Clear removes both | State/store tests + installed observation | installed-observed |
 
 ## Compatibility Matrix
 
