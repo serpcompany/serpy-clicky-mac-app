@@ -50,7 +50,7 @@ ln -s /Applications "${stage_dir}/Applications"
 codesign --verify --deep --strict --verbose=2 "${stage_dir}/Guide Companion.app"
 
 hdiutil create \
-  -volname "Guide Companion ${version}" \
+  -volname "Guide Companion ${version} (${build_number})" \
   -srcfolder "${stage_dir}" \
   -ov \
   -format UDZO \

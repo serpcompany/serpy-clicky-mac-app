@@ -15,6 +15,7 @@ public final class AppleSpeechTranscriber {
     private var partialHandler: PartialHandler?
     private var stopTimeoutTask: Task<Void, Never>?
     private var inputTapInstalled = false
+    private var completionGate = SpeechCompletionGate()
 
     public init() {}
 
@@ -51,6 +52,7 @@ public final class AppleSpeechTranscriber {
 
         latestTranscript = ""
         partialHandler = onPartial
+        completionGate.reset()
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -92,13 +94,11 @@ public final class AppleSpeechTranscriber {
 
         return try await withCheckedThrowingContinuation { continuation in
             completion = continuation
-            if audioEngine.isRunning {
-                audioEngine.stop()
+            if completionGate.shouldFinishWhenStopped {
+                finishSuccessfully()
+                return
             }
-            if inputTapInstalled {
-                audioEngine.inputNode.removeTap(onBus: 0)
-                inputTapInstalled = false
-            }
+            stopCapturingAudio()
             recognitionRequest.endAudio()
             stopTimeoutTask?.cancel()
             stopTimeoutTask = Task { [weak self] in
@@ -120,7 +120,13 @@ public final class AppleSpeechTranscriber {
             latestTranscript = result.bestTranscription.formattedString
             partialHandler?(latestTranscript)
             if result.isFinal {
-                finishSuccessfully()
+                completionGate.receiveFinalResult()
+                if completion != nil {
+                    finishSuccessfully()
+                } else {
+                    stopCapturingAudio()
+                    recognitionRequest?.endAudio()
+                }
                 return
             }
         }
@@ -178,6 +184,15 @@ public final class AppleSpeechTranscriber {
     private func cleanup() {
         stopTimeoutTask?.cancel()
         stopTimeoutTask = nil
+        stopCapturingAudio()
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
+        partialHandler = nil
+        completionGate.reset()
+    }
+
+    private func stopCapturingAudio() {
         if audioEngine.isRunning {
             audioEngine.stop()
         }
@@ -185,10 +200,6 @@ public final class AppleSpeechTranscriber {
             audioEngine.inputNode.removeTap(onBus: 0)
             inputTapInstalled = false
         }
-        recognitionTask?.cancel()
-        recognitionTask = nil
-        recognitionRequest = nil
-        partialHandler = nil
     }
 
     private func makeRecognizer() -> SFSpeechRecognizer? {
@@ -201,5 +212,19 @@ public final class AppleSpeechTranscriber {
 
     private func speechFailure(_ message: String, recovery: String) -> GuideFailure {
         GuideFailure(stage: .transcription, message: message, recovery: recovery)
+    }
+}
+
+struct SpeechCompletionGate: Equatable, Sendable {
+    private(set) var didReceiveFinalResult = false
+
+    var shouldFinishWhenStopped: Bool { didReceiveFinalResult }
+
+    mutating func receiveFinalResult() {
+        didReceiveFinalResult = true
+    }
+
+    mutating func reset() {
+        didReceiveFinalResult = false
     }
 }

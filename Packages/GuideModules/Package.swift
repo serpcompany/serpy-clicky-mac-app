@@ -24,8 +24,7 @@ let package = Package(
         ),
         .testTarget(
             name: "GuideCoreTests",
-            dependencies: ["GuideCore"]
+            dependencies: ["GuideCore", "GuideMac"]
         )
     ]
 )
-
