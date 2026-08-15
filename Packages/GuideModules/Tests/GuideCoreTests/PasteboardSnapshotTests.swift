@@ -5,6 +5,14 @@ import Testing
 @MainActor
 @Suite("Pasteboard snapshot")
 struct PasteboardSnapshotTests {
+    @Test("only observable delivery methods are confirmed")
+    func deliveryConfirmationIsConservative() {
+        #expect(TextInsertionMethod.accessibility.isConfirmed)
+        #expect(TextInsertionMethod.accessibilityValue.isConfirmed)
+        #expect(TextInsertionMethod.paste.isConfirmed)
+        #expect(!TextInsertionMethod.pasteUnconfirmed.isConfirmed)
+    }
+
     @Test("restores all items and representations while it owns the pasteboard")
     func restoresAllRepresentations() throws {
         let pasteboard = NSPasteboard(name: .init("GuideCompanionTests-\(UUID().uuidString)"))

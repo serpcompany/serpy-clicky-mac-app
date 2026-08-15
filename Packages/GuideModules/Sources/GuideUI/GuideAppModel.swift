@@ -446,6 +446,7 @@ public final class GuideAppModel {
     }
 
     private func retryTranscript(_ transcript: String, historyID: UUID?) {
+        lastInsertionMethod = nil
         statusMessage = "Click the destination text field now. Retrying in 4 seconds."
         recoveryMessage = "The transcript stays saved even if this attempt fails."
         lastDictationStage = "Waiting for retry target"
@@ -590,6 +591,7 @@ public final class GuideAppModel {
             phase = dictationMachine.phase
             lastDictationStage = "Capturing focused text field"
             focusedTarget = try insertionService.captureFocusedTarget()
+            lastInsertionMethod = nil
             partialTranscript = ""
             recoveryMessage = ""
             try transcriber.start(saveAudio: historyEnabled && saveAudioHistory) { [weak self] text in

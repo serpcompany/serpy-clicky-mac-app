@@ -26,11 +26,14 @@ signal, so event delivery alone cannot be treated as confirmation. See
    change. A posted paste event is `unconfirmed`.
 4. Keep unconfirmed and failed results available through nonblocking Copy,
    Retry, and Delete actions.
-5. Preserve all pasteboard items and representations and restore them only if
+5. An unchanged Accessibility value does not prove failure: Electron and code
+   editors may expose a stable instructional placeholder instead of document
+   text. Treat those deliveries as unconfirmed and preserve recovery.
+6. Preserve all pasteboard items and representations and restore them only if
    the pasteboard change count still proves ownership.
-6. Offer full local text history as an opt-in, bounded to 25 entries and 30
+7. Offer full local text history as an opt-in, bounded to 25 entries and 30
    days. Offer audio history as a second, independent opt-in.
-7. Store files with owner-only permissions, exclude them from backup, and never
+8. Store files with owner-only permissions, exclude them from backup, and never
    log transcript, audio, screen, window-title, or file-path content.
 
 ## Consequences

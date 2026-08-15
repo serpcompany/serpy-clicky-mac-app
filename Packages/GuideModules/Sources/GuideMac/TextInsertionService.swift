@@ -329,22 +329,16 @@ public final class TextInsertionService {
                 recovery: "Your transcript is preserved. Focus the intended field and use Retry."
             )
         }
-        if let valueBeforePaste,
-           let element = target.element,
-           let valueAfterPaste = stringValue(of: element),
-           valueAfterPaste == valueBeforePaste {
-            _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
-            throw insertionFailure(
-                "The destination did not accept the transcript.",
-                recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
-            )
-        }
         _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
         guard let valueBeforePaste,
               let element = target.element,
               let valueAfterPaste = stringValue(of: element) else {
             return false
         }
+        // Electron and code-editor accessibility elements may expose a stable
+        // instructional placeholder instead of their document text. An
+        // unchanged AX value cannot prove that paste failed, so keep the
+        // delivery recoverable and report it as unconfirmed.
         return valueAfterPaste != valueBeforePaste
     }
 
