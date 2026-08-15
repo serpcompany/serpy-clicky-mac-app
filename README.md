@@ -30,12 +30,10 @@ approval-gated.
 
 ## Source-of-Truth References
 
-- OpenClicky evaluation workspace:
-  `/Users/devin/dev/repos/TEMP-openclicky-proj`
-- Installed evaluation app: `/Applications/OpenClicky.app`
+- [OpenClicky evaluation record](docs/reference/openclicky-evaluation.md)
 - Prior clean-room evidence workspace:
   `/Users/devin/dev/repos/clone-keylume-ios-app`
 - Recorded OpenClicky findings:
   `https://github.com/devinschumacher/openclicky-internal-releases/issues`
 
-These locations are evidence inputs. They are not dependencies of this repo.
+These records are evidence inputs. They are not dependencies of this repo.
