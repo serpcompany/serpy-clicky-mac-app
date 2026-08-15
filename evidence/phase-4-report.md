@@ -4,13 +4,13 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Artifact
 
-- Product: Guide Companion 0.1.0 (2)
+- Product: Guide Companion 0.1.0 (3)
 - Bundle ID: `com.serpcompany.guidecompanion.internal`
 - Team: tester-owned Developer ID team `847HR8U8D9`
-- Source commit: `8ce44bc5e1cd4e397bfa073a222adbf8539db7ae`
-- DMG: `dist/Guide-Companion-0.1.0-2.dmg`
-- SHA-256: `86774e8433a8b80de8c903d6c1fc370f7ca3c7375baaffac34640e8fff656612`
-- Notarization: accepted, submission `8d3bdbe4-6ad6-43dd-b9ff-d9a887c49c9b`
+- Source commit: `ab01c727ea5d590bea8ce58d1f285cc1e0cc644c`
+- DMG: `dist/Guide-Companion-0.1.0-3.dmg`
+- SHA-256: `b0d9f64e83dc99c84bee17f91415942896b14fd12a27044a0c15b8473faf4c54`
+- Notarization: accepted, submission `6fb27bcc-6c75-4724-86c2-c069e10667ac`
 - Stapling: passed and validated
 - Gatekeeper: DMG and mounted app accepted as Notarized Developer ID
 
@@ -23,7 +23,7 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Mechanical verification
 
-- Core state tests: 9 passing on 2026-08-16
+- Core and speech-lifecycle tests: 11 passing on 2026-08-16
 - Unsigned Debug build: passed
 - Apple Development interactive build: passed
 - Developer ID Release build: passed
@@ -34,15 +34,17 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Installed human journeys
 
-- Finder DMG mount and copy to Applications: passed for build 2; Finder identified it as newer than build 1
+- Finder DMG mount and copy to Applications: passed for build 3; Finder identified it as newer than build 2
 - Launch without Xcode or Terminal: passed from `/Applications/Guide Companion.app`
 - Microphone and Speech Recognition: granted and reported ready on exact installed build
 - Accessibility permission: granted and retained after refresh/relaunch
 - Accessibility insertion into TextEdit: pending one live spoken phrase from the tester
 - Companion: enabled, visibly rendered after app switching, Settings closure, and relaunch
 - Menu-bar noninterference: implementation clamps to `visibleFrame`; crowded-menu HIL remains pending
-- Explicit one-window screen guidance: permission requested only after activation; local capture/OCR/model path completed and reported ready
+- Explicit one-window screen guidance: permission requested only after activation; local capture/OCR/model path completed and reported ready again on exact installed build 3
 - Quit/relaunch without permission loop: passed; all granted permissions remained granted
+- Early-final speech result lifecycle: regression-tested so a pause before hotkey release cannot discard the phrase
+- Installer collision prevention: volume name includes the build number
 
 ## Remaining human check
 
