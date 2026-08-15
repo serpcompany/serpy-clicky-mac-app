@@ -11,11 +11,12 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A2 | Declining permission does not trigger repeated prompts | Installed recording + state test | unimplemented |
 | A3 | Model download shows size, progress, cancellation, and checksum result | Integration test + installed recording | unimplemented |
 | A4 | Push-to-talk records and inserts into TextEdit | Offline installed recording | installed-observed |
-| A5 | Dictation works in Notes, browser, Slack, and code editor | Compatibility matrix | unimplemented |
+| A5 | Dictation works in Notes, browser, Slack, and code editor | Compatibility matrix | implemented |
 | A6 | Caret, selected-text replacement, multiline, punctuation, and undo work | Integration tests + observation | unimplemented |
 | A7 | Cancellation inserts nothing | State and integration tests | unit-tested |
-| A8 | Clipboard content is preserved during fallback insertion | Deterministic test | unimplemented |
+| A8 | Clipboard content is preserved during fallback insertion | Deterministic test | implemented |
 | A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
+| A10 | Failed delivery retains Last Dictation with Retry, Copy, and Clear | State test + installed observation | unit-tested |
 
 Build 15 visibly reports the four permission states and shortcut registration,
 and its signed live-audio path records without the earlier callback crashes.
@@ -28,8 +29,11 @@ global monitor also failed with TextEdit frontmost. Build 15 uses a verified
 listen-only CGEvent tap. On the installed notarized build, a synthetic global
 shortcut plus an audible spoken phrase produced the expected on-device
 transcript in an empty TextEdit field. Owner-voice confirmation remains pending.
-A4 remains only `implemented` until the owner physically focuses an editable
-field, speaks through the installed app, and observes the resulting text.
+Build 16 changes delivery to focus-verified session paste and verifies the
+installed app acoustically in Chrome plain input, textarea, contenteditable,
+and TextEdit targets. It also retains a single in-memory Last Dictation before
+delivery so Copy and Retry remain available after failure. A5 remains partial:
+Notes, Slack, and a code editor are not yet observed.
 
 ## B — Companion
 
@@ -70,7 +74,7 @@ the current build.
 | D1 | Developer ID signed, notarized, stapled DMG | Mechanical report | accepted |
 | D2 | HTTPS download carries quarantine and passes Gatekeeper | Installed report | unimplemented |
 | D3 | Quit/relaunch does not cause permission loops | Installed recording | installed-observed |
-| D4 | No audio, screenshots, or transcript history is stored by default | Filesystem/log audit | implemented |
+| D4 | No audio or screenshots are stored; one transcript is retained only in memory until cleared or quit | Filesystem/log audit | implemented |
 | D5 | Diagnostics redact captured and dictated content | Fixture tests + export audit | implemented |
 | D6 | No borrowed product identity, keys, feeds, or release destinations remain | Provenance/identity audit | implemented |
 

@@ -13,11 +13,15 @@ func argument(after flag: String) -> String? {
 
 let expectedFrontmostBundle = argument(after: "--bundle") ?? "com.apple.TextEdit"
 let spokenPhrase = argument(after: "--phrase") ?? "Guide Companion dictation test"
+let startupDelay = Double(argument(after: "--delay") ?? "0") ?? 0
+if startupDelay > 0 {
+    Thread.sleep(forTimeInterval: startupDelay)
+}
 let frontmostBundle = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none"
 
 guard frontmostBundle == expectedFrontmostBundle else {
     FileHandle.standardError.write(
-        Data("FAIL: expected TextEdit frontmost; found \(frontmostBundle)\n".utf8)
+        Data("FAIL: expected \(expectedFrontmostBundle) frontmost; found \(frontmostBundle)\n".utf8)
     )
     exit(2)
 }
