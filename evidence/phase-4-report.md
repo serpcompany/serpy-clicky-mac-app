@@ -45,6 +45,8 @@ Status: installed release verified; live spoken-dictation HIL pending
 - Quit/relaunch without permission loop: passed; all granted permissions remained granted
 - Early-final speech result lifecycle: regression-tested so a pause before hotkey release cannot discard the phrase
 - Installer collision prevention: volume name includes the build number
+- Network/storage audit: no network client code, network entitlement, transcript/screenshot file writer, or live app socket was found
+- Superseded build 1/2 artifacts were moved to the user Trash; `dist/` contains only build 3
 
 ## Remaining human check
 

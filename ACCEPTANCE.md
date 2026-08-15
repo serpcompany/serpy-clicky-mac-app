@@ -15,7 +15,7 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A6 | Caret, selected-text replacement, multiline, punctuation, and undo work | Integration tests + observation | unimplemented |
 | A7 | Cancellation inserts nothing | State and integration tests | unit-tested |
 | A8 | Clipboard content is preserved during fallback insertion | Deterministic test | unimplemented |
-| A9 | No API key, account, or network is required after model download | Network-disabled observation | unimplemented |
+| A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
 
 ## B — Companion
 
