@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CoreGraphics
 import Foundation
 
 public struct GlobalHotKeyConfiguration: Equatable, Sendable {
@@ -93,8 +94,8 @@ public final class GlobalHotKeyService {
     private let identifier: EventHotKeyID
     private var eventHandler: EventHandlerRef?
     private var hotKey: EventHotKeyRef?
-    private var globalMonitor: Any?
-    private var localMonitor: Any?
+    private var eventTap: CFMachPort?
+    private var eventTapSource: CFRunLoopSource?
     private var pressState = GlobalHotKeyPressState()
     private var deliveredIsPressed = false
 
@@ -144,21 +145,23 @@ public final class GlobalHotKeyService {
             throw HotKeyError.registrationFailed(registerStatus)
         }
 
-        let sink = MainActorCallbackBridge.make { [weak self] event in
-            self?.handle(event)
-        }
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(
-            matching: [.keyDown, .keyUp],
-            handler: KeyboardMonitorBridge.makeObserver(sink)
+        let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
+        eventTap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .listenOnly,
+            eventsOfInterest: CGEventMask(eventMask),
+            callback: guideKeyboardEventTapHandler,
+            userInfo: userData
         )
-        localMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.keyDown, .keyUp],
-            handler: KeyboardMonitorBridge.makeLocalObserver(sink)
-        )
-        guard globalMonitor != nil, localMonitor != nil else {
+        guard let eventTap else {
             stop()
-            throw HotKeyError.monitorInstallationFailed
+            throw HotKeyError.eventTapInstallationFailed
         }
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+        eventTapSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: eventTap, enable: true)
     }
 
     public func stop() {
@@ -170,13 +173,14 @@ public final class GlobalHotKeyService {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
         }
-        if let globalMonitor {
-            NSEvent.removeMonitor(globalMonitor)
-            self.globalMonitor = nil
+        if let eventTapSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapSource, .commonModes)
+            CFRunLoopSourceInvalidate(eventTapSource)
+            self.eventTapSource = nil
         }
-        if let localMonitor {
-            NSEvent.removeMonitor(localMonitor)
-            self.localMonitor = nil
+        if let eventTap {
+            CFMachPortInvalidate(eventTap)
+            self.eventTap = nil
         }
         pressState.reset()
         deliveredIsPressed = false
@@ -213,7 +217,7 @@ public final class GlobalHotKeyService {
 public enum HotKeyError: LocalizedError {
     case installFailed(OSStatus)
     case registrationFailed(OSStatus)
-    case monitorInstallationFailed
+    case eventTapInstallationFailed
 
     public var errorDescription: String? {
         switch self {
@@ -221,36 +225,9 @@ public enum HotKeyError: LocalizedError {
             "Could not install the global shortcut handler (\(status))."
         case .registrationFailed(let status):
             "The global shortcut is unavailable (\(status))."
-        case .monitorInstallationFailed:
-            "Could not install the global keyboard monitor."
+        case .eventTapInstallationFailed:
+            "Could not install the global keyboard event tap."
         }
-    }
-}
-
-private enum KeyboardMonitorBridge {
-    nonisolated static func makeObserver(
-        _ sink: @escaping @Sendable (KeyboardEventSnapshot) -> Void
-    ) -> (NSEvent) -> Void {
-        { event in
-            sink(snapshot(event))
-        }
-    }
-
-    nonisolated static func makeLocalObserver(
-        _ sink: @escaping @Sendable (KeyboardEventSnapshot) -> Void
-    ) -> (NSEvent) -> NSEvent? {
-        { event in
-            sink(snapshot(event))
-            return event
-        }
-    }
-
-    private nonisolated static func snapshot(_ event: NSEvent) -> KeyboardEventSnapshot {
-        KeyboardEventSnapshot(
-            keyCode: event.keyCode,
-            modifierFlags: event.modifierFlags.rawValue,
-            isKeyDown: event.type == .keyDown
-        )
     }
 }
 
@@ -279,4 +256,40 @@ private func guideHotKeyEventHandler(
         service.handle(kind: kind, signature: signature, identifier: identifier)
     }
     return noErr
+}
+
+private func guideKeyboardEventTapHandler(
+    _ proxy: CGEventTapProxy,
+    _ type: CGEventType,
+    _ event: CGEvent,
+    _ userData: UnsafeMutableRawPointer?
+) -> Unmanaged<CGEvent>? {
+    guard (type == .keyDown || type == .keyUp), let userData else {
+        return Unmanaged.passUnretained(event)
+    }
+
+    var modifierFlags: UInt = 0
+    if event.flags.contains(.maskControl) {
+        modifierFlags |= NSEvent.ModifierFlags.control.rawValue
+    }
+    if event.flags.contains(.maskAlternate) {
+        modifierFlags |= NSEvent.ModifierFlags.option.rawValue
+    }
+    if event.flags.contains(.maskCommand) {
+        modifierFlags |= NSEvent.ModifierFlags.command.rawValue
+    }
+    if event.flags.contains(.maskShift) {
+        modifierFlags |= NSEvent.ModifierFlags.shift.rawValue
+    }
+
+    let snapshot = KeyboardEventSnapshot(
+        keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
+        modifierFlags: modifierFlags,
+        isKeyDown: type == .keyDown
+    )
+    let service = Unmanaged<GlobalHotKeyService>.fromOpaque(userData).takeUnretainedValue()
+    Task { @MainActor in
+        service.handle(snapshot)
+    }
+    return Unmanaged.passUnretained(event)
 }
