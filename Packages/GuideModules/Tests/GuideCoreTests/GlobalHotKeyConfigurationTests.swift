@@ -4,21 +4,25 @@ import Testing
 
 @Suite("Global dictation shortcut")
 struct GlobalHotKeyConfigurationTests {
-    @Test("default avoids macOS input-source shortcuts")
-    func defaultAvoidsInputSourceShortcuts() {
+    @Test("default matches the SERPy toggle shortcut")
+    func defaultMatchesSERPyToggleShortcut() {
         let shortcut = GlobalHotKeyConfiguration.dictation
-        let inputSourceShortcuts: Set<Shortcut> = [
-            Shortcut(keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey)),
-            Shortcut(keyCode: UInt32(kVK_Space), modifiers: UInt32(controlKey | optionKey))
-        ]
-
-        #expect(!inputSourceShortcuts.contains(
-            Shortcut(keyCode: shortcut.keyCode, modifiers: shortcut.modifiers)
-        ))
+        #expect(shortcut.keyCode == UInt32(kVK_Space))
+        #expect(shortcut.modifiers == UInt32(optionKey))
+        #expect(shortcut.displayName == "⌥Space")
     }
-}
 
-private struct Shortcut: Hashable {
-    let keyCode: UInt32
-    let modifiers: UInt32
+    @Test("configuration survives persistence")
+    func configurationRoundTripsThroughJSON() throws {
+        let original = GlobalHotKeyConfiguration(
+            keyCode: UInt32(kVK_ANSI_J),
+            modifiers: UInt32(controlKey | optionKey),
+            displayName: "⌃⌥J"
+        )
+
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(GlobalHotKeyConfiguration.self, from: data)
+
+        #expect(decoded == original)
+    }
 }

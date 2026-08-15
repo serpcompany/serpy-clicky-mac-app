@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 team_id="${GUIDE_COMPANION_TEAM_ID:-847HR8U8D9}"
 derived_path="${GUIDE_COMPANION_DERIVED_PATH:-.release-derived}"
-app_path="${derived_path}/Build/Products/Release/Guide Companion.app"
+app_path="${derived_path}/Build/Products/Release/SERPy.app"
 
 signing_hash=$(security find-identity -v -p codesigning \
   | sed -nE 's/^ *[0-9]+\) ([A-F0-9]{40}) "Developer ID Application: .+ \('"${team_id}"'\)"$/\1/p' \

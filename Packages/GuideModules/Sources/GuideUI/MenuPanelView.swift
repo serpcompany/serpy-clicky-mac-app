@@ -47,12 +47,14 @@ public struct MenuPanelView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "location.north.circle.fill")
-                .font(.system(size: 32))
-                .foregroundStyle(.blue)
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 36, height: 36)
+                .clipShape(.rect(cornerRadius: 8))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Guide Companion")
+                Text("SERPy")
                     .font(.title2.weight(.semibold))
                 Text("Private local dictation")
                     .font(.subheadline)
@@ -130,11 +132,11 @@ public struct MenuPanelView: View {
 
     private var readyCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Hold to dictate")
+            Text("Toggle dictation")
                 .font(.headline)
             Text(model.shortcutDescription)
                 .font(.title3.monospaced().weight(.semibold))
-            Text("Focus any text field, hold the shortcut, speak normally, then release. Guide Companion inserts the local transcript without sending it.")
+            Text("Focus any text field, press the shortcut once, and speak for as long as you need. Press it again to insert, or Escape to cancel. SERPy keeps this local.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 

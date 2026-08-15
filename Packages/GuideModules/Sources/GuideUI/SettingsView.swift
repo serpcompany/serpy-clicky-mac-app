@@ -45,7 +45,15 @@ public struct SettingsView: View {
     private var setupForm: some View {
         Form {
             Section("Dictation") {
-                LabeledContent("Shortcut", value: model.shortcutDescription)
+                LabeledContent("Start / stop shortcut") {
+                    ShortcutRecorderView(configuration: model.dictationShortcut) {
+                        model.setDictationShortcut($0)
+                    }
+                    .frame(width: 150, height: 26)
+                }
+                Text("Click the shortcut to record a new one. Press it once to start listening, press it again to insert, or press Escape to cancel.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 LabeledContent("Speech engine", value: "Apple on-device Speech")
                 LabeledContent("Readiness", value: model.dictationReady ? "Ready" : "Setup needed")
                 Text("Plain dictation never calls an assistant or paid API.")
@@ -140,7 +148,7 @@ public struct SettingsView: View {
             Section("Local screen guidance") {
                 LabeledContent("Shortcut", value: "Control–Option–G")
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-                Text("Screen access is requested only after you invoke guidance. Guide Companion reads one visible window, uses on-device intelligence, and never clicks or types for you.")
+                Text("Screen access is requested only after you invoke guidance. SERPy reads one visible window, uses on-device intelligence, and never clicks or types for you.")
                     .foregroundStyle(.secondary)
                 Button("Guide Current Screen") { Task { await model.guideCurrentScreen() } }
                     .disabled(model.guidancePhase.isActive)
@@ -156,7 +164,7 @@ public struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Storage location") {
-                Text("~/Library/Application Support/Guide Companion/History")
+                Text("~/Library/Application Support/SERPy/History")
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
                 Text("History files are excluded from backup and written with owner-only permissions.")

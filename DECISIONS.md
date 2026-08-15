@@ -9,7 +9,7 @@
 | D-005 | Speech runtime | Provisional implementation | Apple on-device Speech for the first installed baseline; retain adapter seam | Offline HIL or latency/accuracy fails acceptance |
 | D-006 | Local guidance runtime | Provisional implementation | ScreenCaptureKit + Vision OCR + Apple Foundation Models on macOS 26 | Local model unavailable or scenario HIL fails |
 | D-007 | Distribution | Recommended | Developer ID notarized direct DMG | Owner chooses Mac App Store or dual channel |
-| D-008 | Product name and visual identity | Internal baseline | `Guide Companion`, tester-owned bundle ID, and original generated icon | Commercial naming decision before public distribution |
+| D-008 | Product name and visual identity | Approved by owner | `SERPy`, tester-owned stable bundle ID, and owner-supplied SERP brand assets | Public distribution review |
 | D-009 | Automatic updates | Deferred | No update framework in first slices | Installed baseline stabilizes |
 | D-010 | Cloud providers | Deferred | No cloud provider in core path | Owner explicitly approves optional cloud tier |
 | D-011 | Implementation through installed baseline | Approved by owner | Execute Phases 0–4 and deliver a notarized internal DMG | Public distribution remains separately approval-gated |

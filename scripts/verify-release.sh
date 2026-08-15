@@ -4,7 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-dmg_path="${1:-dist/Guide-Companion-0.1.0-1.dmg}"
+dmg_path="${1:-dist/SERPy-0.1.0-19.dmg}"
 [[ -f "${dmg_path}" ]] || {
   echo "ERROR: DMG not found: ${dmg_path}" >&2
   exit 1
@@ -20,7 +20,7 @@ if [[ -f "${checksum_path}" ]]; then
   }
 fi
 
-mount_dir=$(mktemp -d -t guide-companion-mount.XXXXXX)
+mount_dir=$(mktemp -d -t serpy-mount.XXXXXX)
 cleanup() {
   hdiutil detach "${mount_dir}" -quiet 2>/dev/null || true
   rmdir "${mount_dir}" 2>/dev/null || true
@@ -33,7 +33,7 @@ xcrun stapler validate "${dmg_path}"
 spctl --assess --type open --context context:primary-signature -vv "${dmg_path}"
 hdiutil attach "${dmg_path}" -nobrowse -readonly -mountpoint "${mount_dir}" >/dev/null
 
-mounted_app="${mount_dir}/Guide Companion.app"
+mounted_app="${mount_dir}/SERPy.app"
 codesign --verify --deep --strict --verbose=2 "${mounted_app}"
 spctl --assess --type execute -vv "${mounted_app}"
 

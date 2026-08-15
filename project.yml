@@ -35,11 +35,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal
-        PRODUCT_NAME: Guide Companion
+        PRODUCT_NAME: SERPy
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/GuideCompanion.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CURRENT_PROJECT_VERSION: 18
+        CURRENT_PROJECT_VERSION: 19
         MARKETING_VERSION: 0.1.0
         GENERATE_INFOPLIST_FILE: NO
       configs:

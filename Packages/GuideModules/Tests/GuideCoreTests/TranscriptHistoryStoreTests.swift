@@ -131,6 +131,27 @@ struct TranscriptHistoryStoreTests {
         clock.set(base.addingTimeInterval(TranscriptHistoryStore.recoveryRetentionInterval + 1))
         #expect(try await store.load().isEmpty)
     }
+
+    @Test("SERPy imports the previous product's local recovery once")
+    func migratesLegacyRecovery() async throws {
+        let fixture = try Fixture()
+        let legacyFileURL = fixture.directory.appending(path: "Legacy/History/transcripts.json")
+        let serpyFileURL = fixture.directory.appending(path: "SERPy/History/transcripts.json")
+        let legacyStore = TranscriptHistoryStore(fileURL: legacyFileURL)
+        _ = try await legacyStore.preserve(
+            text: "keep this through the rename",
+            targetBundleIdentifier: nil,
+            retainInHistory: true
+        )
+
+        let serpyStore = TranscriptHistoryStore(
+            fileURL: serpyFileURL,
+            legacyFileURL: legacyFileURL
+        )
+
+        #expect(try await serpyStore.load().map(\.text) == ["keep this through the rename"])
+        #expect(FileManager.default.fileExists(atPath: serpyFileURL.path))
+    }
 }
 
 private final class LockedClock: @unchecked Sendable {

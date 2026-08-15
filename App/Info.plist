@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>Guide Companion</string>
+    <string>SERPy</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -25,15 +25,14 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSAccessibilityUsageDescription</key>
-    <string>Guide Companion uses Accessibility only to insert your local dictation into the text field you chose.</string>
+    <string>SERPy uses Accessibility only to insert your local dictation into the text field you chose.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Guide Companion records only while you activate dictation, then transcribes the audio locally.</string>
+    <string>SERPy records only while you activate dictation, then transcribes the audio locally.</string>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>Guide Companion captures the screen only when you explicitly ask for visual guidance.</string>
+    <string>SERPy captures the screen only when you explicitly ask for visual guidance.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>Guide Companion uses Apple's on-device speech recognizer to turn your voice into text.</string>
+    <string>SERPy uses Apple's on-device speech recognizer to turn your voice into text.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>
 </plist>
-

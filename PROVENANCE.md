@@ -44,7 +44,8 @@ These are audit candidates, not approved imports:
 
 ## Brand Separation
 
-The working name `Guide Companion` is a neutral codename. Do not copy the
+The product name `SERPy` and assets from `/Users/devin/Brands/SERP` are owned
+brand inputs supplied by the project owner. Do not copy the
 HeyClicky, Clicky, OpenClicky, or Keylume name, icon, cursor artwork, sounds,
 copywriting, bundle identifiers, URL schemes, or marketing assets.
 

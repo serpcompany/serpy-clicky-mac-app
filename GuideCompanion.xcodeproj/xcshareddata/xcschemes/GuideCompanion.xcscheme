@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C72578BA9BADD56511A59773"
-               BuildableName = "Guide Companion.app"
+               BuildableName = "SERPy.app"
                BlueprintName = "GuideCompanion"
                ReferencedContainer = "container:GuideCompanion.xcodeproj">
             </BuildableReference>
@@ -32,7 +32,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C72578BA9BADD56511A59773"
-            BuildableName = "Guide Companion.app"
+            BuildableName = "SERPy.app"
             BlueprintName = "GuideCompanion"
             ReferencedContainer = "container:GuideCompanion.xcodeproj">
          </BuildableReference>
@@ -65,7 +65,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C72578BA9BADD56511A59773"
-            BuildableName = "Guide Companion.app"
+            BuildableName = "SERPy.app"
             BlueprintName = "GuideCompanion"
             ReferencedContainer = "container:GuideCompanion.xcodeproj">
          </BuildableReference>
@@ -82,7 +82,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C72578BA9BADD56511A59773"
-            BuildableName = "Guide Companion.app"
+            BuildableName = "SERPy.app"
             BlueprintName = "GuideCompanion"
             ReferencedContainer = "container:GuideCompanion.xcodeproj">
          </BuildableReference>

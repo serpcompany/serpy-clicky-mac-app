@@ -26,6 +26,7 @@ public final class GuideAppModel {
     public private(set) var transcriptRecovery = EphemeralTranscriptRecovery()
     public private(set) var transcriptHistory: [TranscriptHistoryEntry] = []
     public private(set) var historyStatusMessage = "Loading local history…"
+    public private(set) var dictationShortcut: GlobalHotKeyConfiguration
     public var guidanceQuestion = "What should I do next?"
     public var companionEnabled: Bool {
         didSet {
@@ -63,6 +64,7 @@ public final class GuideAppModel {
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var guidanceHotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
+    @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var started = false
@@ -76,6 +78,7 @@ public final class GuideAppModel {
         static let companionEnabled = "GuideCompanion.companionEnabled"
         static let historyEnabled = "GuideCompanion.historyEnabled"
         static let saveAudioHistory = "GuideCompanion.saveAudioHistory"
+        static let dictationShortcut = "SERPy.dictationShortcut"
     }
 
     private init(defaults: UserDefaults = .standard) {
@@ -90,6 +93,9 @@ public final class GuideAppModel {
         self.presentation = presentation
         companionController = CompanionPanelController(presentation: presentation)
         let enabled = defaults.object(forKey: Keys.companionEnabled) as? Bool ?? true
+        dictationShortcut = defaults.data(forKey: Keys.dictationShortcut)
+            .flatMap { try? JSONDecoder().decode(GlobalHotKeyConfiguration.self, from: $0) }
+            ?? .dictation
         historyEnabled = defaults.object(forKey: Keys.historyEnabled) as? Bool ?? false
         saveAudioHistory = defaults.object(forKey: Keys.saveAudioHistory) as? Bool ?? false
         companionEnabled = enabled
@@ -133,7 +139,7 @@ public final class GuideAppModel {
     }
 
     public var shortcutDescription: String {
-        GlobalHotKeyConfiguration.dictation.displayName
+        dictationShortcut.displayName
     }
 
     public var hasRecoverableTranscript: Bool {
@@ -155,10 +161,7 @@ public final class GuideAppModel {
         refreshPermissions()
         await loadTranscriptHistory()
 
-        let service = GlobalHotKeyService(
-            pressed: { [weak self] in self?.hotKeyPressed() },
-            released: { [weak self] in self?.hotKeyReleased() }
-        )
+        let service = makeDictationHotKeyService(configuration: dictationShortcut)
         hotKeyService = service
         do {
             try service.start()
@@ -181,11 +184,11 @@ public final class GuideAppModel {
             statusMessage = hasRecoveryRequiringAttention
                 ? "A saved dictation still needs confirmation or retry."
                 : (dictationReady
-                    ? "Ready. Hold \(shortcutDescription) to dictate."
+                    ? "Ready. Press \(shortcutDescription) to start or stop dictation."
                     : "Complete the three dictation permissions to begin.")
             if !dictationReady {
                 presentation.mode = .ready
-                presentation.caption = "Open Guide Companion in the menu bar to finish setup"
+                presentation.caption = "Open SERPy in the menu bar to finish setup"
                 companionController.refresh()
                 Task { [weak self] in
                     try? await Task.sleep(for: .seconds(10))
@@ -200,7 +203,7 @@ public final class GuideAppModel {
                 GuideFailure(
                     stage: .activation,
                     message: error.localizedDescription,
-                    recovery: "Quit the app using that shortcut, then relaunch Guide Companion."
+                    recovery: "Quit the other app using that shortcut, or choose a different shortcut in SERPy Settings."
                 )
             )
         }
@@ -224,7 +227,7 @@ public final class GuideAppModel {
                 statusMessage = "A saved dictation still needs confirmation or retry."
                 recoveryMessage = "Open History to Copy, Retry, or Delete it."
             } else {
-                statusMessage = "Ready. Hold \(shortcutDescription) to dictate."
+                statusMessage = "Ready. Press \(shortcutDescription) to start or stop dictation."
                 recoveryMessage = ""
             }
         }
@@ -234,6 +237,31 @@ public final class GuideAppModel {
         let microphoneGranted = await requestMicrophonePermission()
         guard microphoneGranted else { return }
         _ = await requestSpeechPermission()
+    }
+
+    public func setDictationShortcut(_ configuration: GlobalHotKeyConfiguration) {
+        guard configuration != dictationShortcut else { return }
+        let previous = dictationShortcut
+        hotKeyService?.stop()
+
+        let replacement = makeDictationHotKeyService(configuration: configuration)
+        do {
+            try replacement.start()
+            hotKeyService = replacement
+            dictationShortcut = configuration
+            if let data = try? JSONEncoder().encode(configuration) {
+                defaults.set(data, forKey: Keys.dictationShortcut)
+            }
+            hotKeyRegistered = true
+            statusMessage = "Dictation shortcut changed to \(configuration.displayName)."
+            recoveryMessage = "Press once to start, press again to insert, or press Escape to cancel."
+        } catch {
+            let fallback = makeDictationHotKeyService(configuration: previous)
+            hotKeyService = fallback
+            hotKeyRegistered = (try? fallback.start()) != nil
+            statusMessage = "\(configuration.displayName) is unavailable."
+            recoveryMessage = "Quit the other app using it, or record a different shortcut. \(previous.displayName) remains active."
+        }
     }
 
     @discardableResult
@@ -251,7 +279,7 @@ public final class GuideAppModel {
                 GuideFailure(
                     stage: .permission,
                     message: "Microphone access was not granted.",
-                    recovery: "Open Microphone settings and enable Guide Companion when you are ready."
+                    recovery: "Open Microphone settings and enable SERPy when you are ready."
                 )
             )
         }
@@ -275,7 +303,7 @@ public final class GuideAppModel {
                 GuideFailure(
                     stage: .permission,
                     message: "Speech Recognition access was not granted.",
-                    recovery: "Open Speech Recognition settings and enable Guide Companion."
+                    recovery: "Open Speech Recognition settings and enable SERPy."
                 )
             )
         }
@@ -283,7 +311,7 @@ public final class GuideAppModel {
     }
 
     public func requestAccessibility() {
-        statusMessage = "Accessibility lets Guide Companion place your transcript in the field you selected."
+        statusMessage = "Accessibility lets SERPy place your transcript in the field you selected."
         _ = permissionService.requestAccessibility()
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
@@ -313,7 +341,7 @@ public final class GuideAppModel {
                 let failure = GuideFailure(
                     stage: .permission,
                     message: "Screen access was not granted.",
-                    recovery: "Open Screen & System Audio Recording settings, enable Guide Companion, then try again."
+                    recovery: "Open Screen & System Audio Recording settings, enable SERPy, then try again."
                 )
                 guidancePhase = .failed(failure)
                 guidanceAnswer = failure.recovery
@@ -369,7 +397,7 @@ public final class GuideAppModel {
     public func beginManualDictationTest() {
         guard !phase.isActive else { return }
         statusMessage = "Click the destination text field now. Listening starts in 4 seconds."
-        recoveryMessage = "After speaking, reopen Guide Companion and click Stop & Insert."
+        recoveryMessage = "After speaking, reopen SERPy and click Stop & Insert."
         presentation.mode = .working
         presentation.caption = "Click a text field — listening starts in 4…"
         companionController.refresh()
@@ -399,7 +427,7 @@ public final class GuideAppModel {
                 lastDictationStage = "Testing text insertion"
                 let target = try insertionService.captureFocusedTarget()
                 lastInsertionMethod = try await insertionService.insert(
-                    "Guide Companion insertion test.",
+                    "SERPy insertion test.",
                     into: target
                 )
                 lastDictationStage = "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
@@ -557,12 +585,21 @@ public final class GuideAppModel {
             historyStatusMessage = historySummary
         } catch {
             historyStatusMessage = "Local history could not be read. Existing data was not overwritten."
-            recoveryMessage = "Guide Companion will not overwrite unreadable history."
+            recoveryMessage = "SERPy will not overwrite unreadable history."
         }
     }
 
     private func hotKeyPressed() {
-        startDictation(source: "Shortcut press")
+        switch activationPolicy.shortcutAction(for: phase) {
+        case .start:
+            startDictation(source: "Shortcut toggle")
+        case .finish:
+            finishDictation(source: "Shortcut toggle")
+        case .cancel:
+            cancelDictation()
+        case .none:
+            break
+        }
     }
 
     private func startDictation(source: String) {
@@ -576,7 +613,7 @@ public final class GuideAppModel {
                 GuideFailure(
                     stage: .permission,
                     message: "Dictation setup is incomplete.",
-                    recovery: "Open Guide Companion from the menu bar and complete Microphone, Speech Recognition, and Accessibility."
+                    recovery: "Open SERPy from the menu bar and complete Microphone, Speech Recognition, and Accessibility."
                 )
             )
             lastDictationStage = "Blocked: setup incomplete"
@@ -602,7 +639,7 @@ public final class GuideAppModel {
             }
             try dictationMachine.beginRecording()
             phase = dictationMachine.phase
-            statusMessage = "Listening… release \(shortcutDescription) to insert."
+            statusMessage = "Listening… press \(shortcutDescription) again to insert, or Escape to cancel."
             lastDictationStage = "Listening"
             Self.logger.notice("Microphone recording started")
             presentation.mode = .recording
@@ -617,7 +654,23 @@ public final class GuideAppModel {
     }
 
     private func hotKeyReleased() {
-        finishDictation(source: "Shortcut release")
+        // Toggle dictation intentionally continues after every key is released.
+    }
+
+    private func escapePressed() {
+        guard activationPolicy.escapeAction(for: phase) == .cancel else { return }
+        cancelDictation()
+    }
+
+    private func makeDictationHotKeyService(
+        configuration: GlobalHotKeyConfiguration
+    ) -> GlobalHotKeyService {
+        GlobalHotKeyService(
+            configuration: configuration,
+            pressed: { [weak self] in self?.hotKeyPressed() },
+            released: { [weak self] in self?.hotKeyReleased() },
+            cancelled: { [weak self] in self?.escapePressed() }
+        )
     }
 
     private func finishDictation(source: String) {
@@ -663,7 +716,7 @@ public final class GuideAppModel {
                     throw GuideFailure(
                         stage: .storage,
                         message: "The transcript could not be saved safely, so automatic insertion was stopped.",
-                        recovery: "The transcript is still shown in Guide Companion and copied to the clipboard. Check available disk space, then paste it manually."
+                        recovery: "The transcript is still shown in SERPy and copied to the clipboard. Check available disk space, then paste it manually."
                     )
                 }
                 try dictationMachine.beginInsertion()
@@ -760,7 +813,7 @@ public final class GuideAppModel {
         return GuideFailure(
             stage: stage,
             message: error.localizedDescription,
-            recovery: "Try again. If the problem continues, open Guide Companion and check permissions."
+            recovery: "Try again. If the problem continues, open SERPy and check permissions."
         )
     }
 

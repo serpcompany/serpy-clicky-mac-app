@@ -13,6 +13,7 @@ public actor TranscriptHistoryStore {
     public static let confirmedRecoveryInterval: TimeInterval = 10 * 60
 
     private let fileURL: URL
+    private let legacyFileURL: URL?
     private let audioDirectoryURL: URL
     private let maximumEntries: Int
     private let retentionInterval: TimeInterval
@@ -21,12 +22,18 @@ public actor TranscriptHistoryStore {
 
     public init(
         fileURL: URL = TranscriptHistoryStore.defaultFileURL(),
+        legacyFileURL: URL? = nil,
         maximumEntries: Int = TranscriptHistoryStore.defaultMaximumEntries,
         retentionInterval: TimeInterval = TranscriptHistoryStore.defaultRetentionInterval,
         now: @escaping @Sendable () -> Date = { .now },
         fileManager: FileManager = .default
     ) {
         self.fileURL = fileURL
+        self.legacyFileURL = legacyFileURL ?? (
+            fileURL.standardizedFileURL == Self.defaultFileURL(fileManager: fileManager).standardizedFileURL
+                ? Self.legacyFileURL(fileManager: fileManager)
+                : nil
+        )
         audioDirectoryURL = fileURL.deletingLastPathComponent().appending(path: "Audio", directoryHint: .isDirectory)
         self.maximumEntries = max(1, maximumEntries)
         self.retentionInterval = max(60, retentionInterval)
@@ -37,6 +44,13 @@ public actor TranscriptHistoryStore {
     public static func defaultFileURL(fileManager: FileManager = .default) -> URL {
         let applicationSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return applicationSupport
+            .appending(path: "SERPy", directoryHint: .isDirectory)
+            .appending(path: "History", directoryHint: .isDirectory)
+            .appending(path: "transcripts.json", directoryHint: .notDirectory)
+    }
+
+    private static func legacyFileURL(fileManager: FileManager) -> URL {
+        fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appending(path: "Guide Companion", directoryHint: .isDirectory)
             .appending(path: "History", directoryHint: .isDirectory)
             .appending(path: "transcripts.json", directoryHint: .notDirectory)
@@ -134,6 +148,7 @@ public actor TranscriptHistoryStore {
     }
 
     private func loadDocument() throws -> TranscriptHistoryDocument {
+        try migrateLegacyStoreIfNeeded()
         guard fileManager.fileExists(atPath: fileURL.path) else {
             return TranscriptHistoryDocument(entries: [])
         }
@@ -141,6 +156,26 @@ public actor TranscriptHistoryStore {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(TranscriptHistoryDocument.self, from: data)
+    }
+
+    private func migrateLegacyStoreIfNeeded() throws {
+        guard !fileManager.fileExists(atPath: fileURL.path),
+              let legacyFileURL,
+              fileManager.fileExists(atPath: legacyFileURL.path) else { return }
+
+        let destinationDirectory = fileURL.deletingLastPathComponent()
+        try fileManager.createDirectory(
+            at: destinationDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try fileManager.copyItem(at: legacyFileURL, to: fileURL)
+
+        let legacyAudio = legacyFileURL.deletingLastPathComponent().appending(path: "Audio", directoryHint: .isDirectory)
+        if fileManager.fileExists(atPath: legacyAudio.path),
+           !fileManager.fileExists(atPath: audioDirectoryURL.path) {
+            try fileManager.copyItem(at: legacyAudio, to: audioDirectoryURL)
+        }
     }
 
     private func retainedEntries(from entries: [TranscriptHistoryEntry]) -> [TranscriptHistoryEntry] {

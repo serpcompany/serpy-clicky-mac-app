@@ -144,7 +144,7 @@ public final class TextInsertionService {
               isEditableTextTarget(element) else {
             throw insertionFailure(
                 "The destination did not accept the transcript.",
-                recovery: "The transcript is saved in Guide Companion. Focus a text field and use Retry or Copy."
+                recovery: "The transcript is saved in SERPy. Focus a text field and use Retry or Copy."
             )
         }
 
@@ -157,7 +157,7 @@ public final class TextInsertionService {
 
         throw insertionFailure(
             "The destination did not accept the transcript.",
-            recovery: "The transcript is saved in Guide Companion. Focus a text field and use Retry or Copy."
+            recovery: "The transcript is saved in SERPy. Focus a text field and use Retry or Copy."
         )
     }
 
@@ -293,7 +293,7 @@ public final class TextInsertionService {
         guard pasteboard.setString(text, forType: .string) else {
             throw insertionFailure(
                 "The temporary paste operation could not be prepared.",
-                recovery: "Copy the transcript from Guide Companion and paste it manually."
+                recovery: "Copy the transcript from SERPy and paste it manually."
             )
         }
         let injectedChangeCount = pasteboard.changeCount

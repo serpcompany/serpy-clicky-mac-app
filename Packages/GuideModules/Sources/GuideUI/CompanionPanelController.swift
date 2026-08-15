@@ -164,6 +164,6 @@ private struct CompanionBubbleView: View {
     }
 
     private var accessibilityDescription: String {
-        presentation.caption.isEmpty ? "Guide Companion is ready" : presentation.caption
+        presentation.caption.isEmpty ? "SERPy is ready" : presentation.caption
     }
 }

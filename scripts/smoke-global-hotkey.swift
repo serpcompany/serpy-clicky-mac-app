@@ -12,7 +12,7 @@ func argument(after flag: String) -> String? {
 }
 
 let expectedFrontmostBundle = argument(after: "--bundle") ?? "com.apple.TextEdit"
-let spokenPhrase = argument(after: "--phrase") ?? "Guide Companion dictation test"
+let spokenPhrase = argument(after: "--phrase") ?? "SERPy dictation test"
 let startupDelay = Double(argument(after: "--delay") ?? "0") ?? 0
 if startupDelay > 0 {
     Thread.sleep(forTimeInterval: startupDelay)
@@ -29,22 +29,23 @@ guard frontmostBundle == expectedFrontmostBundle else {
 guard let source = CGEventSource(stateID: .combinedSessionState),
       let keyDown = CGEvent(
         keyboardEventSource: source,
-        virtualKey: CGKeyCode(kVK_ANSI_D),
+        virtualKey: CGKeyCode(kVK_Space),
         keyDown: true
       ),
       let keyUp = CGEvent(
         keyboardEventSource: source,
-        virtualKey: CGKeyCode(kVK_ANSI_D),
+        virtualKey: CGKeyCode(kVK_Space),
         keyDown: false
       ) else {
     FileHandle.standardError.write(Data("FAIL: could not construct key events\n".utf8))
     exit(3)
 }
 
-let modifiers: CGEventFlags = [.maskControl, .maskAlternate]
+let modifiers: CGEventFlags = [.maskAlternate]
 keyDown.flags = modifiers
 keyUp.flags = modifiers
 keyDown.post(tap: .cghidEventTap)
+keyUp.post(tap: .cghidEventTap)
 
 if CommandLine.arguments.contains("--speak") {
     Thread.sleep(forTimeInterval: 0.7)
@@ -58,6 +59,7 @@ if CommandLine.arguments.contains("--speak") {
     Thread.sleep(forTimeInterval: 0.6)
 }
 
+keyDown.post(tap: .cghidEventTap)
 keyUp.post(tap: .cghidEventTap)
 
-print("Posted Control-Option-D with \(expectedFrontmostBundle) verified frontmost")
+print("Toggled Option-Space twice with \(expectedFrontmostBundle) verified frontmost")

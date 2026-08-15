@@ -11,8 +11,8 @@ struct GuideCompanionApp: App {
         MenuBarExtra {
             MenuPanelView(model: model)
         } label: {
-            Label("Guide Companion", systemImage: model.menuBarSymbol)
-                .accessibilityLabel("Guide Companion, \(model.shortStatus)")
+            Label("SERPy", systemImage: model.menuBarSymbol)
+                .accessibilityLabel("SERPy, \(model.shortStatus)")
         }
         .menuBarExtraStyle(.window)
 
@@ -35,4 +35,3 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
         GuideAppModel.shared.stop()
     }
 }
-

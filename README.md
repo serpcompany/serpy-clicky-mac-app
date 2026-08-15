@@ -1,7 +1,7 @@
-# Guide Companion for macOS — Planning Workspace
+# SERPy for macOS
 
-This is a fresh, planning-first project for a small native macOS companion.
-The working product name is intentionally generic and temporary.
+SERPy is a small native macOS companion for private, on-device dictation and
+optional screen guidance.
 
 The first product must do two things well:
 
@@ -25,12 +25,8 @@ reference and possible donor for individually audited components.
 
 ## Current Gate
 
-Status: architecture planning; no implementation authorized yet.
-
-The next executable step is Phase 0 in `DELIVERY_PLAN.md`: small disposable
-technical probes for local transcription, text insertion, overlay lifecycle,
-and local screen guidance. A human must approve the architecture and Phase 0
-scope before those probes begin.
+Status: installed internal baseline. Public distribution remains separately
+approval-gated.
 
 ## Source-of-Truth References
 
