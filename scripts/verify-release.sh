@@ -4,7 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-dmg_path="${1:-dist/SERPy-0.1.0-20.dmg}"
+dmg_path="${1:-dist/SERPy-0.1.0-21.dmg}"
 [[ -f "${dmg_path}" ]] || {
   echo "ERROR: DMG not found: ${dmg_path}" >&2
   exit 1

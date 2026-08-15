@@ -173,7 +173,6 @@ public final class GuideAppModel {
                     modifiers: UInt32(controlKey | optionKey),
                     displayName: "Control–Option–G"
                 ),
-                identifier: 2,
                 pressed: { [weak self] in
                     Task { await self?.guideCurrentScreen() }
                 },
