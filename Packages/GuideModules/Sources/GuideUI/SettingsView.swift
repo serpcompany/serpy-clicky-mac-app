@@ -99,6 +99,23 @@ public struct SettingsView: View {
                         .textSelection(.enabled)
                 }
             }
+
+            if model.hasRecoverableTranscript {
+                Section("Last dictation recovery") {
+                    Text(model.recoverableTranscript)
+                        .lineLimit(4)
+                        .textSelection(.enabled)
+                    HStack {
+                        Button("Retry in 4 Seconds") { model.retryLastTranscript() }
+                            .disabled(model.phase.isActive)
+                        Button("Copy") { model.copyLastTranscript() }
+                        Button("Clear", role: .destructive) { model.clearLastTranscript() }
+                    }
+                    Text("Kept only in memory until you clear it or quit Guide Companion.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
     }
@@ -131,7 +148,7 @@ public struct SettingsView: View {
     private var privacyForm: some View {
         Form {
             Section("Privacy") {
-                Text("Audio, transcripts, and screenshots are not stored. Dictation and guidance use on-device system models without an API key.")
+                Text("Audio and screenshots are not stored. The last completed dictation is kept only in memory until you clear it or quit Guide Companion. Dictation and guidance use on-device system models without an API key.")
                     .foregroundStyle(.secondary)
             }
         }

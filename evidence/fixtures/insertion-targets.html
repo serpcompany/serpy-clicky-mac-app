@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Guide Companion insertion targets</title>
+<style>
+  body { font: 18px system-ui; max-width: 720px; margin: 48px auto; }
+  label { display: block; margin: 24px 0 8px; font-weight: 600; }
+  input, textarea, [contenteditable] {
+    box-sizing: border-box; width: 100%; min-height: 52px; padding: 12px;
+    border: 2px solid #777; border-radius: 8px; font: inherit;
+  }
+  textarea, [contenteditable] { min-height: 120px; }
+</style>
+<h1>Guide Companion insertion targets</h1>
+<label for="plain-input">Plain input</label>
+<input id="plain-input" aria-label="Plain input">
+<label for="text-area">Text area</label>
+<textarea id="text-area" aria-label="Text area"></textarea>
+<label for="rich-editor">Content editable</label>
+<div id="rich-editor" contenteditable="true" role="textbox" aria-label="Content editable"></div>

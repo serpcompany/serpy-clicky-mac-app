@@ -5,7 +5,14 @@ import Carbon
 import CoreGraphics
 import Foundation
 
-let expectedFrontmostBundle = "com.apple.TextEdit"
+func argument(after flag: String) -> String? {
+    guard let index = CommandLine.arguments.firstIndex(of: flag),
+          CommandLine.arguments.indices.contains(index + 1) else { return nil }
+    return CommandLine.arguments[index + 1]
+}
+
+let expectedFrontmostBundle = argument(after: "--bundle") ?? "com.apple.TextEdit"
+let spokenPhrase = argument(after: "--phrase") ?? "Guide Companion dictation test"
 let frontmostBundle = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none"
 
 guard frontmostBundle == expectedFrontmostBundle else {
@@ -39,7 +46,7 @@ if CommandLine.arguments.contains("--speak") {
     Thread.sleep(forTimeInterval: 0.7)
     let speaker = Process()
     speaker.executableURL = URL(fileURLWithPath: "/usr/bin/say")
-    speaker.arguments = ["Guide Companion dictation test"]
+    speaker.arguments = [spokenPhrase]
     try speaker.run()
     speaker.waitUntilExit()
     Thread.sleep(forTimeInterval: 1.0)
@@ -49,4 +56,4 @@ if CommandLine.arguments.contains("--speak") {
 
 keyUp.post(tap: .cghidEventTap)
 
-print("Posted Control-Option-D with TextEdit verified frontmost")
+print("Posted Control-Option-D with \(expectedFrontmostBundle) verified frontmost")

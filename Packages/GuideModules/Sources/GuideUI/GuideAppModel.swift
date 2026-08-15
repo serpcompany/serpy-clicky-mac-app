@@ -23,6 +23,7 @@ public final class GuideAppModel {
     public private(set) var lastActivationMessage = "No dictation activation received yet."
     public private(set) var lastDictationStage = "Waiting"
     public private(set) var lastFailureMessage = "None"
+    public private(set) var transcriptRecovery = EphemeralTranscriptRecovery()
     public var guidanceQuestion = "What should I do next?"
     public var companionEnabled: Bool {
         didSet {
@@ -110,6 +111,14 @@ public final class GuideAppModel {
 
     public var shortcutDescription: String {
         GlobalHotKeyConfiguration.dictation.displayName
+    }
+
+    public var hasRecoverableTranscript: Bool {
+        transcriptRecovery.isAvailable
+    }
+
+    public var recoverableTranscript: String {
+        transcriptRecovery.transcript ?? ""
     }
 
     public func start() async {
@@ -359,6 +368,7 @@ public final class GuideAppModel {
                 )
                 lastDictationStage = "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
                 statusMessage = "The insertion test succeeded."
+                lastFailureMessage = "None"
                 presentation.mode = .success
                 presentation.caption = "Insertion works"
                 companionController.refresh()
@@ -367,6 +377,50 @@ public final class GuideAppModel {
                 presentFailure(normalize(error, stage: .insertion))
             }
         }
+    }
+
+    public func copyLastTranscript() {
+        guard let transcript = transcriptRecovery.transcript else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        guard pasteboard.setString(transcript, forType: .string) else {
+            statusMessage = "The last dictation could not be copied."
+            return
+        }
+        statusMessage = "Last dictation copied. Paste it wherever you need it."
+        recoveryMessage = "The recovery copy remains available until you clear it or quit Guide Companion."
+    }
+
+    public func retryLastTranscript() {
+        guard !phase.isActive, let transcript = transcriptRecovery.transcript else { return }
+        statusMessage = "Click the destination text field now. Retrying in 4 seconds."
+        recoveryMessage = "The transcript stays recoverable even if this attempt fails."
+        lastDictationStage = "Waiting for retry target"
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self else { return }
+            do {
+                lastDictationStage = "Retrying last dictation"
+                let target = try insertionService.captureFocusedTarget()
+                lastInsertionMethod = try await insertionService.insert(transcript, into: target)
+                statusMessage = "Last dictation inserted locally."
+                recoveryMessage = "A recovery copy remains available until you clear it or quit Guide Companion."
+                lastFailureMessage = "None"
+                lastDictationStage = "Retry succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                presentation.mode = .success
+                presentation.caption = "Inserted"
+                companionController.refresh()
+            } catch {
+                lastDictationStage = "Retry failed"
+                presentFailure(normalize(error, stage: .insertion))
+            }
+        }
+    }
+
+    public func clearLastTranscript() {
+        transcriptRecovery.clear()
+        statusMessage = "Last dictation cleared."
+        recoveryMessage = ""
     }
 
     private func hotKeyPressed() {
@@ -447,6 +501,8 @@ public final class GuideAppModel {
             guard let self else { return }
             do {
                 let transcript = try await transcriber.stop()
+                transcriptRecovery.preserve(transcript)
+                partialTranscript = transcript
                 try dictationMachine.beginInsertion()
                 phase = dictationMachine.phase
                 statusMessage = "Inserting text…"
@@ -454,11 +510,11 @@ public final class GuideAppModel {
                 lastInsertionMethod = try await insertionService.insert(transcript, into: focusedTarget)
                 try dictationMachine.succeed()
                 phase = dictationMachine.phase
-                partialTranscript = transcript
                 statusMessage = "Dictation inserted locally."
                 lastDictationStage = "Succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
                 Self.logger.notice("Dictation inserted; method=\(self.lastInsertionMethod?.rawValue ?? "unknown", privacy: .public)")
                 recoveryMessage = ""
+                lastFailureMessage = "None"
                 self.focusedTarget = nil
                 presentation.mode = .success
                 presentation.caption = "Inserted"

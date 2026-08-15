@@ -20,6 +20,10 @@ public struct MenuPanelView: View {
                 readyCard
             }
 
+            if model.hasRecoverableTranscript {
+                recoveryCard
+            }
+
             Toggle("Show cursor companion", isOn: $model.companionEnabled)
                 .toggleStyle(.switch)
 
@@ -191,6 +195,29 @@ public struct MenuPanelView: View {
         }
         .padding(14)
         .background(.purple.opacity(0.10), in: .rect(cornerRadius: 12))
+    }
+
+    private var recoveryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Last dictation", systemImage: "arrow.counterclockwise.circle")
+                .font(.headline)
+            Text(model.recoverableTranscript)
+                .font(.callout)
+                .lineLimit(3)
+                .textSelection(.enabled)
+            Text("Kept only in memory until you clear it or quit. Retry gives you 4 seconds to focus a destination field.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("Retry") { model.retryLastTranscript() }
+                    .disabled(model.phase.isActive)
+                Button("Copy") { model.copyLastTranscript() }
+                Spacer()
+                Button("Clear", role: .destructive) { model.clearLastTranscript() }
+            }
+        }
+        .padding(14)
+        .background(.orange.opacity(0.10), in: .rect(cornerRadius: 12))
     }
 
     private func permissionRow(

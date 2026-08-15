@@ -11,9 +11,9 @@ private let insertionLogger = Logger(
 
 public final class FocusedTextTarget: @unchecked Sendable {
     fileprivate let processIdentifier: pid_t
-    fileprivate let element: AXUIElement
+    fileprivate let element: AXUIElement?
 
-    fileprivate init(processIdentifier: pid_t, element: AXUIElement) {
+    fileprivate init(processIdentifier: pid_t, element: AXUIElement?) {
         self.processIdentifier = processIdentifier
         self.element = element
     }
@@ -90,33 +90,29 @@ public final class TextInsertionService {
             )
         }
 
-        guard result == .success,
-              let value,
-              CFGetTypeID(value) == AXUIElementGetTypeID() else {
-            throw insertionFailure(
-                "No editable text field is focused.",
-                recovery: "Click in a text field before starting dictation."
-            )
+        let element: AXUIElement?
+        if result == .success,
+           let value,
+           CFGetTypeID(value) == AXUIElementGetTypeID() {
+            element = unsafeDowncast(value, to: AXUIElement.self)
+        } else {
+            element = nil
         }
 
-        let element = unsafeDowncast(value, to: AXUIElement.self)
-        let focusedRole = stringAttribute(kAXRoleAttribute as CFString, of: element) ?? "unknown"
-        insertionLogger.notice("Focused AX role=\(focusedRole, privacy: .public)")
-        guard isEditableTextTarget(element) else {
-            throw insertionFailure(
-                "No editable text field is focused.",
-                recovery: "Click directly inside the destination text field and try again."
-            )
+        if let element {
+            let focusedRole = stringAttribute(kAXRoleAttribute as CFString, of: element) ?? "unknown"
+            insertionLogger.notice("Focused AX role=\(focusedRole, privacy: .public)")
+        } else {
+            insertionLogger.notice("Focused AX element unavailable; paste-only target captured")
         }
-        var elementPID: pid_t = 0
-        guard AXUIElementGetPid(element, &elementPID) == .success else {
+
+        guard frontmostPID > 0 else {
             throw insertionFailure(
                 "The focused application could not be identified.",
                 recovery: "Click in the destination field and try again."
             )
         }
-
-        return FocusedTextTarget(processIdentifier: elementPID, element: element)
+        return FocusedTextTarget(processIdentifier: frontmostPID, element: element)
     }
 
     public func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
@@ -124,22 +120,31 @@ public final class TextInsertionService {
             throw insertionFailure("The transcript was empty.", recovery: "Try dictating again.")
         }
 
-        let selectedTextResult = AXUIElementSetAttributeValue(
-               target.element,
-               kAXSelectedTextAttribute as CFString,
-               text as CFString
-           )
-        insertionLogger.notice("AX selected-text write result=\(selectedTextResult.rawValue)")
-        if selectedTextResult == .success {
-            return .accessibility
+        do {
+            try await paste(text, into: target)
+            return .paste
+        } catch {
+            insertionLogger.notice("Session paste did not verify; trying Accessibility fallbacks")
         }
 
-        if let replacementMethod = try replaceAccessibilityValue(text, on: target.element) {
+        guard let element = target.element, isEditableTextTarget(element) else {
+            throw insertionFailure(
+                "The destination did not accept the transcript.",
+                recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
+            )
+        }
+
+        if let selectedTextMethod = await replaceSelectedText(text, on: element) {
+            return selectedTextMethod
+        }
+        if let replacementMethod = try await replaceAccessibilityValue(text, on: element) {
             return replacementMethod
         }
 
-        try await paste(text, into: target)
-        return .paste
+        throw insertionFailure(
+            "The destination did not accept the transcript.",
+            recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
+        )
     }
 
     private func canSet(attribute: CFString, on element: AXUIElement) -> Bool {
@@ -161,10 +166,32 @@ public final class TextInsertionService {
             || canSet(attribute: kAXValueAttribute as CFString, on: element)
     }
 
+    private func replaceSelectedText(
+        _ text: String,
+        on element: AXUIElement
+    ) async -> TextInsertionMethod? {
+        let valueBefore = stringValue(of: element)
+        let result = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextAttribute as CFString,
+            text as CFString
+        )
+        insertionLogger.notice("AX selected-text write result=\(result.rawValue)")
+        guard result == .success else { return nil }
+        try? await Task.sleep(for: .milliseconds(120))
+        guard let valueBefore,
+              let valueAfter = stringValue(of: element),
+              valueAfter != valueBefore else {
+            insertionLogger.notice("AX selected-text write returned success without an observable change")
+            return nil
+        }
+        return .accessibility
+    }
+
     private func replaceAccessibilityValue(
         _ text: String,
         on element: AXUIElement
-    ) throws -> TextInsertionMethod? {
+    ) async throws -> TextInsertionMethod? {
         guard let existing = stringValue(of: element),
               let selectedRange = selectedTextRange(of: element) else {
             return nil
@@ -190,6 +217,11 @@ public final class TextInsertionService {
             return nil
         }
         insertionLogger.notice("AX value replacement succeeded")
+        try? await Task.sleep(for: .milliseconds(120))
+        guard stringValue(of: element) == replacement.value else {
+            insertionLogger.notice("AX value replacement returned success without an observable change")
+            return nil
+        }
 
         var caret = replacement.caret
         if let caretValue = AXValueCreate(.cfRange, &caret) {
@@ -233,9 +265,15 @@ public final class TextInsertionService {
     }
 
     private func paste(_ text: String, into target: FocusedTextTarget) async throws {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
+            throw insertionFailure(
+                "The destination app changed before insertion.",
+                recovery: "Your transcript is preserved. Focus the intended field and use Retry."
+            )
+        }
         let pasteboard = NSPasteboard.general
         let snapshot = PasteboardSnapshot(pasteboard: pasteboard)
-        let valueBeforePaste = stringValue(of: target.element)
+        let valueBeforePaste = target.element.flatMap(stringValue)
 
         pasteboard.clearContents()
         guard pasteboard.setString(text, forType: .string) else {
@@ -258,17 +296,28 @@ public final class TextInsertionService {
 
         keyDown.flags = .maskCommand
         keyUp.flags = .maskCommand
-        keyDown.postToPid(target.processIdentifier)
-        keyUp.postToPid(target.processIdentifier)
+        keyDown.post(tap: .cghidEventTap)
+        try await Task.sleep(for: .milliseconds(30))
+        keyUp.post(tap: .cghidEventTap)
 
-        try await Task.sleep(for: .milliseconds(350))
+        try await Task.sleep(for: .milliseconds(550))
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
+            if pasteboard.changeCount == injectedChangeCount {
+                snapshot.restore(to: pasteboard)
+            }
+            throw insertionFailure(
+                "The destination app changed during insertion.",
+                recovery: "Your transcript is preserved. Focus the intended field and use Retry."
+            )
+        }
         if let valueBeforePaste,
-           let valueAfterPaste = stringValue(of: target.element),
+           let element = target.element,
+           let valueAfterPaste = stringValue(of: element),
            valueAfterPaste == valueBeforePaste {
             snapshot.restore(to: pasteboard)
             throw insertionFailure(
                 "The destination did not accept the transcript.",
-                recovery: "Click directly inside the text field and try again."
+                recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
             )
         }
         if pasteboard.changeCount == injectedChangeCount {
