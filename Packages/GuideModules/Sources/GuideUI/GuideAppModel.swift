@@ -109,7 +109,7 @@ public final class GuideAppModel {
     }
 
     public var shortcutDescription: String {
-        "Control–Option–Space"
+        GlobalHotKeyConfiguration.dictation.displayName
     }
 
     public func start() async {
@@ -127,7 +127,11 @@ public final class GuideAppModel {
             hotKeyRegistered = true
             Self.logger.notice("Global dictation shortcut registered")
             let guidanceService = GlobalHotKeyService(
-                keyCode: UInt32(kVK_ANSI_G),
+                configuration: GlobalHotKeyConfiguration(
+                    keyCode: UInt32(kVK_ANSI_G),
+                    modifiers: UInt32(controlKey | optionKey),
+                    displayName: "Control–Option–G"
+                ),
                 identifier: 2,
                 pressed: { [weak self] in
                     Task { await self?.guideCurrentScreen() }

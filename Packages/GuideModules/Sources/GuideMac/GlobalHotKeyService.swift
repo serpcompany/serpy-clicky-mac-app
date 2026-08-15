@@ -1,6 +1,24 @@
 import Carbon
 import Foundation
 
+public struct GlobalHotKeyConfiguration: Equatable, Sendable {
+    public let keyCode: UInt32
+    public let modifiers: UInt32
+    public let displayName: String
+
+    public init(keyCode: UInt32, modifiers: UInt32, displayName: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.displayName = displayName
+    }
+
+    public static let dictation = GlobalHotKeyConfiguration(
+        keyCode: UInt32(kVK_ANSI_D),
+        modifiers: UInt32(controlKey | optionKey),
+        displayName: "Control–Option–D"
+    )
+}
+
 @MainActor
 public final class GlobalHotKeyService {
     public typealias Handler = @MainActor @Sendable () -> Void
@@ -14,14 +32,13 @@ public final class GlobalHotKeyService {
     private var hotKey: EventHotKeyRef?
 
     public init(
-        keyCode: UInt32 = UInt32(kVK_Space),
-        modifiers: UInt32 = UInt32(controlKey | optionKey),
+        configuration: GlobalHotKeyConfiguration = .dictation,
         identifier: UInt32 = 1,
         pressed: @escaping Handler,
         released: @escaping Handler
     ) {
-        self.keyCode = keyCode
-        self.modifiers = modifiers
+        self.keyCode = configuration.keyCode
+        self.modifiers = configuration.modifiers
         self.identifier = EventHotKeyID(signature: 0x47554350, id: identifier) // GUCP
         self.pressed = pressed
         self.released = released
@@ -93,7 +110,7 @@ public enum HotKeyError: LocalizedError {
         case .installFailed(let status):
             "Could not install the global shortcut handler (\(status))."
         case .registrationFailed(let status):
-            "Control–Option–Space is unavailable (\(status))."
+            "The global shortcut is unavailable (\(status))."
         }
     }
 }
