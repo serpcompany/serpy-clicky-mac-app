@@ -1,0 +1,205 @@
+import AVFoundation
+import Foundation
+import GuideCore
+import Speech
+
+@MainActor
+public final class AppleSpeechTranscriber {
+    public typealias PartialHandler = @MainActor @Sendable (String) -> Void
+
+    private let audioEngine = AVAudioEngine()
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var recognitionTask: SFSpeechRecognitionTask?
+    private var completion: CheckedContinuation<String, Error>?
+    private var latestTranscript = ""
+    private var partialHandler: PartialHandler?
+    private var stopTimeoutTask: Task<Void, Never>?
+    private var inputTapInstalled = false
+
+    public init() {}
+
+    public var availabilityDescription: String {
+        guard let recognizer = makeRecognizer() else {
+            return "No speech recognizer is available for this language."
+        }
+        if recognizer.supportsOnDeviceRecognition {
+            return "Apple on-device speech is ready."
+        }
+        return "Apple does not provide on-device speech for the current language."
+    }
+
+    public var isOnDeviceAvailable: Bool {
+        makeRecognizer()?.supportsOnDeviceRecognition == true
+    }
+
+    public func start(onPartial: @escaping PartialHandler) throws {
+        guard recognitionTask == nil else {
+            throw speechFailure("A recording is already active.", recovery: "Stop or cancel it first.")
+        }
+        guard SFSpeechRecognizer.authorizationStatus() == .authorized else {
+            throw speechFailure("Speech Recognition permission is not granted.", recovery: "Enable Speech Recognition in System Settings.")
+        }
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
+            throw speechFailure("Microphone permission is not granted.", recovery: "Enable Microphone access in System Settings.")
+        }
+        guard let recognizer = makeRecognizer(), recognizer.supportsOnDeviceRecognition else {
+            throw speechFailure(
+                "On-device speech is unavailable for the current language.",
+                recovery: "Choose a supported language or install the local speech model in a later build."
+            )
+        }
+
+        latestTranscript = ""
+        partialHandler = onPartial
+
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = true
+        request.addsPunctuation = true
+        recognitionRequest = request
+
+        let inputNode = audioEngine.inputNode
+        let format = inputNode.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            cleanup()
+            throw speechFailure("The selected microphone has no usable audio format.", recovery: "Choose another input device and try again.")
+        }
+
+        inputNode.installTap(onBus: 0, bufferSize: 1_024, format: format) { [weak request] buffer, _ in
+            request?.append(buffer)
+        }
+        inputTapInstalled = true
+
+        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            Task { @MainActor in
+                self?.handle(result: result, error: error)
+            }
+        }
+
+        audioEngine.prepare()
+        do {
+            try audioEngine.start()
+        } catch {
+            cleanup()
+            throw speechFailure("The microphone could not start.", recovery: "Check the input device and try again.")
+        }
+    }
+
+    public func stop() async throws -> String {
+        guard recognitionTask != nil, let recognitionRequest else {
+            throw speechFailure("No recording is active.", recovery: "Start dictation and try again.")
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            completion = continuation
+            if audioEngine.isRunning {
+                audioEngine.stop()
+            }
+            if inputTapInstalled {
+                audioEngine.inputNode.removeTap(onBus: 0)
+                inputTapInstalled = false
+            }
+            recognitionRequest.endAudio()
+            stopTimeoutTask?.cancel()
+            stopTimeoutTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled else { return }
+                self?.finishAfterTimeout()
+            }
+        }
+    }
+
+    public func cancel() {
+        completion?.resume(throwing: CancellationError())
+        completion = nil
+        cleanup()
+    }
+
+    private func handle(result: SFSpeechRecognitionResult?, error: Error?) {
+        if let result {
+            latestTranscript = result.bestTranscription.formattedString
+            partialHandler?(latestTranscript)
+            if result.isFinal {
+                finishSuccessfully()
+                return
+            }
+        }
+
+        if error != nil, completion != nil {
+            if latestTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                finish(
+                    throwing: speechFailure(
+                        "No speech could be transcribed.",
+                        recovery: "Speak closer to the microphone and try again."
+                    )
+                )
+            } else {
+                finishSuccessfully()
+            }
+        }
+    }
+
+    private func finishAfterTimeout() {
+        guard completion != nil else { return }
+        if latestTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            finish(
+                throwing: speechFailure(
+                    "Dictation timed out without a final transcript.",
+                    recovery: "Try a shorter phrase and verify the input device."
+                )
+            )
+        } else {
+            finishSuccessfully()
+        }
+    }
+
+    private func finishSuccessfully() {
+        let transcript = latestTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !transcript.isEmpty else {
+            finish(
+                throwing: speechFailure(
+                    "No speech was detected.",
+                    recovery: "Try again and speak while the recording indicator is visible."
+                )
+            )
+            return
+        }
+        completion?.resume(returning: transcript)
+        completion = nil
+        cleanup()
+    }
+
+    private func finish(throwing error: Error) {
+        completion?.resume(throwing: error)
+        completion = nil
+        cleanup()
+    }
+
+    private func cleanup() {
+        stopTimeoutTask?.cancel()
+        stopTimeoutTask = nil
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        if inputTapInstalled {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            inputTapInstalled = false
+        }
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
+        partialHandler = nil
+    }
+
+    private func makeRecognizer() -> SFSpeechRecognizer? {
+        let preferred = SFSpeechRecognizer(locale: .current)
+        if preferred?.supportsOnDeviceRecognition == true {
+            return preferred
+        }
+        return SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    }
+
+    private func speechFailure(_ message: String, recovery: String) -> GuideFailure {
+        GuideFailure(stage: .transcription, message: message, recovery: recovery)
+    }
+}

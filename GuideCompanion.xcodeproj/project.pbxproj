@@ -1,0 +1,490 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11CF664193125A6D4EDC0FAF /* GuideUI */; };
+		34A605741DE02A6B17DB039F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 402E6AB6BF038ED9D42B35CD /* Assets.xcassets */; };
+		4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */; };
+		9FDCD85439B52AF22561A60D /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = E878CF5435BA1D7276BA94B8 /* GuideCore */; };
+		CBF6B3EBF6E3695BFF5A8F0F /* GuideCompanionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 672808DCF70F3F649403697F /* GuideCompanionUITests.swift */; };
+		FF400FA0636D88205DE2D8EA /* GuideMac in Frameworks */ = {isa = PBXBuildFile; productRef = FFB5392BB48DD619D30AAD3A /* GuideMac */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B958B7FBDC825EED1C5568C2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0AFA0107528D7902F0E2685F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C72578BA9BADD56511A59773;
+			remoteInfo = GuideCompanion;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1A4519E3B22F16775F01BFEC /* GuideCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GuideCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F61D8657750A3BC5FE004B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		402E6AB6BF038ED9D42B35CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GuideCompanion.entitlements; sourceTree = "<group>"; };
+		672808DCF70F3F649403697F /* GuideCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionUITests.swift; sourceTree = "<group>"; };
+		81CF39FA79A851F3A9ECC42A /* GuideCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GuideCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionApp.swift; sourceTree = "<group>"; };
+		DA1572F19C3E0D8130EEF6A4 /* GuideModules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GuideModules; path = Packages/GuideModules; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5F872BD604A2CBD72194D431 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9FDCD85439B52AF22561A60D /* GuideCore in Frameworks */,
+				FF400FA0636D88205DE2D8EA /* GuideMac in Frameworks */,
+				33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		007A1CC91626A28E12775EF8 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				DA1572F19C3E0D8130EEF6A4 /* GuideModules */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		17EFB257F5758A59B940B974 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				81CF39FA79A851F3A9ECC42A /* GuideCompanion.app */,
+				1A4519E3B22F16775F01BFEC /* GuideCompanionUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		295C5EC77B7D4457BE787C42 /* GuideCompanionUITests */ = {
+			isa = PBXGroup;
+			children = (
+				672808DCF70F3F649403697F /* GuideCompanionUITests.swift */,
+			);
+			path = GuideCompanionUITests;
+			sourceTree = "<group>";
+		};
+		2991CCBEE9008831151D6F36 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				48FD6FB2B86163145DF82BC6 /* Resources */,
+				665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */,
+				9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */,
+				3F61D8657750A3BC5FE004B3 /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		48FD6FB2B86163145DF82BC6 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				402E6AB6BF038ED9D42B35CD /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		7ABA4585E13989225A70B3BC = {
+			isa = PBXGroup;
+			children = (
+				2991CCBEE9008831151D6F36 /* App */,
+				295C5EC77B7D4457BE787C42 /* GuideCompanionUITests */,
+				007A1CC91626A28E12775EF8 /* Packages */,
+				17EFB257F5758A59B940B974 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		85C699F9ABBAC335777CC339 /* GuideCompanionUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 84AC320DEC0A26FAC5E79C78 /* Build configuration list for PBXNativeTarget "GuideCompanionUITests" */;
+			buildPhases = (
+				3B900D48AEEFCF48CCF2EB78 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				04502B577BFDCC3C868C3C61 /* PBXTargetDependency */,
+			);
+			name = GuideCompanionUITests;
+			packageProductDependencies = (
+			);
+			productName = GuideCompanionUITests;
+			productReference = 1A4519E3B22F16775F01BFEC /* GuideCompanionUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		C72578BA9BADD56511A59773 /* GuideCompanion */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 09B75C11511A4A4E1252ECD2 /* Build configuration list for PBXNativeTarget "GuideCompanion" */;
+			buildPhases = (
+				ED94EDFBAC5E39026C198119 /* Sources */,
+				0A9DB0E746DBFF7182A3F670 /* Resources */,
+				5F872BD604A2CBD72194D431 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GuideCompanion;
+			packageProductDependencies = (
+				E878CF5435BA1D7276BA94B8 /* GuideCore */,
+				FFB5392BB48DD619D30AAD3A /* GuideMac */,
+				11CF664193125A6D4EDC0FAF /* GuideUI */,
+			);
+			productName = GuideCompanion;
+			productReference = 81CF39FA79A851F3A9ECC42A /* GuideCompanion.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0AFA0107528D7902F0E2685F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					85C699F9ABBAC335777CC339 = {
+						DevelopmentTeam = 847HR8U8D9;
+						ProvisioningStyle = Automatic;
+						TestTargetID = C72578BA9BADD56511A59773;
+					};
+					C72578BA9BADD56511A59773 = {
+						DevelopmentTeam = 847HR8U8D9;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 210D67D6FFA1D8F9C2F9C6A2 /* Build configuration list for PBXProject "GuideCompanion" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 7ABA4585E13989225A70B3BC;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F3EEE62A0DE2D2AE47F483D8 /* XCLocalSwiftPackageReference "Packages/GuideModules" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C72578BA9BADD56511A59773 /* GuideCompanion */,
+				85C699F9ABBAC335777CC339 /* GuideCompanionUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0A9DB0E746DBFF7182A3F670 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				34A605741DE02A6B17DB039F /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3B900D48AEEFCF48CCF2EB78 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CBF6B3EBF6E3695BFF5A8F0F /* GuideCompanionUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ED94EDFBAC5E39026C198119 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		04502B577BFDCC3C868C3C61 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C72578BA9BADD56511A59773 /* GuideCompanion */;
+			targetProxy = B958B7FBDC825EED1C5568C2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		15CCA21DB2EB83470639573F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.serpcompany.guidecompanion.internal.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = GuideCompanion;
+			};
+			name = Debug;
+		};
+		1B303F9FA330AF6B808188FC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.serpcompany.guidecompanion.internal.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = GuideCompanion;
+			};
+			name = Release;
+		};
+		C35E5E3F3839DECE5E0D0144 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/GuideCompanion.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.serpcompany.guidecompanion.internal;
+				PRODUCT_NAME = "Guide Companion";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		D30E69495A84F0A48D531B6A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 847HR8U8D9;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		EB9B1B86955EB90675583CBA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 847HR8U8D9;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		EFED84D446BD185981ED2855 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/GuideCompanion.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.serpcompany.guidecompanion.internal;
+				PRODUCT_NAME = "Guide Companion";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		09B75C11511A4A4E1252ECD2 /* Build configuration list for PBXNativeTarget "GuideCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C35E5E3F3839DECE5E0D0144 /* Debug */,
+				EFED84D446BD185981ED2855 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		210D67D6FFA1D8F9C2F9C6A2 /* Build configuration list for PBXProject "GuideCompanion" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D30E69495A84F0A48D531B6A /* Debug */,
+				EB9B1B86955EB90675583CBA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		84AC320DEC0A26FAC5E79C78 /* Build configuration list for PBXNativeTarget "GuideCompanionUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				15CCA21DB2EB83470639573F /* Debug */,
+				1B303F9FA330AF6B808188FC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F3EEE62A0DE2D2AE47F483D8 /* XCLocalSwiftPackageReference "Packages/GuideModules" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/GuideModules;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		11CF664193125A6D4EDC0FAF /* GuideUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GuideUI;
+		};
+		E878CF5435BA1D7276BA94B8 /* GuideCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GuideCore;
+		};
+		FFB5392BB48DD619D30AAD3A /* GuideMac */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GuideMac;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0AFA0107528D7902F0E2685F /* Project object */;
+}

@@ -8,9 +8,12 @@ the required evidence.
 
 ## Current Authorization
 
-Planning only. Do not create an Xcode project, add dependencies, copy source,
-download models, request permissions, create Apple resources, or implement a
-probe until the owner explicitly authorizes Phase 0.
+The owner authorized implementation through the installed-product finish line
+on 2026-08-16. Work through Phases 0–4 in order. This authorization includes
+local source changes, local model/runtime evaluation, stable tester-owned
+signing configuration, packaging, notarization, and installed-app verification.
+It does not authorize a public release, public remote, billing, cloud services,
+or any feature listed under Deferred in `PRODUCT.md`.
 
 ## Hard Boundaries
 
