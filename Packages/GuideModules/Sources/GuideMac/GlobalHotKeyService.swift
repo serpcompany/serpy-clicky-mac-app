@@ -74,6 +74,22 @@ public struct GlobalHotKeyPressState: Sendable {
     }
 }
 
+public struct GlobalHotKeyEventPolicy: Sendable {
+    public init() {}
+
+    public func shouldConsume(
+        _ event: KeyboardEventSnapshot,
+        configuration: GlobalHotKeyConfiguration
+    ) -> Bool {
+        guard event.keyCode == UInt16(configuration.keyCode) else { return false }
+        if !event.isKeyDown {
+            return true
+        }
+        let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
+        return event.modifierFlags & significantMask == configuration.cocoaModifiers
+    }
+}
+
 @MainActor
 public final class GlobalHotKeyService {
     public typealias Handler = @MainActor @Sendable () -> Void
@@ -82,6 +98,7 @@ public final class GlobalHotKeyService {
     private let released: Handler
     private let cancelled: Handler
     private let configuration: GlobalHotKeyConfiguration
+    private let eventPolicy = GlobalHotKeyEventPolicy()
     private var eventTap: CFMachPort?
     private var eventTapSource: CFRunLoopSource?
     private var pressState = GlobalHotKeyPressState()
@@ -106,7 +123,7 @@ public final class GlobalHotKeyService {
         eventTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
-            options: .listenOnly,
+            options: .defaultTap,
             eventsOfInterest: CGEventMask(eventMask),
             callback: guideKeyboardEventTapHandler,
             userInfo: userData
@@ -142,6 +159,10 @@ public final class GlobalHotKeyService {
         }
         guard let transition = pressState.consume(event, configuration: configuration) else { return }
         deliver(transition)
+    }
+
+    nonisolated fileprivate func shouldConsume(_ event: KeyboardEventSnapshot) -> Bool {
+        eventPolicy.shouldConsume(event, configuration: configuration)
     }
 
     private func deliver(_ transition: GlobalHotKeyTransition) {
@@ -191,8 +212,9 @@ private func guideKeyboardEventTapHandler(
         isKeyDown: type == .keyDown
     )
     let service = Unmanaged<GlobalHotKeyService>.fromOpaque(userData).takeUnretainedValue()
+    let shouldConsume = service.shouldConsume(snapshot)
     Task { @MainActor in
         service.handle(snapshot)
     }
-    return Unmanaged.passUnretained(event)
+    return shouldConsume ? nil : Unmanaged.passUnretained(event)
 }

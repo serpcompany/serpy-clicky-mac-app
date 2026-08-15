@@ -31,6 +31,36 @@ struct GlobalHotKeyPressStateTests {
         ) == .released)
     }
 
+    @Test("configured chord is consumed without consuming ordinary typing")
+    func consumesOnlyConfiguredChord() {
+        let policy = GlobalHotKeyEventPolicy()
+        #expect(policy.shouldConsume(keyDown(), configuration: configuration))
+        #expect(policy.shouldConsume(
+            KeyboardEventSnapshot(
+                keyCode: UInt16(configuration.keyCode),
+                modifierFlags: 0,
+                isKeyDown: false
+            ),
+            configuration: configuration
+        ))
+        #expect(!policy.shouldConsume(
+            KeyboardEventSnapshot(
+                keyCode: UInt16(kVK_ANSI_A),
+                modifierFlags: 0,
+                isKeyDown: true
+            ),
+            configuration: configuration
+        ))
+        #expect(!policy.shouldConsume(
+            KeyboardEventSnapshot(
+                keyCode: UInt16(kVK_Space),
+                modifierFlags: 0,
+                isKeyDown: true
+            ),
+            configuration: configuration
+        ))
+    }
+
     private func keyDown() -> KeyboardEventSnapshot {
         KeyboardEventSnapshot(
             keyCode: UInt16(configuration.keyCode),
