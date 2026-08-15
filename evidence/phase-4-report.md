@@ -4,13 +4,13 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Artifact
 
-- Product: Guide Companion 0.1.0 (13)
+- Product: Guide Companion 0.1.0 (14)
 - Bundle ID: `com.serpcompany.guidecompanion.internal`
 - Team: tester-owned Developer ID team `847HR8U8D9`
-- Source commit: `ec71d87`
-- DMG: `dist/Guide-Companion-0.1.0-13.dmg`
-- SHA-256: `2a1de44786325acfa8c20b6caecf2fed455a2e43a928ec93980f41ac87cf6b9d`
-- Notarization: accepted, submission `443a5f36-2f8d-46d8-affd-451c55e9b1e9`
+- Source commit: `2199ea8`
+- DMG: `dist/Guide-Companion-0.1.0-14.dmg`
+- SHA-256: `f91cccadfbee1c2088508e3b9fe189f7091eb496e42089f92fa07d17cb1991ff`
+- Notarization: accepted, submission `739074b1-3f6a-404a-9296-5b94bf161d26`
 - Stapling: passed and validated
 - Gatekeeper: DMG and mounted app accepted as Notarized Developer ID
 
@@ -23,7 +23,7 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Mechanical verification
 
-- Core, speech-lifecycle, callback-isolation, shortcut-collision, and text-replacement tests: 16 passing on 2026-08-16
+- Core, speech-lifecycle, callback-isolation, shortcut-collision/delivery, and text-replacement tests: 19 passing on 2026-08-16
 - Unsigned Debug build: passed
 - Apple Development interactive build: passed
 - Developer ID Release build: passed
@@ -34,12 +34,14 @@ Status: installed release verified; live spoken-dictation HIL pending
 
 ## Installed human journeys
 
-- DMG mount and copy to Applications: passed for build 13; the prior installed build was moved recoverably to Trash
+- DMG mount and copy to Applications: passed for build 14; the prior installed build was moved recoverably to Trash
 - Launch without Xcode or Terminal: passed from `/Applications/Guide Companion.app`
 - Setup now keeps permission state visible without relying on the prior long form's scroll position
 - Microphone, Speech Recognition, Accessibility, and Screen Recording: granted and visibly reported on exact installed build
 - Global shortcut registration: visibly reported as registered
 - The owner observed that build 12's Control–Option–Space did nothing. The exact combination was independently found enabled in macOS as the “select next input source” system shortcut. Build 13 changes dictation to Control–Option–D without modifying the owner's system settings, and a regression test prevents returning to the two standard input-source combinations
+- The owner then observed that build 13's Control–Option–D also did nothing, and installed diagnostics remained at zero attempts. This proved the Carbon registration result was a false-positive delivery signal rather than a remaining key collision
+- Build 14 retains Carbon as a compatibility path and adds narrowly filtered local/global NSEvent monitors with press/release deduplication. An installed app-targeted Control–Option–D test advanced Attempts from 0 to 1, recorded the activation, and reached transcription; with no speech in that automated test, it correctly ended with “No speech could be transcribed.” Physical delivery while another app is frontmost remains the required HIL
 - Accessibility permission: granted and retained after refresh/relaunch
 - Two Swift concurrency crashes were reproduced and fixed: the speech-permission callback and the audio-tap/result callbacks no longer enter main-actor code from TCC/audio queues
 - Signed live-audio testing reached microphone recording and a speech callback without crashing; synthetic system speech did not produce a non-empty transcript
