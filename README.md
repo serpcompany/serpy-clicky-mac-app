@@ -25,10 +25,13 @@ reference and possible donor for individually audited components.
 
 Private beta release procedure: [docs/RELEASING.md](docs/RELEASING.md).
 
+Latest private beta:
+[SERPy 0.1.0 Beta 1](https://github.com/serpcompany/serpy-clicky-mac-app/releases/tag/v0.1.0-beta.1).
+
 ## Current Gate
 
-Status: installed internal baseline. Public distribution remains separately
-approval-gated.
+Status: `v0.1.0-beta.1` is a signed, notarized private prerelease. Public
+distribution remains separately approval-gated.
 
 ## Source-of-Truth References
 
