@@ -167,10 +167,22 @@ public final class GuideAppModel {
     }
 
     public func requestVoicePermissions() async {
-        statusMessage = "macOS will ask for Microphone and Speech Recognition access."
-        let microphoneGranted = await permissionService.requestMicrophone()
-        guard microphoneGranted else {
-            refreshPermissions()
+        let microphoneGranted = await requestMicrophonePermission()
+        guard microphoneGranted else { return }
+        _ = await requestSpeechPermission()
+    }
+
+    @discardableResult
+    public func requestMicrophonePermission() async -> Bool {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        statusMessage = "Waiting for macOS Microphone permission…"
+        recoveryMessage = "Respond to the macOS prompt. If no prompt appears, use Open Settings beside Microphone."
+        let granted = await permissionService.requestMicrophone()
+        refreshPermissions()
+        if granted {
+            statusMessage = "Microphone granted. Speech Recognition is the next voice permission."
+            recoveryMessage = ""
+        } else {
             presentFailure(
                 GuideFailure(
                     stage: .permission,
@@ -178,12 +190,23 @@ public final class GuideAppModel {
                     recovery: "Open Microphone settings and enable Guide Companion when you are ready."
                 )
             )
-            return
         }
+        return granted
+    }
 
-        let speechGranted = await permissionService.requestSpeechRecognition()
+    @discardableResult
+    public func requestSpeechPermission() async -> Bool {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        statusMessage = "Waiting for macOS Speech Recognition permission…"
+        recoveryMessage = "Respond to the macOS prompt. If no prompt appears, use Open Settings beside Speech Recognition."
+        let granted = await permissionService.requestSpeechRecognition()
         refreshPermissions()
-        if !speechGranted {
+        if granted {
+            statusMessage = permissions.dictationReady
+                ? "Voice permissions granted. Enable Accessibility to insert dictated text."
+                : "Speech Recognition granted."
+            recoveryMessage = ""
+        } else {
             presentFailure(
                 GuideFailure(
                     stage: .permission,
@@ -192,6 +215,7 @@ public final class GuideAppModel {
                 )
             )
         }
+        return granted
     }
 
     public func requestAccessibility() {

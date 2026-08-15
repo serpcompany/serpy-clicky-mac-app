@@ -10,6 +10,16 @@ dmg_path="${1:-dist/Guide-Companion-0.1.0-1.dmg}"
   exit 1
 }
 
+checksum_path="${dmg_path}.sha256"
+if [[ -f "${checksum_path}" ]]; then
+  expected_sha=$(awk '{print $1}' "${checksum_path}")
+  actual_sha=$(shasum -a 256 "${dmg_path}" | awk '{print $1}')
+  [[ "${actual_sha}" == "${expected_sha}" ]] || {
+    echo "ERROR: DMG SHA-256 does not match ${checksum_path}." >&2
+    exit 1
+  }
+fi
+
 mount_dir=$(mktemp -d -t guide-companion-mount.XXXXXX)
 cleanup() {
   hdiutil detach "${mount_dir}" -quiet 2>/dev/null || true

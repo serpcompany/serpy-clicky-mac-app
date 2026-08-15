@@ -24,9 +24,21 @@ public struct SettingsView: View {
                 permissionRow("Accessibility", state: model.permissions.accessibility, permission: .accessibility)
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
 
+                Text(model.statusMessage)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                if !model.recoveryMessage.isEmpty {
+                    Text(model.recoveryMessage)
+                        .foregroundStyle(.orange)
+                        .textSelection(.enabled)
+                }
+
                 HStack {
-                    Button("Enable voice permissions") {
-                        Task { await model.requestVoicePermissions() }
+                    Button("Request Microphone") {
+                        Task { await model.requestMicrophonePermission() }
+                    }
+                    Button("Request Speech Recognition") {
+                        Task { await model.requestSpeechPermission() }
                     }
                     Button("Enable Accessibility") {
                         model.requestAccessibility()
@@ -35,6 +47,9 @@ public struct SettingsView: View {
                         model.refreshPermissions()
                     }
                 }
+                Text("macOS shows permission prompts only once. If a request was previously denied, click Open Settings on that row and enable Guide Companion there.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Companion") {
