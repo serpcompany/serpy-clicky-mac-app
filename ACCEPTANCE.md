@@ -17,6 +17,11 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A8 | Clipboard content is preserved during fallback insertion | Deterministic test | unimplemented |
 | A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
 
+Build 12 visibly reports the four permission states and shortcut registration,
+and its signed live-audio path records without the earlier callback crashes.
+A4 remains only `implemented` until the owner physically focuses an editable
+field, speaks through the installed app, and observes the resulting text.
+
 ## B — Companion
 
 | ID | Journey | Required evidence | Status |
@@ -44,6 +49,11 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | C8 | The guide never clicks, types, executes, or submits | Capability audit + HIL | implemented |
 | C9 | Dictation remains available when guidance is unavailable | Failure-injection test | unimplemented |
 
+The owner reported that the guidance journeys after the initial companion
+checks did not work during first use. The C rows above describe implementation
+or earlier bounded evidence only; none should be read as owner acceptance of
+the current build.
+
 ## D — Distribution and Privacy
 
 | ID | Journey | Required evidence | Status |
@@ -52,7 +62,7 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | D2 | HTTPS download carries quarantine and passes Gatekeeper | Installed report | unimplemented |
 | D3 | Quit/relaunch does not cause permission loops | Installed recording | installed-observed |
 | D4 | No audio, screenshots, or transcript history is stored by default | Filesystem/log audit | implemented |
-| D5 | Diagnostics redact captured and dictated content | Fixture tests + export audit | unimplemented |
+| D5 | Diagnostics redact captured and dictated content | Fixture tests + export audit | implemented |
 | D6 | No borrowed product identity, keys, feeds, or release destinations remain | Provenance/identity audit | implemented |
 
 ## Compatibility Matrix
