@@ -5,13 +5,16 @@ import Speech
 
 private final class SpeechAudioSink: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
+    private let recordingFile: AVAudioFile?
 
-    init(request: SFSpeechAudioBufferRecognitionRequest) {
+    init(request: SFSpeechAudioBufferRecognitionRequest, recordingFile: AVAudioFile?) {
         self.request = request
+        self.recordingFile = recordingFile
     }
 
     func append(_ buffer: AVAudioPCMBuffer) {
         request.append(buffer)
+        try? recordingFile?.write(from: buffer)
     }
 }
 
@@ -47,12 +50,13 @@ public final class AppleSpeechTranscriber {
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-    private var completion: CheckedContinuation<String, Error>?
+    private var completion: CheckedContinuation<SpeechTranscriptionResult, Error>?
     private var latestTranscript = ""
     private var partialHandler: PartialHandler?
     private var stopTimeoutTask: Task<Void, Never>?
     private var inputTapInstalled = false
     private var completionGate = SpeechCompletionGate()
+    private var temporaryAudioURL: URL?
 
     public init() {}
 
@@ -70,7 +74,7 @@ public final class AppleSpeechTranscriber {
         makeRecognizer()?.supportsOnDeviceRecognition == true
     }
 
-    public func start(onPartial: @escaping PartialHandler) throws {
+    public func start(saveAudio: Bool = false, onPartial: @escaping PartialHandler) throws {
         guard recognitionTask == nil else {
             throw speechFailure("A recording is already active.", recovery: "Stop or cancel it first.")
         }
@@ -104,10 +108,29 @@ public final class AppleSpeechTranscriber {
             throw speechFailure("The selected microphone has no usable audio format.", recovery: "Choose another input device and try again.")
         }
 
+        let recordingFile: AVAudioFile?
+        if saveAudio {
+            let url = FileManager.default.temporaryDirectory
+                .appending(path: "GuideCompanion-\(UUID().uuidString).wav")
+            do {
+                recordingFile = try AVAudioFile(forWriting: url, settings: format.settings)
+                temporaryAudioURL = url
+            } catch {
+                cleanup()
+                throw speechFailure(
+                    "The optional audio archive could not be prepared.",
+                    recovery: "Turn off Save audio history or check available disk space."
+                )
+            }
+        } else {
+            recordingFile = nil
+            temporaryAudioURL = nil
+        }
+
         installSpeechInputTap(
             on: inputNode,
             format: format,
-            sink: SpeechAudioSink(request: request)
+            sink: SpeechAudioSink(request: request, recordingFile: recordingFile)
         )
         inputTapInstalled = true
 
@@ -129,7 +152,7 @@ public final class AppleSpeechTranscriber {
         }
     }
 
-    public func stop() async throws -> String {
+    public func stop() async throws -> SpeechTranscriptionResult {
         guard recognitionTask != nil, let recognitionRequest else {
             throw speechFailure("No recording is active.", recovery: "Start dictation and try again.")
         }
@@ -154,7 +177,7 @@ public final class AppleSpeechTranscriber {
     public func cancel() {
         completion?.resume(throwing: CancellationError())
         completion = nil
-        cleanup()
+        cleanup(discardAudio: true)
     }
 
     private func handle(result: SFSpeechRecognitionResult?, error: Error?) {
@@ -212,18 +235,21 @@ public final class AppleSpeechTranscriber {
             )
             return
         }
-        completion?.resume(returning: transcript)
+        completion?.resume(returning: SpeechTranscriptionResult(
+            transcript: transcript,
+            temporaryAudioURL: temporaryAudioURL
+        ))
         completion = nil
-        cleanup()
+        cleanup(discardAudio: false)
     }
 
     private func finish(throwing error: Error) {
         completion?.resume(throwing: error)
         completion = nil
-        cleanup()
+        cleanup(discardAudio: true)
     }
 
-    private func cleanup() {
+    private func cleanup(discardAudio: Bool = true) {
         stopTimeoutTask?.cancel()
         stopTimeoutTask = nil
         stopCapturingAudio()
@@ -232,6 +258,10 @@ public final class AppleSpeechTranscriber {
         recognitionRequest = nil
         partialHandler = nil
         completionGate.reset()
+        if discardAudio, let temporaryAudioURL {
+            try? FileManager.default.removeItem(at: temporaryAudioURL)
+        }
+        temporaryAudioURL = nil
     }
 
     private func stopCapturingAudio() {
@@ -254,6 +284,16 @@ public final class AppleSpeechTranscriber {
 
     private func speechFailure(_ message: String, recovery: String) -> GuideFailure {
         GuideFailure(stage: .transcription, message: message, recovery: recovery)
+    }
+}
+
+public struct SpeechTranscriptionResult: Equatable, Sendable {
+    public let transcript: String
+    public let temporaryAudioURL: URL?
+
+    public init(transcript: String, temporaryAudioURL: URL?) {
+        self.transcript = transcript
+        self.temporaryAudioURL = temporaryAudioURL
     }
 }
 

@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Carbon
 import Foundation
 import GuideCore
 import OSLog
@@ -12,10 +13,12 @@ private let insertionLogger = Logger(
 public final class FocusedTextTarget: @unchecked Sendable {
     fileprivate let processIdentifier: pid_t
     fileprivate let element: AXUIElement?
+    public let bundleIdentifier: String?
 
-    fileprivate init(processIdentifier: pid_t, element: AXUIElement?) {
+    fileprivate init(processIdentifier: pid_t, element: AXUIElement?, bundleIdentifier: String?) {
         self.processIdentifier = processIdentifier
         self.element = element
+        self.bundleIdentifier = bundleIdentifier
     }
 }
 
@@ -23,6 +26,11 @@ public enum TextInsertionMethod: String, Equatable, Sendable {
     case accessibility
     case accessibilityValue
     case paste
+    case pasteUnconfirmed
+
+    public var isConfirmed: Bool {
+        self != .pasteUnconfirmed
+    }
 }
 
 public enum TextValueReplacement {
@@ -112,7 +120,11 @@ public final class TextInsertionService {
                 recovery: "Click in the destination field and try again."
             )
         }
-        return FocusedTextTarget(processIdentifier: frontmostPID, element: element)
+        return FocusedTextTarget(
+            processIdentifier: frontmostPID,
+            element: element,
+            bundleIdentifier: frontmostApplication?.bundleIdentifier
+        )
     }
 
     public func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
@@ -121,16 +133,18 @@ public final class TextInsertionService {
         }
 
         do {
-            try await paste(text, into: target)
-            return .paste
+            let confirmed = try await paste(text, into: target)
+            return confirmed ? .paste : .pasteUnconfirmed
         } catch {
             insertionLogger.notice("Session paste did not verify; trying Accessibility fallbacks")
         }
 
-        guard let element = target.element, isEditableTextTarget(element) else {
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier,
+              let element = target.element,
+              isEditableTextTarget(element) else {
             throw insertionFailure(
                 "The destination did not accept the transcript.",
-                recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
+                recovery: "The transcript is saved in Guide Companion. Focus a text field and use Retry or Copy."
             )
         }
 
@@ -143,7 +157,7 @@ public final class TextInsertionService {
 
         throw insertionFailure(
             "The destination did not accept the transcript.",
-            recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
+            recovery: "The transcript is saved in Guide Companion. Focus a text field and use Retry or Copy."
         )
     }
 
@@ -264,7 +278,7 @@ public final class TextInsertionService {
         return range
     }
 
-    private func paste(_ text: String, into target: FocusedTextTarget) async throws {
+    private func paste(_ text: String, into target: FocusedTextTarget) async throws -> Bool {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
             throw insertionFailure(
                 "The destination app changed before insertion.",
@@ -285,26 +299,31 @@ public final class TextInsertionService {
         let injectedChangeCount = pasteboard.changeCount
 
         guard let source = CGEventSource(stateID: .combinedSessionState),
+              let commandDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_Command), keyDown: true),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
-            snapshot.restore(to: pasteboard)
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false),
+              let commandUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_Command), keyDown: false) else {
+            _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
             throw insertionFailure(
                 "The paste keystroke could not be created.",
                 recovery: "Copy the transcript and paste it manually."
             )
         }
 
+        commandDown.flags = .maskCommand
         keyDown.flags = .maskCommand
         keyUp.flags = .maskCommand
+        commandDown.post(tap: .cghidEventTap)
+        try await Task.sleep(for: .milliseconds(15))
         keyDown.post(tap: .cghidEventTap)
-        try await Task.sleep(for: .milliseconds(30))
+        try await Task.sleep(for: .milliseconds(15))
         keyUp.post(tap: .cghidEventTap)
+        try await Task.sleep(for: .milliseconds(15))
+        commandUp.post(tap: .cghidEventTap)
 
         try await Task.sleep(for: .milliseconds(550))
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
-            if pasteboard.changeCount == injectedChangeCount {
-                snapshot.restore(to: pasteboard)
-            }
+            _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
             throw insertionFailure(
                 "The destination app changed during insertion.",
                 recovery: "Your transcript is preserved. Focus the intended field and use Retry."
@@ -314,15 +333,19 @@ public final class TextInsertionService {
            let element = target.element,
            let valueAfterPaste = stringValue(of: element),
            valueAfterPaste == valueBeforePaste {
-            snapshot.restore(to: pasteboard)
+            _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
             throw insertionFailure(
                 "The destination did not accept the transcript.",
                 recovery: "Your transcript is preserved in Guide Companion. Focus a text field and use Retry or Copy."
             )
         }
-        if pasteboard.changeCount == injectedChangeCount {
-            snapshot.restore(to: pasteboard)
+        _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
+        guard let valueBeforePaste,
+              let element = target.element,
+              let valueAfterPaste = stringValue(of: element) else {
+            return false
         }
+        return valueAfterPaste != valueBeforePaste
     }
 
     private func insertionFailure(_ message: String, recovery: String) -> GuideFailure {
@@ -331,7 +354,7 @@ public final class TextInsertionService {
 }
 
 @MainActor
-private struct PasteboardSnapshot {
+struct PasteboardSnapshot {
     struct Item {
         let values: [(NSPasteboard.PasteboardType, Data)]
     }
@@ -346,7 +369,9 @@ private struct PasteboardSnapshot {
         }
     }
 
-    func restore(to pasteboard: NSPasteboard) {
+    @discardableResult
+    func restoreIfUnchanged(to pasteboard: NSPasteboard, expectedChangeCount: Int) -> Bool {
+        guard pasteboard.changeCount == expectedChangeCount else { return false }
         pasteboard.clearContents()
         let restored = items.map { stored -> NSPasteboardItem in
             let item = NSPasteboardItem()
@@ -358,5 +383,6 @@ private struct PasteboardSnapshot {
         if !restored.isEmpty {
             pasteboard.writeObjects(restored)
         }
+        return true
     }
 }

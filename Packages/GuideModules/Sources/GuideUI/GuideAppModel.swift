@@ -24,6 +24,8 @@ public final class GuideAppModel {
     public private(set) var lastDictationStage = "Waiting"
     public private(set) var lastFailureMessage = "None"
     public private(set) var transcriptRecovery = EphemeralTranscriptRecovery()
+    public private(set) var transcriptHistory: [TranscriptHistoryEntry] = []
+    public private(set) var historyStatusMessage = "Loading local history…"
     public var guidanceQuestion = "What should I do next?"
     public var companionEnabled: Bool {
         didSet {
@@ -33,11 +35,27 @@ public final class GuideAppModel {
             applyCompanionVisibility()
         }
     }
+    public var historyEnabled: Bool {
+        didSet {
+            guard oldValue != historyEnabled else { return }
+            defaults.set(historyEnabled, forKey: Keys.historyEnabled)
+            if !historyEnabled, saveAudioHistory {
+                saveAudioHistory = false
+            }
+        }
+    }
+    public var saveAudioHistory: Bool {
+        didSet {
+            guard oldValue != saveAudioHistory else { return }
+            defaults.set(saveAudioHistory, forKey: Keys.saveAudioHistory)
+        }
+    }
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let permissionService: PermissionService
     @ObservationIgnored private let transcriber: AppleSpeechTranscriber
     @ObservationIgnored private let insertionService: TextInsertionService
+    @ObservationIgnored private let historyStore: TranscriptHistoryStore
     @ObservationIgnored private let screenContextService: ScreenContextService
     @ObservationIgnored private let localGuidanceService: LocalGuidanceService
     @ObservationIgnored private let presentation: CompanionPresentation
@@ -56,6 +74,8 @@ public final class GuideAppModel {
 
     private enum Keys {
         static let companionEnabled = "GuideCompanion.companionEnabled"
+        static let historyEnabled = "GuideCompanion.historyEnabled"
+        static let saveAudioHistory = "GuideCompanion.saveAudioHistory"
     }
 
     private init(defaults: UserDefaults = .standard) {
@@ -63,12 +83,15 @@ public final class GuideAppModel {
         permissionService = PermissionService()
         transcriber = AppleSpeechTranscriber()
         insertionService = TextInsertionService()
+        historyStore = TranscriptHistoryStore()
         screenContextService = ScreenContextService()
         localGuidanceService = LocalGuidanceService()
         let presentation = CompanionPresentation()
         self.presentation = presentation
         companionController = CompanionPanelController(presentation: presentation)
         let enabled = defaults.object(forKey: Keys.companionEnabled) as? Bool ?? true
+        historyEnabled = defaults.object(forKey: Keys.historyEnabled) as? Bool ?? false
+        saveAudioHistory = defaults.object(forKey: Keys.saveAudioHistory) as? Bool ?? false
         companionEnabled = enabled
         companionMachine = CompanionStateMachine(isEnabled: enabled)
         permissions = PermissionSnapshot(
@@ -84,13 +107,13 @@ public final class GuideAppModel {
         case .recording: "waveform.circle.fill"
         case .preparing, .transcribing, .inserting: "ellipsis.circle.fill"
         case .failed: "exclamationmark.circle.fill"
-        default: "location.north.circle.fill"
+        default: hasRecoveryRequiringAttention ? "exclamationmark.bubble.fill" : "location.north.circle.fill"
         }
     }
 
     public var shortStatus: String {
         switch phase {
-        case .idle: permissions.dictationReady ? "ready" : "setup needed"
+        case .idle: hasRecoveryRequiringAttention ? "dictation recovered" : (permissions.dictationReady ? "ready" : "setup needed")
         case .preparing: "preparing"
         case .recording: "recording"
         case .transcribing: "transcribing"
@@ -114,17 +137,23 @@ public final class GuideAppModel {
     }
 
     public var hasRecoverableTranscript: Bool {
-        transcriptRecovery.isAvailable
+        transcriptRecovery.isAvailable || !transcriptHistory.isEmpty
     }
 
     public var recoverableTranscript: String {
-        transcriptRecovery.transcript ?? ""
+        transcriptRecovery.transcript ?? transcriptHistory.first?.text ?? ""
+    }
+
+    public var hasRecoveryRequiringAttention: Bool {
+        guard let state = transcriptHistory.first?.deliveryState else { return false }
+        return state == .pending || state == .unconfirmed || state == .failed
     }
 
     public func start() async {
         guard !started else { return }
         started = true
         refreshPermissions()
+        await loadTranscriptHistory()
 
         let service = GlobalHotKeyService(
             pressed: { [weak self] in self?.hotKeyPressed() },
@@ -149,9 +178,11 @@ public final class GuideAppModel {
             )
             try guidanceService.start()
             guidanceHotKeyService = guidanceService
-            statusMessage = dictationReady
-                ? "Ready. Hold \(shortcutDescription) to dictate."
-                : "Complete the three dictation permissions to begin."
+            statusMessage = hasRecoveryRequiringAttention
+                ? "A saved dictation still needs confirmation or retry."
+                : (dictationReady
+                    ? "Ready. Hold \(shortcutDescription) to dictate."
+                    : "Complete the three dictation permissions to begin.")
             if !dictationReady {
                 presentation.mode = .ready
                 presentation.caption = "Open Guide Companion in the menu bar to finish setup"
@@ -189,8 +220,13 @@ public final class GuideAppModel {
     public func refreshPermissions() {
         permissions = permissionService.snapshot()
         if dictationReady, !phase.isActive {
-            statusMessage = "Ready. Hold \(shortcutDescription) to dictate."
-            recoveryMessage = ""
+            if hasRecoveryRequiringAttention {
+                statusMessage = "A saved dictation still needs confirmation or retry."
+                recoveryMessage = "Open History to Copy, Retry, or Delete it."
+            } else {
+                statusMessage = "Ready. Hold \(shortcutDescription) to dictate."
+                recoveryMessage = ""
+            }
         }
     }
 
@@ -380,7 +416,15 @@ public final class GuideAppModel {
     }
 
     public func copyLastTranscript() {
-        guard let transcript = transcriptRecovery.transcript else { return }
+        guard !recoverableTranscript.isEmpty else { return }
+        copyTranscript(recoverableTranscript)
+    }
+
+    public func copyHistoryEntry(_ entry: TranscriptHistoryEntry) {
+        copyTranscript(entry.text)
+    }
+
+    private func copyTranscript(_ transcript: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         guard pasteboard.setString(transcript, forType: .string) else {
@@ -388,13 +432,22 @@ public final class GuideAppModel {
             return
         }
         statusMessage = "Last dictation copied. Paste it wherever you need it."
-        recoveryMessage = "The recovery copy remains available until you clear it or quit Guide Companion."
+        recoveryMessage = "The saved transcript remains available in local history."
     }
 
     public func retryLastTranscript() {
-        guard !phase.isActive, let transcript = transcriptRecovery.transcript else { return }
+        guard !phase.isActive, !recoverableTranscript.isEmpty else { return }
+        retryTranscript(recoverableTranscript, historyID: transcriptHistory.first?.id)
+    }
+
+    public func retryHistoryEntry(_ entry: TranscriptHistoryEntry) {
+        guard !phase.isActive else { return }
+        retryTranscript(entry.text, historyID: entry.id)
+    }
+
+    private func retryTranscript(_ transcript: String, historyID: UUID?) {
         statusMessage = "Click the destination text field now. Retrying in 4 seconds."
-        recoveryMessage = "The transcript stays recoverable even if this attempt fails."
+        recoveryMessage = "The transcript stays saved even if this attempt fails."
         lastDictationStage = "Waiting for retry target"
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))
@@ -403,14 +456,34 @@ public final class GuideAppModel {
                 lastDictationStage = "Retrying last dictation"
                 let target = try insertionService.captureFocusedTarget()
                 lastInsertionMethod = try await insertionService.insert(transcript, into: target)
-                statusMessage = "Last dictation inserted locally."
-                recoveryMessage = "A recovery copy remains available until you clear it or quit Guide Companion."
+                let confirmed = lastInsertionMethod?.isConfirmed == true
+                if let historyID {
+                    transcriptHistory = try await historyStore.updateDelivery(
+                        id: historyID,
+                        state: confirmed ? .confirmed : .unconfirmed,
+                        method: lastInsertionMethod?.rawValue,
+                        targetBundleIdentifier: target.bundleIdentifier
+                    )
+                }
+                statusMessage = confirmed
+                    ? "Saved dictation inserted locally."
+                    : "Paste sent, but the destination could not be verified."
+                recoveryMessage = confirmed
+                    ? "The transcript remains in local history."
+                    : "Check the destination. Use Copy or Retry only if the text is missing."
                 lastFailureMessage = "None"
                 lastDictationStage = "Retry succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
-                presentation.mode = .success
-                presentation.caption = "Inserted"
+                presentation.mode = confirmed ? .success : .error
+                presentation.caption = confirmed ? "Inserted" : "Saved — verify paste"
                 companionController.refresh()
             } catch {
+                if let historyID {
+                    transcriptHistory = (try? await historyStore.updateDelivery(
+                        id: historyID,
+                        state: .failed,
+                        method: lastInsertionMethod?.rawValue
+                    )) ?? transcriptHistory
+                }
                 lastDictationStage = "Retry failed"
                 presentFailure(normalize(error, stage: .insertion))
             }
@@ -419,8 +492,72 @@ public final class GuideAppModel {
 
     public func clearLastTranscript() {
         transcriptRecovery.clear()
-        statusMessage = "Last dictation cleared."
-        recoveryMessage = ""
+        guard let id = transcriptHistory.first?.id else {
+            statusMessage = "Last dictation cleared."
+            recoveryMessage = ""
+            return
+        }
+        deleteHistoryEntry(id: id)
+    }
+
+    public func deleteHistoryEntry(id: UUID) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                transcriptHistory = try await historyStore.delete(id: id)
+                if let latest = transcriptHistory.first {
+                    transcriptRecovery = EphemeralTranscriptRecovery(transcript: latest.text)
+                } else {
+                    transcriptRecovery.clear()
+                }
+                statusMessage = "Saved dictation deleted."
+                recoveryMessage = ""
+                historyStatusMessage = historySummary
+            } catch {
+                historyStatusMessage = "History deletion failed. Try again."
+            }
+        }
+    }
+
+    public func clearTranscriptHistory() {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await historyStore.clear()
+                transcriptHistory = []
+                transcriptRecovery.clear()
+                historyStatusMessage = "No saved dictations."
+                statusMessage = "Local transcript and audio history cleared."
+                recoveryMessage = ""
+            } catch {
+                historyStatusMessage = "History could not be cleared. Try again."
+            }
+        }
+    }
+
+    public var historySummary: String {
+        switch transcriptHistory.count {
+        case 0: "No saved dictations."
+        case 1: "1 saved dictation."
+        default: "\(transcriptHistory.count) saved dictations."
+        }
+    }
+
+    private func loadTranscriptHistory() async {
+        do {
+            transcriptHistory = try await historyStore.load()
+            if let latest = transcriptHistory.first {
+                transcriptRecovery.preserve(latest.text)
+                if latest.deliveryState == .pending {
+                    statusMessage = "A dictation was recovered before delivery completed."
+                    recoveryMessage = "Use Copy or Retry after focusing the intended field."
+                }
+            }
+            historyStatusMessage = historySummary
+        } catch {
+            historyStatusMessage = "Local history could not be read. Existing data was not overwritten."
+            recoveryMessage = "Guide Companion will not overwrite unreadable history."
+        }
     }
 
     private func hotKeyPressed() {
@@ -455,7 +592,7 @@ public final class GuideAppModel {
             focusedTarget = try insertionService.captureFocusedTarget()
             partialTranscript = ""
             recoveryMessage = ""
-            try transcriber.start { [weak self] text in
+            try transcriber.start(saveAudio: historyEnabled && saveAudioHistory) { [weak self] text in
                 self?.partialTranscript = text
                 if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     self?.lastDictationStage = "Speech detected (\(text.count) characters)"
@@ -500,26 +637,74 @@ public final class GuideAppModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let transcript = try await transcriber.stop()
+                let result = try await transcriber.stop()
+                let transcript = result.transcript
                 transcriptRecovery.preserve(transcript)
                 partialTranscript = transcript
+                let historyEntry: TranscriptHistoryEntry
+                do {
+                    let entry = try await historyStore.preserve(
+                        text: transcript,
+                        targetBundleIdentifier: focusedTarget.bundleIdentifier,
+                        temporaryAudioURL: result.temporaryAudioURL,
+                        retainInHistory: historyEnabled
+                    )
+                    historyEntry = entry
+                    transcriptHistory = try await historyStore.load()
+                    historyStatusMessage = historySummary
+                    lastDictationStage = "Transcript saved before delivery"
+                } catch {
+                    if let url = result.temporaryAudioURL {
+                        try? FileManager.default.removeItem(at: url)
+                    }
+                    copyTranscript(transcript)
+                    throw GuideFailure(
+                        stage: .storage,
+                        message: "The transcript could not be saved safely, so automatic insertion was stopped.",
+                        recovery: "The transcript is still shown in Guide Companion and copied to the clipboard. Check available disk space, then paste it manually."
+                    )
+                }
                 try dictationMachine.beginInsertion()
                 phase = dictationMachine.phase
                 statusMessage = "Inserting text…"
                 lastDictationStage = "Inserting text"
-                lastInsertionMethod = try await insertionService.insert(transcript, into: focusedTarget)
+                do {
+                    lastInsertionMethod = try await insertionService.insert(transcript, into: focusedTarget)
+                } catch {
+                    transcriptHistory = (try? await historyStore.updateDelivery(
+                        id: historyEntry.id,
+                        state: .failed,
+                        method: lastInsertionMethod?.rawValue
+                    )) ?? transcriptHistory
+                    throw error
+                }
+                let confirmed = lastInsertionMethod?.isConfirmed == true
+                transcriptHistory = (try? await historyStore.updateDelivery(
+                    id: historyEntry.id,
+                    state: confirmed ? .confirmed : .unconfirmed,
+                    method: lastInsertionMethod?.rawValue
+                )) ?? transcriptHistory
+                historyStatusMessage = historySummary
                 try dictationMachine.succeed()
                 phase = dictationMachine.phase
-                statusMessage = "Dictation inserted locally."
-                lastDictationStage = "Succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
-                Self.logger.notice("Dictation inserted; method=\(self.lastInsertionMethod?.rawValue ?? "unknown", privacy: .public)")
-                recoveryMessage = ""
+                statusMessage = confirmed
+                    ? "Dictation inserted locally."
+                    : "Paste sent, but the destination could not be verified."
+                lastDictationStage = confirmed
+                    ? "Confirmed via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                    : "Unconfirmed via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                Self.logger.notice(
+                    "Dictation delivery completed; method=\(self.lastInsertionMethod?.rawValue ?? "unknown", privacy: .public) confirmed=\(confirmed)"
+                )
+                recoveryMessage = confirmed
+                    ? (historyEnabled ? "Saved in local history." : "A short-lived recovery copy is available.")
+                    : "Check the destination. The transcript is saved; use Copy or Retry only if it is missing."
                 lastFailureMessage = "None"
                 self.focusedTarget = nil
-                presentation.mode = .success
-                presentation.caption = "Inserted"
+                presentation.mode = confirmed ? .success : .error
+                presentation.caption = confirmed ? "Inserted" : "Saved — verify paste"
                 companionController.refresh()
-                scheduleReset()
+                scheduleReset(after: confirmed ? 0.8 : 12)
             } catch is CancellationError {
                 cancelDictation()
             } catch {
@@ -545,9 +730,11 @@ public final class GuideAppModel {
             lastDictationStage = "Failed: \(failure.stage.rawValue)"
         }
         presentation.mode = .error
-        presentation.caption = failure.message
+        presentation.caption = hasRecoverableTranscript
+            ? "Saved — \(failure.message)"
+            : failure.message
         companionController.refresh()
-        scheduleReset(after: 4)
+        scheduleReset(after: hasRecoverableTranscript ? 12 : 4)
     }
 
     private func presentGuidanceCaption(_ text: String, mode: CompanionMode) {

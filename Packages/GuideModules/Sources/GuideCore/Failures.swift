@@ -5,6 +5,7 @@ public enum GuideFailureStage: String, CaseIterable, Codable, Equatable, Sendabl
     case activation
     case recording
     case transcription
+    case storage
     case insertion
     case capture
     case understanding
@@ -28,4 +29,3 @@ extension GuideFailure: LocalizedError {
     public var errorDescription: String? { message }
     public var recoverySuggestion: String? { recovery }
 }
-

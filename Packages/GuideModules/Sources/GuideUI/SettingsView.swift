@@ -9,6 +9,7 @@ public struct SettingsView: View {
         case setup
         case companion
         case guidance
+        case history
         case privacy
     }
 
@@ -27,6 +28,9 @@ public struct SettingsView: View {
             guidanceForm
                 .tabItem { Label("Guidance", systemImage: "sparkles.rectangle.stack") }
                 .tag(SettingsTab.guidance)
+            historyForm
+                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                .tag(SettingsTab.history)
             privacyForm
                 .tabItem { Label("Privacy", systemImage: "hand.raised") }
                 .tag(SettingsTab.privacy)
@@ -111,7 +115,7 @@ public struct SettingsView: View {
                         Button("Copy") { model.copyLastTranscript() }
                         Button("Clear", role: .destructive) { model.clearLastTranscript() }
                     }
-                    Text("Kept only in memory until you clear it or quit Guide Companion.")
+                    Text("Saved locally before delivery and retained according to History settings.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -148,8 +152,77 @@ public struct SettingsView: View {
     private var privacyForm: some View {
         Form {
             Section("Privacy") {
-                Text("Audio and screenshots are not stored. The last completed dictation is kept only in memory until you clear it or quit Guide Companion. Dictation and guidance use on-device system models without an API key.")
+                Text("Dictation and guidance use on-device system models without an API key. One short-lived Last Dictation is stored locally before delivery so a failed paste cannot lose your words. Longer transcript history and all audio storage are separate opt-ins. Screenshots are not stored.")
                     .foregroundStyle(.secondary)
+            }
+            Section("Storage location") {
+                Text("~/Library/Application Support/Guide Companion/History")
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+                Text("History files are excluded from backup and written with owner-only permissions.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var historyForm: some View {
+        Form {
+            Section("Local recovery") {
+                Toggle("Save transcript history locally", isOn: $model.historyEnabled)
+                Text("Off by default. When enabled, up to 25 transcripts are kept for 30 days. Without it, only the newest Last Dictation is kept: 10 minutes after confirmed delivery or 24 hours when delivery is unconfirmed or failed.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle("Save dictation audio with history", isOn: $model.saveAudioHistory)
+                    .disabled(!model.historyEnabled)
+                Text("Off by default. When enabled, audio is local, follows the same retention limit, and is deleted with its transcript.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text(model.historyStatusMessage)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section(model.historyEnabled ? "Saved dictations" : "Last Dictation recovery") {
+                if model.transcriptHistory.isEmpty {
+                    Text("No saved dictations yet.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(model.transcriptHistory) { entry in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(entry.createdAt, style: .date)
+                                Text(entry.createdAt, style: .time)
+                                Spacer()
+                                Text(entry.deliveryState.rawValue.capitalized)
+                                    .foregroundStyle(entry.deliveryState == .confirmed ? .green : .orange)
+                            }
+                            .font(.caption)
+                            Text(entry.text)
+                                .lineLimit(3)
+                                .textSelection(.enabled)
+                            HStack {
+                                Button("Copy") { model.copyHistoryEntry(entry) }
+                                Button("Retry in 4 Seconds") { model.retryHistoryEntry(entry) }
+                                    .disabled(model.phase.isActive)
+                                Spacer()
+                                Button("Delete", role: .destructive) {
+                                    model.deleteHistoryEntry(id: entry.id)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+
+            Section {
+                Button("Clear Transcript and Audio History", role: .destructive) {
+                    model.clearTranscriptHistory()
+                }
+                .disabled(model.transcriptHistory.isEmpty)
             }
         }
         .formStyle(.grouped)

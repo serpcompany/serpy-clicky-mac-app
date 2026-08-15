@@ -17,6 +17,8 @@ Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`
 | A8 | Clipboard content is preserved during fallback insertion | Deterministic test | implemented |
 | A9 | No API key, account, or network is required after model download | Network-disabled observation | implemented |
 | A10 | Failed delivery retains Last Dictation with Retry, Copy, and Clear | State test + installed observation | unit-tested |
+| A11 | Completed transcript survives crash/relaunch before delivery | Store test + installed crash/relaunch observation | unit-tested |
+| A12 | Unverifiable paste is labeled unconfirmed and remains recoverable | Deterministic test + installed observation | unit-tested |
 
 Build 15 visibly reports the four permission states and shortcut registration,
 and its signed live-audio path records without the earlier callback crashes.
@@ -31,9 +33,10 @@ shortcut plus an audible spoken phrase produced the expected on-device
 transcript in an empty TextEdit field. Owner-voice confirmation remains pending.
 Build 16 changes delivery to focus-verified session paste and verifies the
 installed app acoustically in Chrome plain input, textarea, contenteditable,
-and TextEdit targets. It also retains a single in-memory Last Dictation before
-delivery so Copy and Retry remain available after failure. A5 remains partial:
-Notes, Slack, and a code editor are not yet observed.
+and TextEdit targets. Build 17 replaces the memory-only recovery path with an
+atomic local Last Dictation saved before delivery; installed verification is
+pending. A5 remains partial: Notes, Slack, and a code editor are not yet
+observed.
 
 ## B — Companion
 
@@ -74,9 +77,10 @@ the current build.
 | D1 | Developer ID signed, notarized, stapled DMG | Mechanical report | accepted |
 | D2 | HTTPS download carries quarantine and passes Gatekeeper | Installed report | unimplemented |
 | D3 | Quit/relaunch does not cause permission loops | Installed recording | installed-observed |
-| D4 | No audio or screenshots are stored; one transcript is retained only in memory until cleared or quit | Filesystem/log audit | implemented |
+| D4 | Default storage is one bounded Last Dictation; screenshots/audio are not stored | Filesystem/log audit | unit-tested |
 | D5 | Diagnostics redact captured and dictated content | Fixture tests + export audit | implemented |
 | D6 | No borrowed product identity, keys, feeds, or release destinations remain | Provenance/identity audit | implemented |
+| D7 | Full transcript history and audio history require separate explicit opt-ins and Clear removes both | State/store tests + installed observation | unit-tested |
 
 ## Compatibility Matrix
 

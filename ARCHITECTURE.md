@@ -167,12 +167,19 @@ failure recovery. Select through ADR 0002 after the probe.
 
 Use a capability chain rather than one brittle technique:
 
-1. Accessibility insertion or selected-value replacement where supported.
-2. Clipboard-preserving paste fallback with exact restoration checks.
-3. Clear unsupported-target error when neither path is safe.
+1. Persist the completed transcript atomically before attempting delivery.
+2. Use normal session-stream paste as the broad compatibility path.
+3. Use Accessibility insertion or selected-value replacement only for targets
+   whose resulting value can be observed and verified.
+4. Preserve every clipboard item and representation; restore only while the
+   pasteboard change count proves the app still owns its temporary contents.
+5. Report a clear unsupported-target error when neither path is safe.
 
-Never press Return, submit forms, or silently discard a transcript. Preserve
-the original clipboard unless the user explicitly changes that preference.
+Posting paste events is not proof that insertion succeeded. Mark delivery
+confirmed only when the destination can be read back; otherwise retain an
+unconfirmed recovery item with Copy, Retry, and Delete. Never press Return,
+submit forms, overwrite a newer clipboard change, or silently discard a
+transcript.
 
 ## Screen Guidance Strategy
 
@@ -188,9 +195,16 @@ the original clipboard unless the user explicitly changes that preference.
 ## Storage and Privacy
 
 - UserDefaults: small preferences and completed onboarding steps.
-- Application Support: downloaded model manifests, checksums, and redacted logs.
+- Application Support: downloaded model manifests, checksums, redacted logs,
+  and the bounded local transcript recovery store.
 - Keychain: reserved for future secrets; core product requires none.
-- No transcript, audio, or screenshot history by default.
+- By default, persist only the newest Last Dictation: 10 minutes after
+  confirmed delivery or 24 hours after unconfirmed/failed delivery. Persist it
+  atomically before delivery so a crash cannot erase the user's words.
+- Full transcript history is opt-in, bounded to 25 entries and 30 days.
+- Audio history is a separate opt-in and is never enabled implicitly.
+- Transcript and audio files use owner-only permissions and are excluded from
+  backups. Screenshots are never stored.
 - No account, telemetry SDK, analytics identifier, or localhost control bridge.
 - Logs contain session IDs, durations, stages, and error categories—not content.
 

@@ -205,7 +205,7 @@ public struct MenuPanelView: View {
                 .font(.callout)
                 .lineLimit(3)
                 .textSelection(.enabled)
-            Text("Kept only in memory until you clear it or quit. Retry gives you 4 seconds to focus a destination field.")
+            Text("Saved locally before delivery. Retry gives you 4 seconds to focus a destination field; it never retries automatically.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack {

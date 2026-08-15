@@ -60,8 +60,10 @@ API key, or metered provider.
   and provides a recovery action.
 - **The guide advises; it does not operate.** Autonomous agents are outside the
   first product.
-- **Privacy is structural.** Audio, screenshots, and transcripts are transient
-  by default and are not used for analytics or training.
+- **Privacy is structural.** Screenshots and audio are transient by default.
+  One completed transcript is retained briefly for crash and failed-paste
+  recovery; longer transcript history and audio history require explicit
+  opt-in. Content is never used for analytics or training.
 
 ## First-Product Scope
 
@@ -72,6 +74,9 @@ Included:
 - Configurable push-to-talk and toggle-dictation shortcuts.
 - Free on-device speech-to-text.
 - Focused-field insertion with clipboard-preserving fallback.
+- Crash-safe Last Dictation recovery with explicit Copy, Retry, and Delete.
+- Optional local transcript history; optional audio history is a separate
+  opt-in and remains off by default.
 - Persistent cursor companion and short captions.
 - Explicit, request-scoped screen guidance.
 - Local logs that redact dictated and captured content.
