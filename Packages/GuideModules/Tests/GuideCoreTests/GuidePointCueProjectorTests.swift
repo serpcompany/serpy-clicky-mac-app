@@ -40,4 +40,29 @@ final class GuidePointCueProjectorTests: XCTestCase {
 
         XCTAssertNil(GuidePointCueProjector().appKitPoint(for: cue, displays: []))
     }
+
+    func testEdgeCuePanelIsClampedInsideTheLockedWindowOnItsLockedDisplay() throws {
+        let target = GuideWindowTarget(
+            processIdentifier: 5,
+            windowIdentifier: 9,
+            applicationName: "Fixture",
+            windowTitle: "Edge",
+            frame: CGRect(x: -1800, y: 100, width: 800, height: 600),
+            displayIdentifier: 7
+        )
+        let cue = GuidePointCue(target: target, normalizedPoint: CGPoint(x: 0, y: 0), label: "File")
+        let displays = [GuideDisplayMapping(
+            displayIdentifier: 7,
+            quartzFrame: CGRect(x: -1920, y: 0, width: 1920, height: 1080),
+            appKitFrame: CGRect(x: -1920, y: 0, width: 1920, height: 1080)
+        )]
+
+        let frame = try XCTUnwrap(GuidePointCueProjector().panelFrame(
+            for: cue,
+            panelSize: CGSize(width: 56, height: 56),
+            displays: displays
+        ))
+
+        XCTAssertTrue(CGRect(x: -1800, y: 380, width: 800, height: 600).contains(frame))
+    }
 }

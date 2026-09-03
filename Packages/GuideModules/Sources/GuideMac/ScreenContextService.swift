@@ -4,6 +4,20 @@ import GuideCore
 import ScreenCaptureKit
 import Vision
 
+private func lockedDisplayIdentifier(for frame: CGRect) -> UInt32? {
+    var displayCount: UInt32 = 0
+    guard CGGetDisplaysWithRect(frame, 0, nil, &displayCount) == .success,
+          displayCount > 0 else { return nil }
+    var displays = [CGDirectDisplayID](repeating: 0, count: Int(displayCount))
+    guard CGGetDisplaysWithRect(frame, displayCount, &displays, &displayCount) == .success else { return nil }
+    return displays.prefix(Int(displayCount)).max { first, second in
+        let firstIntersection = CGDisplayBounds(first).intersection(frame)
+        let secondIntersection = CGDisplayBounds(second).intersection(frame)
+        return firstIntersection.width * firstIntersection.height
+            < secondIntersection.width * secondIntersection.height
+    }
+}
+
 public final class VisionScreenTextRecognizer: ScreenTextRecognizing, @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.serpcompany.serpy.vision-ocr", qos: .userInitiated)
 
@@ -45,13 +59,15 @@ public struct ScreenCaptureKitWindowSnapshot: Equatable, Sendable {
     public let applicationName: String
     public let windowTitle: String
     public let frame: CGRect
+    public let displayIdentifier: UInt32?
 
-    public init(processIdentifier: Int32, windowIdentifier: UInt32, applicationName: String, windowTitle: String, frame: CGRect) {
+    public init(processIdentifier: Int32, windowIdentifier: UInt32, applicationName: String, windowTitle: String, frame: CGRect, displayIdentifier: UInt32? = nil) {
         self.processIdentifier = processIdentifier
         self.windowIdentifier = windowIdentifier
         self.applicationName = applicationName
         self.windowTitle = windowTitle
         self.frame = frame
+        self.displayIdentifier = displayIdentifier
     }
 }
 
@@ -103,7 +119,8 @@ public actor SystemScreenCaptureKitFacade: ScreenCaptureKitFacading {
                 windowIdentifier: window.windowID,
                 applicationName: window.owningApplication?.applicationName ?? "Current app",
                 windowTitle: window.title ?? "Untitled window",
-                frame: window.frame
+                frame: window.frame,
+                displayIdentifier: lockedDisplayIdentifier(for: window.frame)
             )
         }
     }
@@ -142,7 +159,8 @@ public actor ScreenCaptureKitWindowProvider: ScreenWindowCaptureProviding {
             windowIdentifier: $0.windowIdentifier,
             applicationName: $0.applicationName,
             windowTitle: $0.windowTitle,
-            frame: $0.frame
+            frame: $0.frame,
+            displayIdentifier: $0.displayIdentifier
         ) }
     }
 
@@ -251,7 +269,8 @@ public final class ScreenContextService: GuideTurnContextCapturing, @unchecked S
                 windowIdentifier: windowID.uint32Value,
                 applicationName: info[kCGWindowOwnerName as String] as? String ?? "Current app",
                 windowTitle: info[kCGWindowName as String] as? String ?? "Untitled window",
-                frame: frame
+                frame: frame,
+                displayIdentifier: lockedDisplayIdentifier(for: frame)
             )
         }
     }

@@ -6,7 +6,7 @@ final class GuideCompanionUITests: XCTestCase {
         application.launchArguments = ["--ui-testing"]
         application.launch()
 
-        XCTAssertTrue(application.wait(for: .runningBackground, timeout: 5))
+        XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
     }
 
     func testVoiceConversationTranscriptHasNoTypingComposer() {

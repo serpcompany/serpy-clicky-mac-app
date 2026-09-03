@@ -284,6 +284,8 @@ public final class TalkGenerationRouter: GuideTurnStreamingGenerating {
         selection == .openAI ? "Looking at this window with OpenAI…" : "Thinking locally…"
     }
 
+    public var expectsStructuredPlan: Bool { true }
+
     public func configure(
         selection: TalkProviderSelection,
         disclosureAccepted: Bool,
@@ -328,6 +330,7 @@ public final class TalkGenerationRouter: GuideTurnStreamingGenerating {
                         )
                         continuation.yield(.textDelta(plan.answer))
                         continuation.yield(.sentenceReady(plan.answer))
+                        continuation.yield(.planReady(plan))
                         continuation.yield(.completed)
                         continuation.finish()
                     } catch {

@@ -235,18 +235,13 @@ public final class CompanionPanelController {
 
 
         if let cue = presentation.pointCue,
-           let point = pointCueProjector.appKitPoint(for: cue) {
+           let cueFrame = pointCueProjector.panelFrame(
+               for: cue,
+               panelSize: CGSize(width: 56, height: 56),
+               displays: GuidePointCueProjector.systemDisplayMappings()
+           ) {
             pointCuePositionIsValid = true
-            let size = NSSize(width: 56, height: 56)
-            pointCuePanel.setFrame(
-                NSRect(
-                    x: point.x - size.width / 2,
-                    y: point.y - size.height / 2,
-                    width: size.width,
-                    height: size.height
-                ),
-                display: true
-            )
+            pointCuePanel.setFrame(cueFrame, display: true)
         } else {
             pointCuePositionIsValid = false
             pointCuePanel.orderOut(nil)

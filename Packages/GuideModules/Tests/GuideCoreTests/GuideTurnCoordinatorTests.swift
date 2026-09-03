@@ -10,7 +10,8 @@ final class GuideTurnCoordinatorTests: XCTestCase {
             windowIdentifier: 901,
             applicationName: "Fixture App",
             windowTitle: "Unique phrase",
-            frame: CGRect(x: 40, y: 50, width: 900, height: 700)
+            frame: CGRect(x: 40, y: 50, width: 900, height: 700),
+            displayIdentifier: 7
         )
         let events = EventRecorder()
         let context = ScreenContext(
@@ -43,6 +44,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
             try XCTUnwrap(events.values.firstIndex(of: "capture:901"))
         )
         XCTAssertEqual(capture.capturedTargets, [target])
+        XCTAssertEqual(overlay.presentations.last?.target?.displayIdentifier, target.displayIdentifier)
         XCTAssertEqual(generation.receivedContexts.first?.promptText, "ORCHID RIVER 731")
         XCTAssertEqual(coordinator.conversation.map(\.content), [
             "What phrase is visible?",
@@ -432,6 +434,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(speech.spokenTexts, ["Open File."])
         XCTAssertEqual(overlay.presentations.last?.responseText, "Open File.")
         XCTAssertEqual(overlay.presentations.last?.stepNumber, 1)
+        XCTAssertFalse(overlay.presentations.contains { $0.responseText == "Open a new window." })
     }
 
     func testCancellationAtReadyForFollowUpClearsPlanCueAndPendingProgressionIdempotently() async throws {
@@ -510,7 +513,8 @@ final class GuideTurnCoordinatorTests: XCTestCase {
             windowIdentifier: 901,
             applicationName: "Fixture App",
             windowTitle: "Unique phrase",
-            frame: CGRect(x: 40, y: 50, width: 900, height: 700)
+            frame: CGRect(x: 40, y: 50, width: 900, height: 700),
+            displayIdentifier: 7
         )
     }
 
@@ -915,6 +919,7 @@ private final class PlanGeneration: GuideTurnGenerating {
 @MainActor
 private final class StreamingPlanGeneration: GuideTurnStreamingGenerating {
     let thinkingStatusText = "Planning…"
+    let expectsStructuredPlan = true
 
     func answer(question: String, context: ScreenContext, conversation: [GuidanceMessage]) async throws -> GuidancePlan {
         GuidancePlan(answer: "unused", confidence: 0)

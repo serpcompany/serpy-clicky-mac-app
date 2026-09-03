@@ -24,7 +24,7 @@ final class LocalGuidanceProviderContractTests: XCTestCase {
     func testProviderSessionReceivesGroundedPromptAndOneContradictionRetry() async throws {
         let session = FakeGuidanceSession(responses: [
             "I can't see the application.",
-            "In ChatGPT, choose New chat in the sidebar."
+            #"{"answer":"In ChatGPT, choose New chat in the sidebar.","steps":[{"text":"Find New chat.","completionEvidence":["New chat"]},{"text":"Choose it.","completionEvidence":["ChatGPT"]}]}"#
         ])
         let service = LocalGuidanceService(provider: FakeGuidanceProvider(session: session))
         let context = ScreenContext(
@@ -44,6 +44,25 @@ final class LocalGuidanceProviderContractTests: XCTestCase {
         XCTAssertTrue(session.prompts[0].contains("Current app: ChatGPT"))
         XCTAssertTrue(session.prompts[0].contains("New chat"))
         XCTAssertTrue(session.prompts[1].contains("Do not claim"))
+    }
+
+    func testProviderRejectsNonStructuredAnswerInsteadOfShowingGenericProse() async throws {
+        let session = FakeGuidanceSession(responses: ["Use the menu."])
+        let service = LocalGuidanceService(provider: FakeGuidanceProvider(session: session))
+        let context = ScreenContext(
+            applicationName: "Chrome",
+            windowTitle: "New Tab",
+            windowFrame: .zero,
+            textBlocks: [.init(text: "File", normalizedBounds: .zero, confidence: 0.99)]
+        )
+
+        do {
+            _ = try await service.answer(question: "Open a window", context: context)
+            XCTFail("Expected malformed plan failure")
+        } catch {
+            XCTAssertEqual((error as? GuideFailure)?.stage, .guidance)
+            XCTAssertTrue((error as? GuideFailure)?.recovery.contains("incomplete steps") == true)
+        }
     }
 
     func testProviderDecodesOrderedWalkthroughStepsFromIndependentFixture() async throws {

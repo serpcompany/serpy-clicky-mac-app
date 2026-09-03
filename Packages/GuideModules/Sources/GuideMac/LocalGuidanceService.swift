@@ -160,12 +160,12 @@ public final class LocalGuidanceService {
                     recovery: "Ask the question another way and try again."
                 )
             }
+            let resolvedPlan = retryAnswer == answer ? retryPlan : initialPlan
+            guard let resolvedPlan else { throw Self.malformedPlanFailure }
             return GuidancePlan(
                 answer: answer,
-                confidence: 0.70,
-                steps: retryAnswer == answer
-                    ? (retryPlan?.steps ?? [])
-                    : (initialPlan?.steps ?? [])
+                confidence: resolvedPlan.confidence,
+                steps: resolvedPlan.steps
             )
     }
 

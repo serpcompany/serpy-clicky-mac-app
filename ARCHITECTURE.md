@@ -102,17 +102,15 @@ idle -> preparing -> recording -> transcribing -> inserting -> succeeded -> idle
 The session snapshots the focused application and editable target when
 recording starts, then validates the target again before insertion.
 
-### Companion visibility
+### Transient companion visibility
 
 ```text
-disabled
-enabledBlocked(reason)
-enabledVisible
-enabledTemporarilyHidden(reason, returnPolicy)
+hidden -> meaningful dictation/Guide state -> visible -> cleanup -> hidden
 ```
 
-Invariant: when the persisted preference is enabled and no documented blocker
-exists, every temporary hide path must return to `enabledVisible`.
+Invariant: idle has no cursor-following badge. Dictation captions and Guide
+surfaces appear only while they convey meaningful transient state, independent
+of any migrated preference from older builds, and cleanup returns to `hidden`.
 
 ### Guidance conversation and request
 
@@ -131,6 +129,12 @@ The engine streams provider-neutral `GuidanceStreamEvent` values. Text deltas
 build the visible answer, complete sentence chunks may enter the local speech
 queue, and spatial actions must pass independent validation before presentation.
 Provider-specific request and SSE types remain in GuideMac.
+
+`GuideWindowTarget` locks PID, exact window ID, title, frame, and display ID at
+invocation. Presentation uses that display identity instead of reselecting a
+screen from later pointer position. Point-cue panels are clamped wholly inside
+the locked window. Retained step coordinates are discarded after a fresh
+capture rather than reused against changed pixels.
 
 The OpenAI adapter requests one strict structured output containing a required
 non-empty `answer` and an optional `point`. It incrementally extracts only the

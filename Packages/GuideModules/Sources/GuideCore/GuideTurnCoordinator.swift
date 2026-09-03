@@ -7,19 +7,22 @@ public struct GuideWindowTarget: Equatable, Sendable {
     public let applicationName: String
     public let windowTitle: String
     public let frame: CGRect
+    public let displayIdentifier: UInt32?
 
     public init(
         processIdentifier: Int32,
         windowIdentifier: UInt32,
         applicationName: String,
         windowTitle: String,
-        frame: CGRect
+        frame: CGRect,
+        displayIdentifier: UInt32? = nil
     ) {
         self.processIdentifier = processIdentifier
         self.windowIdentifier = windowIdentifier
         self.applicationName = applicationName
         self.windowTitle = windowTitle
         self.frame = frame
+        self.displayIdentifier = displayIdentifier
     }
 
     public var identity: ScreenContextIdentity {
@@ -55,6 +58,7 @@ public protocol GuideTurnGenerating: AnyObject {
 @MainActor
 public protocol GuideTurnStreamingGenerating: GuideTurnGenerating {
     var thinkingStatusText: String { get }
+    var expectsStructuredPlan: Bool { get }
     func streamAnswer(
         question: String,
         target: GuideWindowTarget,
@@ -62,6 +66,10 @@ public protocol GuideTurnStreamingGenerating: GuideTurnGenerating {
         conversation: [GuidanceMessage]
     ) throws -> AsyncThrowingStream<GuidanceStreamEvent, Error>
     func cancelGeneration()
+}
+
+public extension GuideTurnStreamingGenerating {
+    var expectsStructuredPlan: Bool { false }
 }
 
 @MainActor
@@ -459,7 +467,7 @@ public final class GuideTurnCoordinator {
             case let .textDelta(delta):
                 answer += delta
                 let visible = GuidanceAnswerSanitizer.sanitize(answer)
-                if !visible.isEmpty {
+                if !visible.isEmpty, !generation.expectsStructuredPlan {
                     phase = .presenting
                     presentOverlay(.init(
                         stage: .speaking,

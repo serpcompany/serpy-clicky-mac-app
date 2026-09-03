@@ -49,14 +49,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             configureTalkGenerator()
         }
     }
-    public var companionEnabled: Bool {
-        didSet {
-            guard oldValue != companionEnabled else { return }
-            defaults.set(companionEnabled, forKey: Keys.companionEnabled)
-            companionMachine.setEnabled(companionEnabled)
-            applyCompanionVisibility()
-        }
-    }
     public var historyEnabled: Bool {
         didSet {
             guard oldValue != historyEnabled else { return }
@@ -95,7 +87,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var shortcutService: (any GlobalShortcutMonitoring)?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
-    @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private let transientSurfaceVisibilityPolicy = TransientCompanionSurfaceVisibilityPolicy()
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
@@ -115,7 +106,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     )
 
     private enum Keys {
-        static let companionEnabled = "GuideCompanion.companionEnabled"
         static let historyEnabled = "GuideCompanion.historyEnabled"
         static let saveAudioHistory = "GuideCompanion.saveAudioHistory"
         static let dictationShortcut = "SERPy.dictationShortcut"
@@ -164,7 +154,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         let presentation = CompanionPresentation()
         self.presentation = presentation
         companionController = CompanionPanelController(presentation: presentation)
-        let enabled = defaults.object(forKey: Keys.companionEnabled) as? Bool ?? true
         dictationShortcut = defaults.data(forKey: Keys.dictationShortcut)
             .flatMap { try? JSONDecoder().decode(GlobalHotKeyConfiguration.self, from: $0) }
             ?? .dictation
@@ -173,8 +162,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             ?? .guideDefault
         historyEnabled = defaults.object(forKey: Keys.historyEnabled) as? Bool ?? false
         saveAudioHistory = defaults.object(forKey: Keys.saveAudioHistory) as? Bool ?? false
-        companionEnabled = enabled
-        companionMachine = CompanionStateMachine(isEnabled: enabled)
         permissions = PermissionSnapshot(
             microphone: .unknown,
             speechRecognition: .unknown,
@@ -1321,7 +1308,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     private func applyCompanionVisibility() {
         guard transientSurfaceVisibilityPolicy.isVisible(
-            persistedCompanionEnabled: companionEnabled,
             guidePhase: guidancePhase,
             hasTransientCaption: !presentation.caption.isEmpty
         ) else {

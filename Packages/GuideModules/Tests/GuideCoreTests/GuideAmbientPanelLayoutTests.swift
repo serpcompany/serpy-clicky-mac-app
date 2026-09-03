@@ -30,9 +30,9 @@ struct TransientCompanionSurfaceVisibilityTests {
     func idleBadgeIsRemoved() {
         let policy = TransientCompanionSurfaceVisibilityPolicy()
 
-        #expect(!policy.isVisible(persistedCompanionEnabled: true, guidePhase: .idle, hasTransientCaption: false))
-        #expect(policy.isVisible(persistedCompanionEnabled: false, guidePhase: .listening, hasTransientCaption: false))
-        #expect(policy.isVisible(persistedCompanionEnabled: false, guidePhase: .idle, hasTransientCaption: true))
+        #expect(!policy.isVisible(guidePhase: .idle, hasTransientCaption: false))
+        #expect(policy.isVisible(guidePhase: .listening, hasTransientCaption: false))
+        #expect(policy.isVisible(guidePhase: .idle, hasTransientCaption: true))
     }
 }
 

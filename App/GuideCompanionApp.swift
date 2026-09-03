@@ -92,10 +92,8 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         applyPresence(for: .running(settingsVisible: flag))
-        if !flag {
-            sender.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-            sender.activate(ignoringOtherApps: true)
-        }
+        sender.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        sender.activate(ignoringOtherApps: true)
         return true
     }
 

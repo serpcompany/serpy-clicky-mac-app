@@ -129,11 +129,9 @@ public struct TransientCompanionSurfaceVisibilityPolicy: Sendable {
     public init() {}
 
     public func isVisible(
-        persistedCompanionEnabled: Bool,
         guidePhase: GuidancePhase,
         hasTransientCaption: Bool
     ) -> Bool {
-        _ = persistedCompanionEnabled
         return guidePhase.isActive || hasTransientCaption
     }
 }
