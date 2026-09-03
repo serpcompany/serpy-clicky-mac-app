@@ -11,7 +11,7 @@ final class GuideConversationWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "SERPy AI Guide"
+        window.title = "SERPy Voice Transcript"
         window.level = .normal
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 440, height: 460)
@@ -35,7 +35,6 @@ final class GuideConversationWindowController: NSWindowController {
 
 public struct GuideConversationView: View {
     @Bindable private var model: GuideAppModel
-    @FocusState private var isComposerFocused: Bool
 
     public init(model: GuideAppModel) {
         self.model = model
@@ -46,12 +45,9 @@ public struct GuideConversationView: View {
             header
             Divider()
             conversation
-            Divider()
-            composer
         }
         .frame(minWidth: 440, minHeight: 460)
         .background(Color(nsColor: .windowBackgroundColor))
-        .onAppear { isComposerFocused = true }
     }
 
     private var header: some View {
@@ -61,7 +57,7 @@ public struct GuideConversationView: View {
                 .foregroundStyle(.purple)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("AI Guide")
+                Text("Voice Conversation")
                     .font(.title2.weight(.semibold))
                 Text(model.guidanceContextLabel)
                     .font(.caption)
@@ -69,9 +65,20 @@ public struct GuideConversationView: View {
                     .lineLimit(1)
             }
             Spacer()
+            Button(
+                model.guidancePhase == .listening ? "Finish Question" : "Talk",
+                systemImage: model.guidancePhase == .listening ? "stop.circle.fill" : "waveform.and.mic"
+            ) {
+                model.toggleGuidanceVoice()
+            }
+            .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
+            if model.guidancePhase == .listening {
+                Button("Cancel", role: .cancel) {
+                    model.cancelGuidanceVoice()
+                }
+            }
             Button("New Conversation", systemImage: "square.and.pencil") {
                 model.startNewGuidanceConversation()
-                isComposerFocused = true
             }
             .disabled(model.guidancePhase.isActive || model.guidanceMessages.isEmpty)
         }
@@ -84,9 +91,9 @@ public struct GuideConversationView: View {
                 LazyVStack(spacing: 14) {
                     if model.guidanceMessages.isEmpty {
                         ContentUnavailableView {
-                            Label("Ask about your screen", systemImage: "bubble.left.and.text.bubble.right")
+                            Label("Talk to SERPy", systemImage: "waveform.and.mic")
                         } description: {
-                            Text("Ask a question, then follow up naturally. SERPy reads the app that was in front when you opened the guide.")
+                            Text("Press Control–Option–G, ask your question out loud, then press the shortcut again. Escape cancels.")
                         }
                         .padding(.vertical, 60)
                     } else {
@@ -106,6 +113,11 @@ public struct GuideConversationView: View {
                             Spacer()
                         }
                         .id("guidance-activity")
+                    } else if !model.guidancePartialTranscript.isEmpty {
+                        Text("Last heard: \(model.guidancePartialTranscript)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                     }
                 }
                 .padding(18)
@@ -119,50 +131,17 @@ public struct GuideConversationView: View {
         }
     }
 
-    private var composer: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .bottom, spacing: 10) {
-                TextField("Ask something about the current app…", text: $model.guidanceDraft, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...4)
-                    .focused($isComposerFocused)
-                    .onSubmit { send() }
-
-                Button("Send", systemImage: "arrow.up.circle.fill") {
-                    send()
-                }
-                .labelStyle(.iconOnly)
-                .font(.title2)
-                .buttonStyle(.plain)
-                .disabled(!canSend)
-                .accessibilityHint("Reads the selected app window and asks the local guide")
-            }
-            Text("Local and private. Each message captures one window; screenshots and chat are not saved.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(16)
-    }
-
-    private var canSend: Bool {
-        !model.guidanceDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !model.guidancePhase.isActive
-    }
-
     private var activityLabel: String {
         switch model.guidancePhase {
         case .requestingPermission: "Waiting for screen permission…"
+        case .listening:
+            model.guidancePartialTranscript.isEmpty
+                ? "Listening to your question…"
+                : "Heard: \(model.guidancePartialTranscript)"
+        case .transcribing: "Finishing your local transcript…"
         case .capturing, .reading: "Reading the selected window…"
         case .thinking: "Thinking locally…"
         default: "Working…"
-        }
-    }
-
-    private func send() {
-        guard canSend else { return }
-        Task {
-            await model.sendGuidanceMessage()
-            isComposerFocused = true
         }
     }
 }

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "claim": "bounded-slice",
+  "scope_statement": "Voice-first guide: hotkey, spoken question, request-scoped screen context, local spoken answer, and spoken follow-up without opening a typing window",
+  "inventory_complete": true,
+  "primary_workflow_passed": false,
+  "installed_artifact_verified": true,
+  "independent_verification": {
+    "required": true,
+    "passed": false,
+    "verifier": "pending owner verification"
+  },
+  "rows": [
+    {
+      "id": "voice-guide.start",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "pass",
+      "exercised": true,
+      "evidence": {
+        "reference": ["https://www.heyclicky.com/ FAQ: press the hotkey and ask out loud"],
+        "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
+        "comparison": [],
+        "behavior": ["Installed build 26 accepted a real spoken question without opening a typing composer"]
+      }
+    },
+    {
+      "id": "voice-guide.contextual-answer",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "pass",
+      "exercised": true,
+      "evidence": {
+        "reference": ["https://github.com/farzaa/clicky README: transcript plus screenshot enters the guide model"],
+        "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
+        "comparison": [],
+        "behavior": ["Installed build 26 returned a local answer carrying a visible source-window label"]
+      }
+    },
+    {
+      "id": "voice-guide.spoken-output",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {
+        "reference": ["https://github.com/farzaa/clicky README: model response is played through text-to-speech"],
+        "candidate": ["Packages/GuideModules/Sources/GuideMac/LocalSpeechOutputService.swift"],
+        "comparison": [],
+        "behavior": []
+      }
+    },
+    {
+      "id": "voice-guide.follow-up",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "pass",
+      "exercised": true,
+      "evidence": {
+        "reference": ["https://www.heyclicky.com/ FAQ: talk is the conversation"],
+        "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
+        "comparison": [],
+        "behavior": ["Installed build 26 transcribed and answered a real spoken follow-up in the same transient conversation"]
+      }
+    }
+  ]
+}

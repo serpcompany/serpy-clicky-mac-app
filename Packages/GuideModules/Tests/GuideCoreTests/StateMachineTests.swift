@@ -182,3 +182,25 @@ final class GuidanceConversationStateMachineTests: XCTestCase {
         XCTAssertTrue(machine.messages.isEmpty)
     }
 }
+
+final class GuidanceVoiceActivationPolicyTests: XCTestCase {
+    private let policy = GuidanceVoiceActivationPolicy()
+
+    func testShortcutStartsStopsAndAllowsSpokenFollowUp() {
+        XCTAssertEqual(policy.shortcutAction(for: .idle), .startListening)
+        XCTAssertEqual(policy.shortcutAction(for: .listening), .finishListening)
+        XCTAssertEqual(policy.shortcutAction(for: .presenting), .startListening)
+    }
+
+    func testShortcutCannotInterruptProcessing() {
+        XCTAssertEqual(policy.shortcutAction(for: .transcribing), .none)
+        XCTAssertEqual(policy.shortcutAction(for: .capturing), .none)
+        XCTAssertEqual(policy.shortcutAction(for: .thinking), .none)
+    }
+
+    func testEscapeCancelsOnlyActiveVoiceCapture() {
+        XCTAssertEqual(policy.escapeAction(for: .listening), .cancel)
+        XCTAssertEqual(policy.escapeAction(for: .thinking), .none)
+        XCTAssertEqual(policy.escapeAction(for: .idle), .none)
+    }
+}

@@ -19,7 +19,8 @@ flowchart LR
     D --> STT["Local transcription adapter"]
     STT --> I["Focused-field insertion"]
 
-    G["Guide shortcut or menu"] --> T["Transient guide conversation"]
+    G["Guide shortcut or menu"] --> V["Local voice question"]
+    V --> T["Transient guide conversation"]
     T --> C["Request-scoped context capture"]
     C --> X["Accessibility tree and OCR"]
     X --> A["Local guidance engine"]
@@ -114,7 +115,7 @@ exists, every temporary hide path must return to `enabledVisible`.
 ### Guidance conversation and request
 
 ```text
-conversation idle -> userTurn -> capturing -> understanding -> planning
+conversation idle -> listening -> transcribing -> userTurn -> capturing -> understanding -> planning
                   -> guideTurn -> readyForFollowUp
                   -> failed(stage, recovery) -> readyForFollowUp
                   -> reset -> conversation idle
@@ -190,8 +191,11 @@ transcript.
 ## Screen Guidance Strategy
 
 - Capture only after explicit activation.
-- Open a normal, non-floating conversation window before capture; submitting a
-  question is the capture action.
+- Voice is the primary guide input. The hotkey starts listening, a second press
+  submits the spoken question, and Escape cancels.
+- Keep the cursor companion as the primary response surface and speak answers
+  with the local system voice. A normal, non-floating window is optional
+  transcript inspection only.
 - Include recent in-memory turns so follow-up questions retain meaning.
 - Prefer accessibility structure and Vision OCR over sending raw pixels into
   the reasoning layer.

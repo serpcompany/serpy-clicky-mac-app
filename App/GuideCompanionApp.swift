@@ -29,8 +29,8 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await GuideAppModel.shared.start()
             if CommandLine.arguments.contains("--ui-testing"),
-               CommandLine.arguments.contains("--open-ai-guide") {
-                GuideAppModel.shared.openGuideConversation()
+               CommandLine.arguments.contains("--open-guide-transcript") {
+                GuideAppModel.shared.openGuidanceTranscript()
             }
         }
     }

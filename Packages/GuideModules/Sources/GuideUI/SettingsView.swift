@@ -145,12 +145,23 @@ public struct SettingsView: View {
 
     private var guidanceForm: some View {
         Form {
-            Section("Local AI Guide") {
+            Section("Local voice guide") {
                 LabeledContent("Shortcut", value: "Control–Option–G")
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-                Text("Open a back-and-forth conversation and ask about the app on screen. SERPy reads one visible window for each question, uses on-device intelligence, and never clicks or types for you.")
+                Text("Press the shortcut, ask about the app on screen out loud, then press it again. SERPy reads one visible window, answers through the cursor companion, and speaks locally.")
                     .foregroundStyle(.secondary)
-                Button("Open AI Guide") { model.openGuideConversation() }
+                Button(model.guidancePhase == .listening ? "Finish Voice Question" : "Start Voice Question") {
+                    model.toggleGuidanceVoice()
+                }
+                .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
+                if model.guidancePhase == .listening {
+                    Button("Cancel Voice Question", role: .cancel) {
+                        model.cancelGuidanceVoice()
+                    }
+                }
+                if !model.guidanceMessages.isEmpty {
+                    Button("View Conversation Transcript") { model.openGuidanceTranscript() }
+                }
             }
         }
         .formStyle(.grouped)

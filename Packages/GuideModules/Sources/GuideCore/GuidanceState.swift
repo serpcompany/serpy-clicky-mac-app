@@ -4,6 +4,8 @@ import Foundation
 public enum GuidancePhase: Equatable, Sendable {
     case idle
     case requestingPermission
+    case listening
+    case transcribing
     case capturing
     case reading
     case thinking
@@ -12,9 +14,35 @@ public enum GuidancePhase: Equatable, Sendable {
 
     public var isActive: Bool {
         switch self {
-        case .requestingPermission, .capturing, .reading, .thinking: true
+        case .requestingPermission, .listening, .transcribing, .capturing, .reading, .thinking: true
         default: false
         }
+    }
+}
+
+public enum GuidanceVoiceAction: Equatable, Sendable {
+    case startListening
+    case finishListening
+    case cancel
+    case none
+}
+
+public struct GuidanceVoiceActivationPolicy: Sendable {
+    public init() {}
+
+    public func shortcutAction(for phase: GuidancePhase) -> GuidanceVoiceAction {
+        switch phase {
+        case .idle, .presenting, .failed:
+            .startListening
+        case .listening:
+            .finishListening
+        case .requestingPermission, .transcribing, .capturing, .reading, .thinking:
+            .none
+        }
+    }
+
+    public func escapeAction(for phase: GuidancePhase) -> GuidanceVoiceAction {
+        phase == .listening ? .cancel : .none
     }
 }
 
@@ -198,4 +226,11 @@ public enum GuidanceAnswerSanitizer {
         }
         return result
     }
+}
+
+@MainActor
+public protocol GuidanceSpeaking: AnyObject {
+    var isSpeaking: Bool { get }
+    @discardableResult func speak(_ text: String) -> Bool
+    func stop()
 }

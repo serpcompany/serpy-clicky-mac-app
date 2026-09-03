@@ -19,6 +19,7 @@ public final class GuideAppModel {
     public private(set) var guidancePhase: GuidancePhase = .idle
     public private(set) var guidanceMessages: [GuidanceMessage] = []
     public private(set) var guidanceContextLabel = "No screen context captured yet"
+    public private(set) var guidancePartialTranscript = ""
     public private(set) var hotKeyRegistered = false
     public private(set) var dictationAttemptCount = 0
     public private(set) var lastActivationMessage = "No dictation activation received yet."
@@ -28,7 +29,6 @@ public final class GuideAppModel {
     public private(set) var transcriptHistory: [TranscriptHistoryEntry] = []
     public private(set) var historyStatusMessage = "Loading local history…"
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
-    public var guidanceDraft = ""
     public var companionEnabled: Bool {
         didSet {
             guard oldValue != companionEnabled else { return }
@@ -60,16 +60,20 @@ public final class GuideAppModel {
     @ObservationIgnored private let historyStore: TranscriptHistoryStore
     @ObservationIgnored private let screenContextService: ScreenContextService
     @ObservationIgnored private let localGuidanceService: LocalGuidanceService
+    @ObservationIgnored private let guidanceTranscriber: AppleSpeechTranscriber
+    @ObservationIgnored private let guidanceSpeaker: LocalSpeechOutputService
     @ObservationIgnored private let presentation: CompanionPresentation
     @ObservationIgnored private let companionController: CompanionPanelController
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var guidanceHotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
     @ObservationIgnored private var guidanceMachine = GuidanceConversationStateMachine()
+    @ObservationIgnored private let guidanceVoicePolicy = GuidanceVoiceActivationPolicy()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
+    @ObservationIgnored private var guidanceContextTask: Task<ScreenContext, Error>?
     @ObservationIgnored private var started = false
 
     @ObservationIgnored private static let logger = Logger(
@@ -92,6 +96,8 @@ public final class GuideAppModel {
         historyStore = TranscriptHistoryStore()
         screenContextService = ScreenContextService()
         localGuidanceService = LocalGuidanceService()
+        guidanceTranscriber = AppleSpeechTranscriber()
+        guidanceSpeaker = LocalSpeechOutputService()
         let presentation = CompanionPresentation()
         self.presentation = presentation
         companionController = CompanionPanelController(presentation: presentation)
@@ -112,7 +118,13 @@ public final class GuideAppModel {
     }
 
     public var menuBarSymbol: String {
-        switch phase {
+        if guidancePhase == .listening {
+            return "waveform.circle.fill"
+        }
+        if guidancePhase.isActive {
+            return "ellipsis.circle.fill"
+        }
+        return switch phase {
         case .recording: "waveform.circle.fill"
         case .preparing, .transcribing, .inserting: "ellipsis.circle.fill"
         case .failed: "exclamationmark.circle.fill"
@@ -121,7 +133,15 @@ public final class GuideAppModel {
     }
 
     public var shortStatus: String {
-        switch phase {
+        switch guidancePhase {
+        case .listening: return "listening to question"
+        case .transcribing: return "understanding question"
+        case .capturing, .reading: return "reading screen"
+        case .thinking: return "thinking locally"
+        case .requestingPermission: return "guide setup needed"
+        case .idle, .presenting, .failed: break
+        }
+        return switch phase {
         case .idle: hasRecoveryRequiringAttention ? "dictation recovered" : (permissions.dictationReady ? "ready" : "setup needed")
         case .preparing: "preparing"
         case .recording: "recording"
@@ -176,10 +196,9 @@ public final class GuideAppModel {
                     modifiers: UInt32(controlKey | optionKey),
                     displayName: "Control–Option–G"
                 ),
-                pressed: { [weak self] in
-                    Task { @MainActor in self?.openGuideConversation() }
-                },
-                released: {}
+                pressed: { [weak self] in self?.guidanceHotKeyPressed() },
+                released: {},
+                cancelled: { [weak self] in self?.guidanceEscapePressed() }
             )
             try guidanceService.start()
             guidanceHotKeyService = guidanceService
@@ -218,6 +237,10 @@ public final class GuideAppModel {
         guidanceHotKeyService?.stop()
         guidanceHotKeyService = nil
         transcriber.cancel()
+        guidanceTranscriber.cancel()
+        guidanceSpeaker.stop()
+        guidanceContextTask?.cancel()
+        guidanceContextTask = nil
         companionController.hide()
         hotKeyRegistered = false
     }
@@ -325,8 +348,7 @@ public final class GuideAppModel {
         permissionService.openSystemSettings(for: permission)
     }
 
-    public func openGuideConversation() {
-        screenContextService.rememberFrontmostApplication()
+    public func openGuidanceTranscript() {
         if guideWindowController == nil {
             guideWindowController = GuideConversationWindowController(model: self)
         }
@@ -339,48 +361,42 @@ public final class GuideAppModel {
         guidanceMessages = guidanceMachine.messages
         guidancePhase = guidanceMachine.phase
         guidanceContextLabel = "No screen context captured yet"
-        guidanceDraft = ""
+        guidancePartialTranscript = ""
     }
 
-    public func sendGuidanceMessage() async {
-        guard !guidancePhase.isActive else { return }
-        let question = guidanceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !question.isEmpty else {
-            return
-        }
+    public func toggleGuidanceVoice() {
+        guidanceHotKeyPressed()
+    }
 
+    public func cancelGuidanceVoice() {
+        guard guidanceVoicePolicy.escapeAction(for: guidancePhase) == .cancel else { return }
+        guidanceTranscriber.cancel()
+        guidanceContextTask?.cancel()
+        guidanceContextTask = nil
+        guidancePartialTranscript = ""
+        guidancePhase = .idle
+        statusMessage = "Voice guide cancelled."
+        presentation.mode = .ready
+        presentation.caption = "Cancelled"
+        companionController.refresh()
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.2))
+            guard let self, guidancePhase == .idle else { return }
+            presentation.caption = ""
+            companionController.refresh()
+        }
+    }
+
+    private func answerGuidanceQuestion(_ question: String, context: ScreenContext) async {
         let priorConversation = guidanceMessages
         do {
             try guidanceMachine.submit(question: question)
         } catch {
             return
         }
-        guidanceDraft = ""
         syncGuidanceState()
 
-        refreshPermissions()
-        if !permissions.screenRecording.isGranted {
-            guidancePhase = .requestingPermission
-            statusMessage = "Screen access is used only for this guide request. macOS will ask now."
-            let granted = permissionService.requestScreenRecording()
-            refreshPermissions()
-            guard granted || permissions.screenRecording.isGranted else {
-                let failure = GuideFailure(
-                    stage: .permission,
-                    message: "Screen access was not granted.",
-                    recovery: "Open Screen & System Audio Recording settings, enable SERPy, then try again."
-                )
-                guidanceMachine.fail(failure)
-                syncGuidanceState()
-                presentGuidanceCaption(failure.message, mode: .error)
-                return
-            }
-        }
-
         do {
-            guidancePhase = .capturing
-            presentGuidanceCaption("Reading current window…", mode: .working)
-            let context = try await screenContextService.captureFrontmostContext()
             guidanceContextLabel = "\(context.applicationName) — \(context.windowTitle)"
             guard !context.promptText.isEmpty else {
                 throw GuideFailure(
@@ -406,12 +422,147 @@ public final class GuideAppModel {
             statusMessage = "Local guidance is ready."
             recoveryMessage = ""
             presentGuidanceCaption(validated.answer, mode: .success)
+            if !guidanceSpeaker.speak(validated.answer) {
+                recoveryMessage = "The answer is shown, but macOS could not start spoken playback."
+            }
         } catch {
             let failure = normalize(error, stage: .guidance)
             guidanceMachine.fail(failure)
             syncGuidanceState()
             presentGuidanceCaption(failure.message, mode: .error)
         }
+    }
+
+    private func guidanceHotKeyPressed() {
+        switch guidanceVoicePolicy.shortcutAction(for: guidancePhase) {
+        case .startListening:
+            startGuidanceVoiceTurn()
+        case .finishListening:
+            finishGuidanceVoiceTurn()
+        case .cancel:
+            cancelGuidanceVoice()
+        case .none:
+            break
+        }
+    }
+
+    private func guidanceEscapePressed() {
+        if guidanceVoicePolicy.escapeAction(for: guidancePhase) == .cancel {
+            cancelGuidanceVoice()
+        }
+    }
+
+    private func startGuidanceVoiceTurn() {
+        guard !phase.isActive else {
+            presentGuidanceFailure(
+                GuideFailure(
+                    stage: .recording,
+                    message: "Dictation is already active.",
+                    recovery: "Finish or cancel dictation, then talk to SERPy."
+                )
+            )
+            return
+        }
+
+        guidanceSpeaker.stop()
+        refreshPermissions()
+        guard permissions.microphone.isGranted,
+              permissions.speechRecognition.isGranted,
+              guidanceTranscriber.isOnDeviceAvailable
+        else {
+            presentGuidanceFailure(
+                GuideFailure(
+                    stage: .permission,
+                    message: "Voice guide setup is incomplete.",
+                    recovery: "Open SERPy Settings and enable Microphone and Speech Recognition."
+                )
+            )
+            return
+        }
+
+        if !permissions.screenRecording.isGranted {
+            guidancePhase = .requestingPermission
+            statusMessage = "Screen access is used only for this voice question. macOS will ask now."
+            let granted = permissionService.requestScreenRecording()
+            refreshPermissions()
+            guard granted || permissions.screenRecording.isGranted else {
+                presentGuidanceFailure(
+                    GuideFailure(
+                        stage: .permission,
+                        message: "Screen access was not granted.",
+                        recovery: "Enable SERPy in Screen & System Audio Recording settings, then try again."
+                    )
+                )
+                return
+            }
+        }
+
+        screenContextService.rememberFrontmostApplication()
+        guidanceContextTask?.cancel()
+        guidanceContextTask = Task { [screenContextService] in
+            try await screenContextService.captureFrontmostContext()
+        }
+        guidancePartialTranscript = ""
+
+        do {
+            try guidanceTranscriber.start { [weak self] text in
+                guard let self else { return }
+                guidancePartialTranscript = text
+                presentation.caption = text.isEmpty ? "Listening…" : String(text.suffix(90))
+                companionController.refresh()
+            }
+            guidancePhase = .listening
+            statusMessage = "Listening for your guide question. Press Control–Option–G again to ask, or Escape to cancel."
+            recoveryMessage = ""
+            presentation.mode = .recording
+            presentation.caption = "Listening…"
+            companionController.refresh()
+        } catch {
+            guidanceContextTask?.cancel()
+            guidanceContextTask = nil
+            presentGuidanceFailure(normalize(error, stage: .recording))
+        }
+    }
+
+    private func finishGuidanceVoiceTurn() {
+        guard guidancePhase == .listening else { return }
+        guidancePhase = .transcribing
+        statusMessage = "Finishing your local voice question…"
+        presentation.mode = .working
+        presentation.caption = "Understanding…"
+        companionController.refresh()
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let result = try await guidanceTranscriber.stop()
+                guidancePartialTranscript = result.transcript
+                presentation.caption = "Reading this screen…"
+                companionController.refresh()
+                let context: ScreenContext
+                if let task = guidanceContextTask {
+                    context = try await task.value
+                } else {
+                    context = try await screenContextService.captureFrontmostContext()
+                }
+                guidanceContextTask = nil
+                await answerGuidanceQuestion(result.transcript, context: context)
+            } catch is CancellationError {
+                cancelGuidanceVoice()
+            } catch {
+                guidanceContextTask?.cancel()
+                guidanceContextTask = nil
+                presentGuidanceFailure(normalize(error, stage: .guidance))
+            }
+        }
+    }
+
+    private func presentGuidanceFailure(_ failure: GuideFailure) {
+        guidanceMachine.fail(failure)
+        syncGuidanceState()
+        statusMessage = failure.message
+        recoveryMessage = failure.recovery
+        presentGuidanceCaption(failure.message, mode: .error)
     }
 
     private func syncGuidanceState() {

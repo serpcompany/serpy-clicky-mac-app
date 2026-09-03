@@ -73,7 +73,8 @@ Build:
 - Request-scoped content selection and capture.
 - Accessibility and OCR context extraction.
 - Selected local guidance adapter.
-- Transient multi-turn conversation state with a normal non-floating window.
+- Transient multi-turn voice state with local recognition and spoken output.
+- Optional normal non-floating transcript window with no typing composer.
 - Structured guidance-plan validation.
 - Caption, speech, and cursor pointing without autonomous action.
 

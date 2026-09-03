@@ -176,18 +176,32 @@ public struct MenuPanelView: View {
 
     private var guidanceCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("AI Guide")
+            Text("Talk to SERPy")
                 .font(.headline)
-            Text("Ask questions about what is on your screen, then keep talking with SERPy until you know what to do.")
+            Text("Ask out loud about the app on your screen. SERPy answers through the cursor companion and speaks the response.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Button {
-                model.openGuideConversation()
+                model.toggleGuidanceVoice()
             } label: {
-                Label("Open AI Guide", systemImage: "bubble.left.and.bubble.right")
+                Label(
+                    model.guidancePhase == .listening ? "Finish Question" : "Start Talking",
+                    systemImage: model.guidancePhase == .listening ? "stop.circle.fill" : "waveform.and.mic"
+                )
             }
             .buttonStyle(.borderedProminent)
-            Text("Control–Option–G · Each question reads the selected app window. The guide advises but never clicks or types.")
+            .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
+            if model.guidancePhase == .listening {
+                Button("Cancel Voice Question", role: .cancel) {
+                    model.cancelGuidanceVoice()
+                }
+            }
+            if !model.guidanceMessages.isEmpty {
+                Button("View Conversation Transcript") {
+                    model.openGuidanceTranscript()
+                }
+            }
+            Text("Control–Option–G starts · press again to ask · Escape cancels. The guide advises but never clicks or types.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

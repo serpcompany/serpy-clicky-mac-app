@@ -36,19 +36,21 @@ API key, or metered provider.
 
 ### Journey C — Ask for screen guidance
 
-1. The user explicitly opens the AI Guide from the menu or guide shortcut.
+1. The user invokes the voice guide from the menu or guide shortcut.
 2. The app explains and requests Screen Recording permission if it has not
    already been granted.
-3. A normal conversation window opens so the user can ask a question and
-   continue with follow-up questions.
-4. For each submitted turn, the app captures only the chosen window/display
+3. The cursor companion shows that it is listening; no typing window opens.
+4. The user asks a question out loud and invokes the guide again to finish, or
+   presses Escape to cancel.
+5. For each spoken turn, the app captures only the chosen window/display
    context for that request.
-5. A local guidance engine receives the recent conversation plus structured
+6. A local guidance engine receives the recent conversation plus structured
    accessibility/OCR context and,
    only when required, the transient image.
-6. The app answers in text and optionally speech, then points or captions a
-   validated location.
-7. It never clicks, types, runs shell commands, or performs the task itself.
+7. The app captions the answer beside the cursor and speaks it locally. An
+   optional normal window can show the transient conversation transcript.
+8. The user can invoke the guide again and ask a spoken follow-up.
+9. It never clicks, types, runs shell commands, or performs the task itself.
 
 ## Product Principles
 
@@ -83,7 +85,7 @@ Included:
 - Optional local transcript history; optional audio history is a separate
   opt-in and remains off by default.
 - Persistent cursor companion and short captions.
-- Explicit, request-scoped conversational screen guidance.
+- Explicit, request-scoped voice conversation with local spoken guidance.
 - Local logs that redact dictated and captured content.
 - Direct-download Developer ID/notarized DMG.
 
