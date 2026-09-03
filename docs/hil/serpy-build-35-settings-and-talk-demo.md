@@ -1,8 +1,12 @@
-# SERPy build 35 Settings and OpenAI Talk HIL
+# SERPy build 35 Settings HIL — rejected
 
 Use only the installed Developer ID build `0.1.0 (35)` whose executable
 SHA-256 is
 `c1ac9ac6144c90498e30b64f7269e971dd9f7b548350d9a7905c6c2f63216b67`.
+
+The live menu-bar loop rejected this build: the Settings window was created,
+but SERPy remained `frontmost=false` after the menu closed. Build 36 supersedes
+it by scheduling a second activation after the menu-bar action returns.
 
 ## Menu-bar Settings regression
 

@@ -77,11 +77,19 @@ public struct MenuPanelView: View {
 
             Button {
                 SettingsWindowPresentation(
+                    enterRegularMode: {
+                        NSApplication.shared.setActivationPolicy(.regular)
+                    },
                     activateApplication: {
                         NSApplication.shared.activate(ignoringOtherApps: true)
                     },
                     openSettings: {
                         openSettings()
+                    },
+                    scheduleAfterMenuCloses: { action in
+                        DispatchQueue.main.async {
+                            action()
+                        }
                     }
                 ).present()
             } label: {

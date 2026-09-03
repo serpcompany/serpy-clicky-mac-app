@@ -1,3 +1,4 @@
+import AppKit
 import GuideCore
 import SwiftUI
 
@@ -40,6 +41,26 @@ public struct SettingsView: View {
         .task {
             model.refreshPermissions()
         }
+        .onAppear {
+            settingsWindowLifecycle.didAppear()
+        }
+        .onDisappear {
+            settingsWindowLifecycle.didDisappear()
+        }
+    }
+
+    private var settingsWindowLifecycle: SettingsWindowVisibilityLifecycle {
+        SettingsWindowVisibilityLifecycle(
+            enterRegularMode: {
+                NSApplication.shared.setActivationPolicy(.regular)
+            },
+            activateApplication: {
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            },
+            restoreMenuBarMode: {
+                NSApplication.shared.setActivationPolicy(.accessory)
+            }
+        )
     }
 
     private var setupForm: some View {
