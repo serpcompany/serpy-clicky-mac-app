@@ -231,6 +231,14 @@ transcript.
   identity, appcast, keys, assets, and destinations must not be copied.
 - Mac App Store sandboxing and automatic updates are separate later decisions.
 
+## Menu-Bar Presentation
+
+Use the native SwiftUI `MenuBarExtra` menu style for status and primary actions.
+Do not place a fixed-width dashboard or vertically unbounded card stack in the
+menu-bar surface. Detailed setup, explanations, diagnostics, and manual tests
+belong in the normal Settings window; transient conversation history belongs in
+its normal non-floating transcript window.
+
 ## Rejected Initial Shapes
 
 | Shape | Decision | Reason |

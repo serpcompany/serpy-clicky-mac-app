@@ -10,242 +10,97 @@ public struct MenuPanelView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header
-            statusCard
-
-            if !model.dictationReady {
-                setupCard
-            } else {
-                readyCard
+        Group {
+            Section("Status") {
+                Label(model.shortStatus.capitalized, systemImage: model.menuBarSymbol)
+                if !model.recoveryMessage.isEmpty {
+                    Text("Needs attention — open Settings")
+                }
             }
+
+            Section("Dictation · \(model.shortcutDescription)") {
+                Button {
+                    model.toggleDictationFromMenu()
+                } label: {
+                    Label(dictationActionTitle, systemImage: dictationActionSymbol)
+                }
+                .disabled(!canToggleDictation)
+
+                if model.phase == .recording {
+                    Button("Cancel Dictation", role: .cancel) {
+                        model.cancelDictation()
+                    }
+                }
+            }
+
+            Section("Voice Guide · Control–Option–G") {
+                Button {
+                    model.toggleGuidanceVoice()
+                } label: {
+                    Label(guideActionTitle, systemImage: guideActionSymbol)
+                }
+                .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
+
+                if model.guidancePhase == .listening {
+                    Button("Cancel Voice Question", role: .cancel) {
+                        model.cancelGuidanceVoice()
+                    }
+                }
+
+                if !model.guidanceMessages.isEmpty {
+                    Button("View Conversation Transcript") {
+                        model.openGuidanceTranscript()
+                    }
+                }
+            }
+
+            Toggle("Show Cursor Companion", isOn: $model.companionEnabled)
 
             if model.hasRecoverableTranscript {
-                recoveryCard
-            }
-
-            Toggle("Show cursor companion", isOn: $model.companionEnabled)
-                .toggleStyle(.switch)
-
-            guidanceCard
-
-            Divider()
-
-            HStack {
-                SettingsLink {
-                    Label("Settings", systemImage: "gear")
-                }
-                Spacer()
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
-                }
-            }
-        }
-        .padding(18)
-        .frame(width: 360)
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Image(nsImage: NSApplication.shared.applicationIconImage)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 36, height: 36)
-                .clipShape(.rect(cornerRadius: 8))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("SERPy")
-                    .font(.title2.weight(.semibold))
-                Text("Private local dictation")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var statusCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(model.shortStatus.capitalized, systemImage: model.menuBarSymbol)
-                .font(.headline)
-            Text(model.statusMessage)
-                .font(.body)
-            if !model.partialTranscript.isEmpty {
-                Text(model.partialTranscript)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-            }
-            if !model.recoveryMessage.isEmpty {
-                Text(model.recoveryMessage)
-                    .font(.callout)
-                    .foregroundStyle(.orange)
-            }
-            if model.phase.isActive {
-                Button("Cancel", role: .cancel) {
-                    model.cancelDictation()
-                }
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary, in: .rect(cornerRadius: 12))
-        .accessibilityElement(children: .contain)
-    }
-
-    private var setupCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Finish dictation setup")
-                .font(.headline)
-            Text("Permissions are requested only when you choose an action. Screen access is not required for dictation.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            permissionRow(
-                title: "Microphone and Speech",
-                granted: model.permissions.microphone.isGranted && model.permissions.speechRecognition.isGranted,
-                actionTitle: "Enable"
-            ) {
-                Task { await model.requestVoicePermissions() }
-            }
-
-            permissionRow(
-                title: "Accessibility insertion",
-                granted: model.permissions.accessibility.isGranted,
-                actionTitle: "Enable"
-            ) {
-                model.requestAccessibility()
-            }
-
-            HStack {
-                Button("Refresh status") {
-                    model.refreshPermissions()
-                }
-                Spacer()
-                Text(model.speechAvailability)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(14)
-        .background(.quaternary, in: .rect(cornerRadius: 12))
-    }
-
-    private var readyCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Toggle dictation")
-                .font(.headline)
-            Text(model.shortcutDescription)
-                .font(.title3.monospaced().weight(.semibold))
-            Text("Focus any text field, press the shortcut once, and speak for as long as you need. Press it again to insert, or Escape to cancel. SERPy keeps this local.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            Divider()
-
-            Label(
-                model.hotKeyRegistered ? "Global shortcut registered" : "Global shortcut unavailable",
-                systemImage: model.hotKeyRegistered ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-            )
-            .font(.callout)
-            .foregroundStyle(model.hotKeyRegistered ? .green : .orange)
-
-            Text("Last stage: \(model.lastDictationStage)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(model.lastActivationMessage)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if model.phase == .recording {
-                Button("Stop & Insert") {
-                    model.finishManualDictationTest()
-                }
-                .buttonStyle(.borderedProminent)
-            } else if !model.phase.isActive {
-                Button("Manual dictation test") {
-                    model.beginManualDictationTest()
-                }
-                Text("Starts after 4 seconds so you can click the destination field. Reopen this menu to stop and insert.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(14)
-        .background(.blue.opacity(0.10), in: .rect(cornerRadius: 12))
-    }
-
-    private var guidanceCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Talk to SERPy")
-                .font(.headline)
-            Text("Ask out loud about the app on your screen. SERPy answers through the cursor companion and speaks the response.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Button {
-                model.toggleGuidanceVoice()
-            } label: {
-                Label(
-                    model.guidancePhase == .listening ? "Finish Question" : "Start Talking",
-                    systemImage: model.guidancePhase == .listening ? "stop.circle.fill" : "waveform.and.mic"
-                )
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
-            if model.guidancePhase == .listening {
-                Button("Cancel Voice Question", role: .cancel) {
-                    model.cancelGuidanceVoice()
-                }
-            }
-            if !model.guidanceMessages.isEmpty {
-                Button("View Conversation Transcript") {
-                    model.openGuidanceTranscript()
-                }
-            }
-            Text("Control–Option–G starts · press again to ask · Escape cancels. The guide advises but never clicks or types.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(14)
-        .background(.purple.opacity(0.10), in: .rect(cornerRadius: 12))
-    }
-
-    private var recoveryCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Last dictation", systemImage: "arrow.counterclockwise.circle")
-                .font(.headline)
-            Text(model.recoverableTranscript)
-                .font(.callout)
-                .lineLimit(3)
-                .textSelection(.enabled)
-            Text("Saved locally before delivery. Retry gives you 4 seconds to focus a destination field; it never retries automatically.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack {
-                Button("Retry") { model.retryLastTranscript() }
+                Menu("Last Dictation") {
+                    Button("Retry in 4 Seconds") {
+                        model.retryLastTranscript()
+                    }
                     .disabled(model.phase.isActive)
-                Button("Copy") { model.copyLastTranscript() }
-                Spacer()
-                Button("Clear", role: .destructive) { model.clearLastTranscript() }
+                    Button("Copy") {
+                        model.copyLastTranscript()
+                    }
+                    Divider()
+                    Button("Clear", role: .destructive) {
+                        model.clearLastTranscript()
+                    }
+                }
+            }
+
+            Divider()
+
+            SettingsLink {
+                Label("Settings…", systemImage: "gear")
+            }
+
+            Button("Quit SERPy", systemImage: "power", role: .destructive) {
+                NSApplication.shared.terminate(nil)
             }
         }
-        .padding(14)
-        .background(.orange.opacity(0.10), in: .rect(cornerRadius: 12))
     }
 
-    private func permissionRow(
-        title: String,
-        granted: Bool,
-        actionTitle: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        HStack {
-            Label(title, systemImage: granted ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(granted ? .green : .primary)
-            Spacer()
-            if !granted {
-                Button(actionTitle, action: action)
-            }
-        }
-        .accessibilityElement(children: .contain)
+    private var dictationActionTitle: String {
+        model.phase == .recording ? "Stop & Insert Dictation" : "Start Dictation"
+    }
+
+    private var dictationActionSymbol: String {
+        model.phase == .recording ? "stop.circle.fill" : "mic.fill"
+    }
+
+    private var canToggleDictation: Bool {
+        model.dictationReady && (!model.phase.isActive || model.phase == .recording)
+    }
+
+    private var guideActionTitle: String {
+        model.guidancePhase == .listening ? "Finish Voice Question" : "Start Voice Question"
+    }
+
+    private var guideActionSymbol: String {
+        model.guidancePhase == .listening ? "stop.circle.fill" : "waveform.and.mic"
     }
 }

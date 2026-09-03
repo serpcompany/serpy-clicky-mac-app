@@ -77,7 +77,9 @@ API key, or metered provider.
 Included:
 
 - Apple Silicon Mac.
-- Menu-bar application plus normal non-floating Settings window.
+- Native concise menu-bar menu plus normal non-floating Settings window.
+- The menu bar contains status and primary actions only; onboarding,
+  explanations, diagnostics, and manual tests live in Settings.
 - Configurable push-to-talk and toggle-dictation shortcuts.
 - Free on-device speech-to-text.
 - Focused-field insertion with clipboard-preserving fallback.

@@ -14,7 +14,7 @@ struct GuideCompanionApp: App {
             Label("SERPy", systemImage: model.menuBarSymbol)
                 .accessibilityLabel("SERPy, \(model.shortStatus)")
         }
-        .menuBarExtraStyle(.window)
+        .menuBarExtraStyle(.menu)
 
         Settings {
             SettingsView(model: model)

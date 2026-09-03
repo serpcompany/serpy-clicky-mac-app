@@ -368,6 +368,10 @@ public final class GuideAppModel {
         guidanceHotKeyPressed()
     }
 
+    public func toggleDictationFromMenu() {
+        hotKeyPressed()
+    }
+
     public func cancelGuidanceVoice() {
         guard guidanceVoicePolicy.escapeAction(for: guidancePhase) == .cancel else { return }
         guidanceTranscriber.cancel()

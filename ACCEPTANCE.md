@@ -52,6 +52,7 @@ Notes and Slack are not yet observed.
 | B6 | It behaves correctly at display edges and on negative-origin displays | Geometry tests + multi-display HIL | unimplemented |
 | B7 | Settings behaves as a normal non-floating window | App-switch/Spaces recording | installed-observed |
 | B8 | Reduce Motion and accessibility labels are respected | Inspection + HIL | implemented |
+| B9 | Menu-bar content uses a native menu, remains fully visible, and routes detailed setup to Settings | Installed screenshot + accessibility inspection | implemented |
 
 ## C — Screen Guidance
 

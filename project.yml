@@ -40,7 +40,7 @@ targets:
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/GuideCompanion.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CURRENT_PROJECT_VERSION: 26
+        CURRENT_PROJECT_VERSION: 27
         MARKETING_VERSION: 0.1.0
         GENERATE_INFOPLIST_FILE: NO
       configs:
