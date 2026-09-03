@@ -26,6 +26,10 @@ let package = Package(
             name: "GuideCoreTests",
             dependencies: ["GuideCore", "GuideMac", "GuideUI"],
             resources: [.process("Fixtures")]
+        ),
+        .testTarget(
+            name: "GuideMacTests",
+            dependencies: ["GuideCore", "GuideMac"]
         )
     ]
 )

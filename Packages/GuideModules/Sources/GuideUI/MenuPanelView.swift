@@ -34,7 +34,7 @@ public struct MenuPanelView: View {
                 }
             }
 
-            Section("Voice Guide · Hold Control–Option") {
+            Section("Voice Guide · Hold \(model.guideShortcut.displayName)") {
                 Button {
                     model.toggleGuidanceVoice()
                 } label: {

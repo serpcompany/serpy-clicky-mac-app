@@ -21,6 +21,7 @@ public final class CompanionPresentation {
     public var guideStage: GuidanceAmbientStage?
     public var contextLabel: String?
     public var pointCue: GuidePointCue?
+    public var guideTarget: GuideWindowTarget?
 
     public init() {}
 }
@@ -148,7 +149,16 @@ public final class CompanionPanelController {
 
     private func updateContentSizeAndPosition() {
         let pointer = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main
+        let targetPoint = presentation.guideTarget.flatMap { target in
+            pointCueProjector.appKitPoint(for: GuidePointCue(
+                target: target,
+                normalizedPoint: CGPoint(x: 0.5, y: 0.5),
+                label: "Locked window"
+            ))
+        }
+        let screen = targetPoint.flatMap { point in NSScreen.screens.first(where: { $0.frame.contains(point) }) }
+            ?? NSScreen.screens.first(where: { $0.frame.contains(pointer) })
+            ?? NSScreen.main
         guard let visibleFrame = screen?.visibleFrame else { return }
         let hasCaption = !presentation.caption.isEmpty
         let isGuideVisible = presentation.guideStage != nil
@@ -364,6 +374,7 @@ private struct CompanionBubbleView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityDescription)
+        .accessibilityValue(presentation.responseText.isEmpty ? (presentation.contextLabel ?? "") : presentation.responseText)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.mode)
     }

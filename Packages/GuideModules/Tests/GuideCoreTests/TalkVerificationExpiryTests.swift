@@ -22,7 +22,8 @@ final class TalkVerificationExpiryTests: XCTestCase {
             talkCredentialStore: store,
             talkCredentialVerifier: AlwaysValidCredentialVerifier(),
             talkVerificationExpirySleeper: sleeper,
-            talkGenerator: router
+            talkGenerator: router,
+            shortcutMonitorFactory: { _, _, _, _, _, _, _ in ExpiryNoopShortcutMonitor() }
         )
         model.talkProviderSelection = .openAI
         model.talkDisclosureAccepted = true
@@ -91,7 +92,8 @@ final class TalkVerificationExpiryTests: XCTestCase {
             talkCredentialStore: store,
             talkCredentialVerifier: AlwaysValidCredentialVerifier(),
             talkVerificationExpirySleeper: sleeper,
-            talkGenerator: router
+            talkGenerator: router,
+            shortcutMonitorFactory: { _, _, _, _, _, _, _ in ExpiryNoopShortcutMonitor() }
         )
         model.talkProviderSelection = .openAI
         model.talkDisclosureAccepted = true
@@ -117,6 +119,12 @@ private final class ExpiryMemoryCredentialStore: TalkCredentialStoring, @uncheck
 }
 
 private struct ExpiryFixtureFailure: Error {}
+
+@MainActor
+private final class ExpiryNoopShortcutMonitor: GlobalShortcutMonitoring {
+    func start() throws {}
+    func stop() {}
+}
 
 private struct AlwaysValidCredentialVerifier: TalkCredentialVerifying {
     func verifyCredential(_ credential: String) async throws -> Bool { true }

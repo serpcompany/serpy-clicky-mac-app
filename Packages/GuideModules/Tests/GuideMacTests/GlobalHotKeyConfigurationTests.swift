@@ -25,4 +25,15 @@ struct GlobalHotKeyConfigurationTests {
 
         #expect(decoded == original)
     }
+
+    @Test("held Guide chord survives persistence and exposes safe choices")
+    func guideChordRoundTripsThroughJSON() throws {
+        let original = GlobalModifierChordConfiguration.guideDefault
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(GlobalModifierChordConfiguration.self, from: data)
+
+        #expect(decoded == original)
+        #expect(GlobalModifierChordConfiguration.guideChoices.contains(original))
+        #expect(original.displayName == "Control–Option")
+    }
 }

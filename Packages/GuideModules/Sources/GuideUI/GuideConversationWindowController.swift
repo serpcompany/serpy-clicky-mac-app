@@ -93,7 +93,7 @@ public struct GuideConversationView: View {
                         ContentUnavailableView {
                             Label("Talk to SERPy", systemImage: "waveform.and.mic")
                         } description: {
-                            Text("Hold Control–Option while you ask your question, then release to send. Escape cancels.")
+                            Text("Hold \(model.guideShortcut.displayName) while you ask your question, then release to send. Escape cancels.")
                         }
                         .padding(.vertical, 60)
                     } else {

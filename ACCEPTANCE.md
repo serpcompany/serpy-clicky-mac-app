@@ -86,6 +86,16 @@ checks did not work during first use. The C rows above describe implementation
 or earlier bounded evidence only; none should be read as owner acceptance of
 the current build.
 
+Build 39 is explicitly rejected by the owner and is not a functional or UX
+baseline. A fresh installed freeze reproduced a failed controlled
+Control–Option–G invocation in TextEdit and Gatekeeper rejection of the
+unnotarized app. Branch `codex/heyclicky-guide-rebuild` restarts from build 38,
+uses one injected shortcut monitor with a persisted held Guide chord, and moves
+active Guide states to one target-display ambient surface. These are source and
+test facts only; C10 and all installed Guide rows remain red until a unique
+signed artifact is installed, hash-matched, and exercised with physical voice,
+focus, answer, speech, follow-up, cancellation, and point evidence.
+
 The 2026-09-04 ambient-guide P0 build 28 adds deterministic visibility,
 edge-layout, and presentation-policy tests plus a signed Release build. The
 installed preference-off lifecycle is observed. A 55-word answer at display

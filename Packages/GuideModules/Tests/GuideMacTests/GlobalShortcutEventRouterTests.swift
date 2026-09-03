@@ -9,9 +9,9 @@ struct GlobalShortcutEventRouterTests {
     func heldGuideChordAndDictationCoexist() {
         var router = GlobalShortcutEventRouter(
             bindings: [
-                .init(id: "dictation", gesture: .key(.dictation)),
+                .init(id: .dictation, gesture: .key(.dictation)),
                 .init(
-                    id: "guide",
+                    id: .guide,
                     gesture: .modifierChord(
                         modifiers: UInt32(controlKey | optionKey),
                         displayName: "⌃⌥"
@@ -25,7 +25,7 @@ struct GlobalShortcutEventRouterTests {
             modifierFlags: NSEvent.ModifierFlags([.control, .option]).rawValue,
             kind: .flagsChanged
         ))
-        #expect(guideDown.deliveries == [.init(id: "guide", transition: .pressed)])
+        #expect(guideDown.deliveries == [.init(id: .guide, transition: .pressed)])
         #expect(!guideDown.shouldConsume)
 
         let guideUp = router.route(.init(
@@ -33,7 +33,7 @@ struct GlobalShortcutEventRouterTests {
             modifierFlags: NSEvent.ModifierFlags.control.rawValue,
             kind: .flagsChanged
         ))
-        #expect(guideUp.deliveries == [.init(id: "guide", transition: .released)])
+        #expect(guideUp.deliveries == [.init(id: .guide, transition: .released)])
         #expect(!guideUp.shouldConsume)
 
         let dictationDown = router.route(.init(
@@ -41,7 +41,7 @@ struct GlobalShortcutEventRouterTests {
             modifierFlags: NSEvent.ModifierFlags.option.rawValue,
             kind: .keyDown
         ))
-        #expect(dictationDown.deliveries == [.init(id: "dictation", transition: .pressed)])
+        #expect(dictationDown.deliveries == [.init(id: .dictation, transition: .pressed)])
         #expect(dictationDown.shouldConsume)
 
         let dictationUp = router.route(.init(
@@ -49,7 +49,7 @@ struct GlobalShortcutEventRouterTests {
             modifierFlags: NSEvent.ModifierFlags.option.rawValue,
             kind: .keyUp
         ))
-        #expect(dictationUp.deliveries == [.init(id: "dictation", transition: .released)])
+        #expect(dictationUp.deliveries == [.init(id: .dictation, transition: .released)])
         #expect(dictationUp.shouldConsume)
     }
 }

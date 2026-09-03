@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 import CoreGraphics
 import Foundation
+import GuideCore
 
 public struct GlobalHotKeyConfiguration: Codable, Equatable, Sendable {
     public let keyCode: UInt32
@@ -28,6 +29,29 @@ public struct GlobalHotKeyConfiguration: Codable, Equatable, Sendable {
         modifiers: UInt32(optionKey),
         displayName: "⌥Space"
     )
+}
+
+public struct GlobalModifierChordConfiguration: Codable, Equatable, Hashable, Sendable, Identifiable {
+    public let modifiers: UInt32
+    public let displayName: String
+
+    public var id: UInt32 { modifiers }
+
+    public init(modifiers: UInt32, displayName: String) {
+        self.modifiers = modifiers
+        self.displayName = displayName
+    }
+
+    public static let guideDefault = GlobalModifierChordConfiguration(
+        modifiers: UInt32(controlKey | optionKey),
+        displayName: "Control–Option"
+    )
+
+    public static let guideChoices: [GlobalModifierChordConfiguration] = [
+        guideDefault,
+        .init(modifiers: UInt32(controlKey | cmdKey), displayName: "Control–Command"),
+        .init(modifiers: UInt32(optionKey | cmdKey), displayName: "Option–Command")
+    ]
 }
 
 public struct KeyboardEventSnapshot: Sendable {
@@ -65,6 +89,33 @@ public struct GlobalShortcutEventSnapshot: Equatable, Sendable {
     }
 }
 
+public struct GlobalShortcutEventAdapter: Sendable {
+    public init() {}
+
+    public func snapshot(
+        type: CGEventType,
+        event: CGEvent
+    ) -> GlobalShortcutEventSnapshot? {
+        let kind: GlobalShortcutEventKind
+        switch type {
+        case .keyDown: kind = .keyDown
+        case .keyUp: kind = .keyUp
+        case .flagsChanged: kind = .flagsChanged
+        default: return nil
+        }
+        var modifierFlags: UInt = 0
+        if event.flags.contains(.maskControl) { modifierFlags |= NSEvent.ModifierFlags.control.rawValue }
+        if event.flags.contains(.maskAlternate) { modifierFlags |= NSEvent.ModifierFlags.option.rawValue }
+        if event.flags.contains(.maskCommand) { modifierFlags |= NSEvent.ModifierFlags.command.rawValue }
+        if event.flags.contains(.maskShift) { modifierFlags |= NSEvent.ModifierFlags.shift.rawValue }
+        return .init(
+            keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
+            modifierFlags: modifierFlags,
+            kind: kind
+        )
+    }
+}
+
 public enum GlobalShortcutGesture: Equatable, Sendable {
     case key(GlobalHotKeyConfiguration)
     case modifierChord(modifiers: UInt32, displayName: String)
@@ -83,21 +134,26 @@ public enum GlobalShortcutGesture: Equatable, Sendable {
     }
 }
 
+public enum GlobalShortcutID: String, Equatable, Hashable, Sendable {
+    case dictation
+    case guide
+}
+
 public struct GlobalShortcutBinding: Equatable, Sendable {
-    public let id: String
+    public let id: GlobalShortcutID
     public let gesture: GlobalShortcutGesture
 
-    public init(id: String, gesture: GlobalShortcutGesture) {
+    public init(id: GlobalShortcutID, gesture: GlobalShortcutGesture) {
         self.id = id
         self.gesture = gesture
     }
 }
 
 public struct GlobalShortcutDelivery: Equatable, Sendable {
-    public let id: String
+    public let id: GlobalShortcutID
     public let transition: GlobalHotKeyTransition
 
-    public init(id: String, transition: GlobalHotKeyTransition) {
+    public init(id: GlobalShortcutID, transition: GlobalHotKeyTransition) {
         self.id = id
         self.transition = transition
     }
@@ -118,7 +174,7 @@ public struct GlobalShortcutRouteResult: Equatable, Sendable {
 /// silently diverge across multiple taps.
 public struct GlobalShortcutEventRouter: Sendable {
     private let bindings: [GlobalShortcutBinding]
-    private var pressedBindingIDs: Set<String> = []
+    private var pressedBindingIDs: Set<GlobalShortcutID> = []
 
     public init(bindings: [GlobalShortcutBinding]) {
         self.bindings = bindings
@@ -207,95 +263,6 @@ public struct GlobalHotKeyEventPolicy: Sendable {
     }
 }
 
-@MainActor
-public final class GlobalHotKeyService {
-    public typealias Handler = @MainActor @Sendable () -> Void
-
-    private let pressed: Handler
-    private let released: Handler
-    private let cancelled: Handler
-    private let configuration: GlobalHotKeyConfiguration
-    private let eventPolicy = GlobalHotKeyEventPolicy()
-    private var eventTap: CFMachPort?
-    private var eventTapSource: CFRunLoopSource?
-    private var pressState = GlobalHotKeyPressState()
-    private var deliveredIsPressed = false
-
-    public init(
-        configuration: GlobalHotKeyConfiguration = .dictation,
-        pressed: @escaping Handler,
-        released: @escaping Handler,
-        cancelled: @escaping Handler = {}
-    ) {
-        self.configuration = configuration
-        self.pressed = pressed
-        self.released = released
-        self.cancelled = cancelled
-    }
-
-    public func start() throws {
-        guard eventTap == nil else { return }
-        let userData = Unmanaged.passUnretained(self).toOpaque()
-        let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
-        eventTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(eventMask),
-            callback: guideKeyboardEventTapHandler,
-            userInfo: userData
-        )
-        guard let eventTap else {
-            stop()
-            throw HotKeyError.eventTapInstallationFailed
-        }
-        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
-        eventTapSource = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: eventTap, enable: true)
-    }
-
-    public func stop() {
-        if let eventTapSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapSource, .commonModes)
-            CFRunLoopSourceInvalidate(eventTapSource)
-            self.eventTapSource = nil
-        }
-        if let eventTap {
-            CFMachPortInvalidate(eventTap)
-            self.eventTap = nil
-        }
-        pressState.reset()
-        deliveredIsPressed = false
-    }
-
-    fileprivate func handle(_ event: KeyboardEventSnapshot) {
-        if event.isKeyDown, event.keyCode == UInt16(kVK_Escape) {
-            cancelled()
-            return
-        }
-        guard let transition = pressState.consume(event, configuration: configuration) else { return }
-        deliver(transition)
-    }
-
-    nonisolated fileprivate func shouldConsume(_ event: KeyboardEventSnapshot) -> Bool {
-        eventPolicy.shouldConsume(event, configuration: configuration)
-    }
-
-    private func deliver(_ transition: GlobalHotKeyTransition) {
-        switch transition {
-        case .pressed:
-            guard !deliveredIsPressed else { return }
-            deliveredIsPressed = true
-            pressed()
-        case .released:
-            guard deliveredIsPressed else { return }
-            deliveredIsPressed = false
-            released()
-        }
-    }
-}
-
 public enum HotKeyError: LocalizedError {
     case eventTapInstallationFailed
 
@@ -308,7 +275,7 @@ public enum HotKeyError: LocalizedError {
 }
 
 @MainActor
-public final class GlobalShortcutService {
+public final class GlobalShortcutService: GlobalShortcutMonitoring {
     public typealias DeliveryHandler = @MainActor @Sendable (GlobalShortcutDelivery) -> Void
     public typealias CancellationHandler = @MainActor @Sendable () -> Void
 
@@ -367,14 +334,21 @@ public final class GlobalShortcutService {
 
     fileprivate func route(_ event: GlobalShortcutEventSnapshot) -> Bool {
         if event.kind == .keyDown, event.keyCode == UInt16(kVK_Escape) {
-            cancelled()
+            Task { @MainActor [cancelled] in cancelled() }
             return false
         }
         let result = router.route(event)
-        for delivery in result.deliveries {
-            delivered(delivery)
+        if !result.deliveries.isEmpty {
+            Task { @MainActor [delivered, deliveries = result.deliveries] in
+                for delivery in deliveries { delivered(delivery) }
+            }
         }
         return result.shouldConsume
+    }
+
+    fileprivate func reenableAfterSystemDisable() {
+        guard let eventTap else { return }
+        CGEvent.tapEnable(tap: eventTap, enable: true)
     }
 }
 
@@ -385,54 +359,14 @@ private func globalShortcutEventTapHandler(
     _ userData: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     guard let userData else { return Unmanaged.passUnretained(event) }
-    let kind: GlobalShortcutEventKind
-    switch type {
-    case .keyDown: kind = .keyDown
-    case .keyUp: kind = .keyUp
-    case .flagsChanged: kind = .flagsChanged
-    default: return Unmanaged.passUnretained(event)
-    }
-
-    var modifierFlags: UInt = 0
-    if event.flags.contains(.maskControl) { modifierFlags |= NSEvent.ModifierFlags.control.rawValue }
-    if event.flags.contains(.maskAlternate) { modifierFlags |= NSEvent.ModifierFlags.option.rawValue }
-    if event.flags.contains(.maskCommand) { modifierFlags |= NSEvent.ModifierFlags.command.rawValue }
-    if event.flags.contains(.maskShift) { modifierFlags |= NSEvent.ModifierFlags.shift.rawValue }
-    let snapshot = GlobalShortcutEventSnapshot(
-        keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
-        modifierFlags: modifierFlags,
-        kind: kind
-    )
     let service = Unmanaged<GlobalShortcutService>.fromOpaque(userData).takeUnretainedValue()
-    let shouldConsume = MainActor.assumeIsolated { service.route(snapshot) }
-    return shouldConsume ? nil : Unmanaged.passUnretained(event)
-}
-
-private func guideKeyboardEventTapHandler(
-    _ proxy: CGEventTapProxy,
-    _ type: CGEventType,
-    _ event: CGEvent,
-    _ userData: UnsafeMutableRawPointer?
-) -> Unmanaged<CGEvent>? {
-    guard (type == .keyDown || type == .keyUp), let userData else {
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        MainActor.assumeIsolated { service.reenableAfterSystemDisable() }
         return Unmanaged.passUnretained(event)
     }
-
-    var modifierFlags: UInt = 0
-    if event.flags.contains(.maskControl) { modifierFlags |= NSEvent.ModifierFlags.control.rawValue }
-    if event.flags.contains(.maskAlternate) { modifierFlags |= NSEvent.ModifierFlags.option.rawValue }
-    if event.flags.contains(.maskCommand) { modifierFlags |= NSEvent.ModifierFlags.command.rawValue }
-    if event.flags.contains(.maskShift) { modifierFlags |= NSEvent.ModifierFlags.shift.rawValue }
-
-    let snapshot = KeyboardEventSnapshot(
-        keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
-        modifierFlags: modifierFlags,
-        isKeyDown: type == .keyDown
-    )
-    let service = Unmanaged<GlobalHotKeyService>.fromOpaque(userData).takeUnretainedValue()
-    let shouldConsume = service.shouldConsume(snapshot)
-    Task { @MainActor in
-        service.handle(snapshot)
+    guard let snapshot = GlobalShortcutEventAdapter().snapshot(type: type, event: event) else {
+        return Unmanaged.passUnretained(event)
     }
+    let shouldConsume = MainActor.assumeIsolated { service.route(snapshot) }
     return shouldConsume ? nil : Unmanaged.passUnretained(event)
 }

@@ -171,6 +171,13 @@ provide prose without pointing.
 Each external dependency implements one of these seams. Product state refers to
 capabilities and failures, never vendor names.
 
+One injected `GlobalShortcutMonitoring` adapter owns a single CGEvent tap for
+both dictation and Guide. Its provider-neutral router distinguishes keyed
+dictation from a held modifier-only Guide chord, delivers work asynchronously
+off the event callback, and re-enables a tap disabled by macOS. The App target
+constructs this adapter; GuideUI receives only the GuideCore lifecycle seam and
+a factory supplied at composition time.
+
 ## Local Speech Strategy
 
 Do not choose a permanent speech runtime from README claims. Phase 0 compares:
@@ -206,9 +213,11 @@ transcript.
 
 - Capture only after explicit activation.
 - Voice is the primary guide input. The hotkey starts listening, a second press
-  submits the spoken question, and Escape cancels.
-- Keep the cursor companion as the primary response surface and speak answers
-  with the local system voice. A normal, non-floating window is optional
+  submits the spoken question for menu/manual activation. The global held
+  modifier chord starts on hold and submits on release. Escape cancels.
+- Keep one compact top-centered ambient Guide surface on the locked target's
+  display and speak answers with the local system voice. It does not follow the
+  pointer or activate SERPy. A normal, non-floating window is optional
   transcript inspection only.
 - Include recent in-memory turns so follow-up questions retain meaning.
 - Local guidance uses Vision OCR. When the user explicitly selects OpenAI Talk

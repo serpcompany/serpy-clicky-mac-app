@@ -51,3 +51,12 @@ copywriting, bundle identifiers, URL schemes, or marketing assets.
 
 MIT compliance does not itself clear third-party assets or trademarks. Every
 shipped asset must be original, commissioned, or separately licensed.
+
+## 2026-09-04 rejected-build rebuild
+
+Branch `codex/heyclicky-guide-rebuild` imports no code or assets from current
+HeyClicky or the historical MIT repository. The rejected build-39 visual
+adaptation commit is not in this branch. Current HeyClicky `1.0.48 (57)` is
+used only through installed screenshots, accessibility output, and observable
+interaction; private/account regions are not committed. No additional MIT
+notice is required unless a later commit passes the import gate above.

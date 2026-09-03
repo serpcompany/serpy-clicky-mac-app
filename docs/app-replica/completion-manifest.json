@@ -179,16 +179,16 @@
       "id": "G19.microphone-recovery",
       "kind": "behavior",
       "in_scope": true,
-      "status": "fail",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {"reference": ["Issue #6 installed comparison"], "candidate": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "comparison": [], "behavior": ["Candidate has no input-device failover"]}
     },
     {
       "id": "G20.output-recovery",
       "kind": "behavior",
       "in_scope": true,
-      "status": "fail",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {"reference": ["Issue #6 installed comparison"], "candidate": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "comparison": [], "behavior": ["Candidate has no muted-output preflight or Bluetooth pre-roll"]}
     },
     {

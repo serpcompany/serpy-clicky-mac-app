@@ -77,6 +77,7 @@ public struct GuideTurnPresentation: Equatable, Sendable {
     public let responseText: String
     public let failure: GuideFailure?
     public let pointCue: GuidePointCue?
+    public let target: GuideWindowTarget?
 
     public init(
         stage: GuidanceAmbientStage,
@@ -84,7 +85,8 @@ public struct GuideTurnPresentation: Equatable, Sendable {
         context: ScreenContextIdentity? = nil,
         responseText: String = "",
         failure: GuideFailure? = nil,
-        pointCue: GuidePointCue? = nil
+        pointCue: GuidePointCue? = nil,
+        target: GuideWindowTarget? = nil
     ) {
         self.stage = stage
         self.statusText = statusText
@@ -92,6 +94,7 @@ public struct GuideTurnPresentation: Equatable, Sendable {
         self.responseText = responseText
         self.failure = failure
         self.pointCue = pointCue
+        self.target = target
     }
 
     public var guidancePhase: GuidancePhase {
@@ -196,7 +199,7 @@ public final class GuideTurnCoordinator {
         activeTurnID = turnID
         cancellationRequested = false
         phase = .listening
-        overlay.present(.init(stage: .listening, statusText: "Listening…", context: target.identity))
+        overlay.present(.init(stage: .listening, statusText: "Listening…", context: target.identity, target: target))
 
         activeTurnTask = Task { [weak self] in
             guard let self else { return }
@@ -253,7 +256,8 @@ public final class GuideTurnCoordinator {
                     overlay.present(.init(
                         stage: .liveTranscript,
                         statusText: transcriptPreview.displayText(for: text),
-                        context: target.identity
+                        context: target.identity,
+                        target: target
                     ))
                 }
             } catch is CancellationError {
@@ -266,7 +270,7 @@ public final class GuideTurnCoordinator {
             for await _ in finishStream { break }
             try Task.checkCancellation()
             phase = .capturing
-            overlay.present(.init(stage: .capturing, statusText: "Reading this screen…", context: target.identity))
+            overlay.present(.init(stage: .capturing, statusText: "Reading this screen…", context: target.identity, target: target))
             let question: String
             do { question = try await transcription.stop() }
             catch is CancellationError { throw CancellationError() }
@@ -280,7 +284,7 @@ public final class GuideTurnCoordinator {
             phase = .thinking
             let thinkingStatus = (generation as? any GuideTurnStreamingGenerating)?.thinkingStatusText
                 ?? "Thinking locally…"
-            overlay.present(.init(stage: .thinking, statusText: thinkingStatus, context: target.identity))
+            overlay.present(.init(stage: .thinking, statusText: thinkingStatus, context: target.identity, target: target))
             let generated: GeneratedTurn
             do {
                 if let streamingGeneration = generation as? any GuideTurnStreamingGenerating {
@@ -320,7 +324,8 @@ public final class GuideTurnCoordinator {
                 statusText: "Speaking…",
                 context: target.identity,
                 responseText: completeAnswer,
-                pointCue: generated.pointCue
+                pointCue: generated.pointCue,
+                target: target
             ))
             if !generated.speechCompleted {
                 do { try await speech.speak(completeAnswer) }
@@ -333,7 +338,8 @@ public final class GuideTurnCoordinator {
                 statusText: "Ready for a follow-up",
                 context: target.identity,
                 responseText: completeAnswer,
-                pointCue: generated.pointCue
+                pointCue: generated.pointCue,
+                target: target
             ))
         } catch is CancellationError {
             // cancel() owns visible cancellation and cleanup.
@@ -349,7 +355,8 @@ public final class GuideTurnCoordinator {
                     stage: .error,
                     statusText: failure.message,
                     context: target.identity,
-                    failure: failure
+                    failure: failure,
+                    target: target
                 ))
                 overlay.restoreIdleVisibility(after: .seconds(4))
             }
@@ -397,7 +404,8 @@ public final class GuideTurnCoordinator {
                         stage: .speaking,
                         statusText: "Answering…",
                         context: target.identity,
-                        responseText: visible
+                        responseText: visible,
+                        target: target
                     ))
                 }
             case let .sentenceReady(sentence):

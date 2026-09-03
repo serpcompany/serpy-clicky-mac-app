@@ -1,8 +1,11 @@
 # HeyClicky 1.0.48 versus SERPy Guide parity ledger
 
-Date frozen: 2026-09-04  
-Reference: installed `/Applications/HeyClicky.app` `1.0.48 (57)`  
-Rejected candidate: installed `/Applications/SERPy.app` `0.1.0 (39)`  
+Date frozen: 2026-09-04
+
+Reference: installed `/Applications/HeyClicky.app` `1.0.48 (57)`
+
+Rejected candidate: installed `/Applications/SERPy.app` `0.1.0 (39)`
+
 Replacement branch: `codex/heyclicky-guide-rebuild` from `ef12f96`
 
 Statuses describe installed evidence, not source intent. `FAIL` means a directly

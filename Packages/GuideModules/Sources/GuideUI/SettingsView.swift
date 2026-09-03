@@ -1,5 +1,6 @@
 import AppKit
 import GuideCore
+import GuideMac
 import SwiftUI
 
 public struct SettingsView: View {
@@ -214,9 +215,19 @@ public struct SettingsView: View {
             }
 
             Section("Voice guide") {
-                LabeledContent("Shortcut", value: "Hold Control–Option")
+                Picker(
+                    "Hold shortcut",
+                    selection: Binding(
+                        get: { model.guideShortcut },
+                        set: { model.setGuideShortcut($0) }
+                    )
+                ) {
+                    ForEach(GlobalModifierChordConfiguration.guideChoices) { shortcut in
+                        Text(shortcut.displayName).tag(shortcut)
+                    }
+                }
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-                Text("Press the shortcut, ask about the app on screen out loud, then press it again. SERPy reads the exact window locked at the start of the turn, streams the answer through the cursor companion when supported, and speaks it.")
+                Text("Hold \(model.guideShortcut.displayName) while you ask about the app on screen, then release to send. SERPy reads the exact window locked at the start of the turn, streams the answer in its ambient panel when supported, and speaks it.")
                     .foregroundStyle(.secondary)
                 Button(model.guidancePhase == .listening ? "Finish Voice Question" : "Start Voice Question") {
                     model.toggleGuidanceVoice()

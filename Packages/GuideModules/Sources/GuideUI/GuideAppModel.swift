@@ -1,5 +1,4 @@
 import AppKit
-import Carbon
 import GuideCore
 import GuideMac
 import Observation
@@ -8,6 +7,15 @@ import OSLog
 @MainActor
 @Observable
 public final class GuideAppModel: GuideTurnOverlayPresenting {
+    public typealias ShortcutMonitorFactory = @MainActor (
+        _ dictationConfiguration: GlobalHotKeyConfiguration,
+        _ guideConfiguration: GlobalModifierChordConfiguration,
+        _ dictationPressed: @escaping @MainActor @Sendable () -> Void,
+        _ dictationReleased: @escaping @MainActor @Sendable () -> Void,
+        _ guidePressed: @escaping @MainActor @Sendable () -> Void,
+        _ guideReleased: @escaping @MainActor @Sendable () -> Void,
+        _ cancelled: @escaping @MainActor @Sendable () -> Void
+    ) -> any GlobalShortcutMonitoring
     public private(set) var phase: DictationPhase = .idle
     public private(set) var partialTranscript = ""
     public private(set) var statusMessage = "Starting…"
@@ -27,6 +35,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public private(set) var transcriptHistory: [TranscriptHistoryEntry] = []
     public private(set) var historyStatusMessage = "Loading local history…"
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
+    public private(set) var guideShortcut: GlobalModifierChordConfiguration
     public private(set) var talkCredentialAvailable = false
     public private(set) var talkCredentialVerification: TalkCredentialVerificationState = .missing
     public private(set) var talkCredentialStatus = "No OpenAI key saved."
@@ -87,7 +96,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var talkVerificationExpiryTask: Task<Void, Never>?
     @ObservationIgnored private let presentation: CompanionPresentation
     @ObservationIgnored private let companionController: CompanionPanelController
-    @ObservationIgnored private var shortcutService: GlobalShortcutService?
+    @ObservationIgnored private let shortcutMonitorFactory: ShortcutMonitorFactory
+    @ObservationIgnored private var shortcutService: (any GlobalShortcutMonitoring)?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
@@ -114,6 +124,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         static let historyEnabled = "GuideCompanion.historyEnabled"
         static let saveAudioHistory = "GuideCompanion.saveAudioHistory"
         static let dictationShortcut = "SERPy.dictationShortcut"
+        static let guideShortcut = "SERPy.guideShortcut"
         static let talkProvider = "SERPy.talkProvider"
         static let talkDisclosureAccepted = "SERPy.talkDisclosureAccepted"
     }
@@ -124,7 +135,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         talkCredentialStore: any TalkCredentialStoring,
         talkCredentialVerifier: any TalkCredentialVerifying,
         talkVerificationExpirySleeper: any TalkVerificationExpirySleeping,
-        talkGenerator: TalkGenerationRouter
+        talkGenerator: TalkGenerationRouter,
+        shortcutMonitorFactory: @escaping ShortcutMonitorFactory
     ) {
         self.defaults = defaults
         permissionService = PermissionService()
@@ -138,6 +150,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         self.talkCredentialStore = talkCredentialStore
         self.talkCredentialVerifier = talkCredentialVerifier
         self.talkVerificationExpirySleeper = talkVerificationExpirySleeper
+        self.shortcutMonitorFactory = shortcutMonitorFactory
         let provider = TalkProviderSelection(
             rawValue: defaults.string(forKey: Keys.talkProvider) ?? ""
         ) ?? .local
@@ -160,6 +173,9 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         dictationShortcut = defaults.data(forKey: Keys.dictationShortcut)
             .flatMap { try? JSONDecoder().decode(GlobalHotKeyConfiguration.self, from: $0) }
             ?? .dictation
+        guideShortcut = defaults.data(forKey: Keys.guideShortcut)
+            .flatMap { try? JSONDecoder().decode(GlobalModifierChordConfiguration.self, from: $0) }
+            ?? .guideDefault
         historyEnabled = defaults.object(forKey: Keys.historyEnabled) as? Bool ?? false
         saveAudioHistory = defaults.object(forKey: Keys.saveAudioHistory) as? Bool ?? false
         companionEnabled = enabled
@@ -405,7 +421,10 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         refreshPermissions()
         await loadTranscriptHistory()
 
-        let service = makeShortcutService(dictationConfiguration: dictationShortcut)
+        let service = makeShortcutService(
+            dictationConfiguration: dictationShortcut,
+            guideConfiguration: guideShortcut
+        )
         shortcutService = service
         do {
             try service.start()
@@ -484,7 +503,10 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         let previous = dictationShortcut
         shortcutService?.stop()
 
-        let replacement = makeShortcutService(dictationConfiguration: configuration)
+        let replacement = makeShortcutService(
+            dictationConfiguration: configuration,
+            guideConfiguration: guideShortcut
+        )
         do {
             try replacement.start()
             shortcutService = replacement
@@ -496,11 +518,60 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             statusMessage = "Dictation shortcut changed to \(configuration.displayName)."
             recoveryMessage = "Press once to start, press again to insert, or press Escape to cancel."
         } catch {
-            let fallback = makeShortcutService(dictationConfiguration: previous)
-            shortcutService = fallback
-            hotKeyRegistered = (try? fallback.start()) != nil
-            statusMessage = "\(configuration.displayName) is unavailable."
-            recoveryMessage = "Quit the other app using it, or record a different shortcut. \(previous.displayName) remains active."
+            let fallback = makeShortcutService(
+                dictationConfiguration: previous,
+                guideConfiguration: guideShortcut
+            )
+            do {
+                try fallback.start()
+                shortcutService = fallback
+                hotKeyRegistered = true
+                statusMessage = "\(configuration.displayName) is unavailable."
+                recoveryMessage = "Activation failed: \(error.localizedDescription) Quit the other app using it, or record a different shortcut. \(previous.displayName) remains active."
+            } catch {
+                shortcutService = nil
+                hotKeyRegistered = false
+                statusMessage = "Global shortcuts are unavailable."
+                recoveryMessage = "Activation failed: \(error.localizedDescription) Open System Settings → Privacy & Security → Accessibility, enable SERPy, then relaunch it."
+            }
+        }
+    }
+
+    public func setGuideShortcut(_ configuration: GlobalModifierChordConfiguration) {
+        guard configuration != guideShortcut else { return }
+        let previous = guideShortcut
+        shortcutService?.stop()
+        let replacement = makeShortcutService(
+            dictationConfiguration: dictationShortcut,
+            guideConfiguration: configuration
+        )
+        do {
+            try replacement.start()
+            shortcutService = replacement
+            guideShortcut = configuration
+            if let data = try? JSONEncoder().encode(configuration) {
+                defaults.set(data, forKey: Keys.guideShortcut)
+            }
+            hotKeyRegistered = true
+            statusMessage = "Guide shortcut changed to \(configuration.displayName)."
+            recoveryMessage = "Hold the chord while speaking, release to send, or press Escape to cancel."
+        } catch {
+            let fallback = makeShortcutService(
+                dictationConfiguration: dictationShortcut,
+                guideConfiguration: previous
+            )
+            do {
+                try fallback.start()
+                shortcutService = fallback
+                hotKeyRegistered = true
+                statusMessage = "\(configuration.displayName) is unavailable."
+                recoveryMessage = "Activation failed: \(error.localizedDescription) \(previous.displayName) remains active."
+            } catch {
+                shortcutService = nil
+                hotKeyRegistered = false
+                statusMessage = "Global shortcuts are unavailable."
+                recoveryMessage = "Activation failed: \(error.localizedDescription) Enable SERPy in Accessibility settings, then relaunch it."
+            }
         }
     }
 
@@ -581,6 +652,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.contextLabel = nil
         presentation.responseText = ""
         presentation.pointCue = nil
+        presentation.guideTarget = nil
         applyCompanionVisibility()
     }
 
@@ -697,7 +769,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guidancePartialTranscript = ""
         do {
             try guideTurnCoordinator.start(target: lockedTarget)
-            statusMessage = "Listening for your guide question. Release Control–Option to ask, or press Escape to cancel."
+            statusMessage = "Listening for your guide question. Release \(guideShortcut.displayName) to ask, or press Escape to cancel."
             recoveryMessage = ""
         } catch {
             presentGuidanceFailure(normalize(error, stage: .recording))
@@ -996,30 +1068,17 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func makeShortcutService(
-        dictationConfiguration: GlobalHotKeyConfiguration
-    ) -> GlobalShortcutService {
-        GlobalShortcutService(
-            bindings: [
-                .init(id: "dictation", gesture: .key(dictationConfiguration)),
-                .init(
-                    id: "guide",
-                    gesture: .modifierChord(
-                        modifiers: UInt32(controlKey | optionKey),
-                        displayName: "Control–Option"
-                    )
-                )
-            ],
-            delivered: { [weak self] delivery in
-                guard let self else { return }
-                switch (delivery.id, delivery.transition) {
-                case ("dictation", .pressed): hotKeyPressed()
-                case ("dictation", .released): hotKeyReleased()
-                case ("guide", .pressed): guidanceHeldShortcutPressed()
-                case ("guide", .released): guidanceHeldShortcutReleased()
-                default: break
-                }
-            },
-            cancelled: { [weak self] in
+        dictationConfiguration: GlobalHotKeyConfiguration,
+        guideConfiguration: GlobalModifierChordConfiguration
+    ) -> any GlobalShortcutMonitoring {
+        shortcutMonitorFactory(
+            dictationConfiguration,
+            guideConfiguration,
+            { [weak self] in self?.hotKeyPressed() },
+            { [weak self] in self?.hotKeyReleased() },
+            { [weak self] in self?.guidanceHeldShortcutPressed() },
+            { [weak self] in self?.guidanceHeldShortcutReleased() },
+            { [weak self] in
                 self?.escapePressed()
                 self?.guidanceEscapePressed()
             }
@@ -1166,6 +1225,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             presentation.responseText = ""
             presentation.guideStage = nil
             presentation.contextLabel = nil
+            presentation.guideTarget = nil
             applyCompanionVisibility()
             companionController.refresh()
         }
@@ -1188,6 +1248,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.contextLabel = turn.context?.compactLabel
         presentation.responseText = turn.responseText
         presentation.pointCue = turn.pointCue
+        presentation.guideTarget = turn.target
         statusMessage = turn.statusText
         recoveryMessage = turn.failure?.recovery ?? ""
         applyCompanionVisibility()
@@ -1215,6 +1276,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             presentation.contextLabel = nil
             presentation.responseText = ""
             presentation.pointCue = nil
+            presentation.guideTarget = nil
             applyCompanionVisibility()
             companionController.refresh()
         }

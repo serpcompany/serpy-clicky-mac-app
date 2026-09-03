@@ -36,7 +36,8 @@ API key, or metered provider.
 
 ### Journey C — Ask for screen guidance
 
-1. The user invokes the voice guide from the menu or guide shortcut.
+1. The user invokes the voice guide from the menu or holds the configurable
+   Guide modifier chord while speaking, then releases it to send.
 2. The app explains and requests Screen Recording permission if it has not
    already been granted.
 3. The cursor companion shows that it is listening; no typing window opens.
@@ -48,8 +49,11 @@ API key, or metered provider.
    the transient image. Local remains the default. The optional OpenAI Talk
    engine sends only the spoken question, bounded recent Talk text, and exact
    locked-window image after an explicit disclosure and provider selection.
-7. The app captions the answer beside the cursor and speaks it locally. An
-   optional normal window can show the transient conversation transcript.
+7. The app streams the answer in one compact top-centered ambient surface on
+   the locked window's display and speaks complete sentence chunks locally.
+   The surface remains nonactivating and click-through unless actual overflow
+   exposes scrolling. An optional normal window can show the transient
+   conversation transcript.
 8. The user can invoke the guide again and ask a spoken follow-up.
 9. It never clicks, types, runs shell commands, or performs the task itself.
 
