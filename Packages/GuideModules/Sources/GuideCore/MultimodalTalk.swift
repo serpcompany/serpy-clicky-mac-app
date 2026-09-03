@@ -59,6 +59,20 @@ public protocol TalkCredentialVerifying: Sendable {
     func verifyCredential(_ credential: String) async throws -> Bool
 }
 
+public protocol TalkVerificationExpirySleeping: Sendable {
+    func sleep(until: Date) async throws
+}
+
+public struct SystemTalkVerificationExpirySleeper: TalkVerificationExpirySleeping {
+    public init() {}
+
+    public func sleep(until: Date) async throws {
+        let interval = until.timeIntervalSinceNow
+        guard interval > 0 else { return }
+        try await Task.sleep(for: .seconds(interval))
+    }
+}
+
 public enum TalkCredentialVerificationState: Equatable, Sendable {
     case missing
     case savedUnverified

@@ -34,6 +34,7 @@ public final class CompanionPanelController {
     private let responseLayoutPolicy = CompanionResponseLayoutPolicy()
     private let responseAnchorPolicy = CompanionResponseAnchorPolicy()
     private let responseInteractionPolicy = CompanionResponseInteractionPolicy()
+    private let responseSizingPolicy = CompanionResponseSizingPolicy()
     private let pointCueProjector = GuidePointCueProjector()
     private var trackingTimer: Timer?
     private var statusAnchorFrame: CGRect?
@@ -178,16 +179,18 @@ public final class CompanionPanelController {
                 visibleFrame: visibleFrame,
                 avoidedFrame: newFrame
             )
-            let responseSize = measuredResponseSize(
+            let responseSizing = measuredResponseSizing(
                 presentation.responseText,
                 availableHeight: maximumResponseHeight
             )
-            let proposedFrame = responseLayoutPolicy.frame(
+            responsePanel.ignoresMouseEvents = responseSizing.interactionMode == .clickThrough
+            let placementFrame = responseLayoutPolicy.frame(
                 pointer: pointer,
                 visibleFrame: visibleFrame,
-                contentSize: responseSize,
+                contentSize: CGSize(width: responseSizing.size.width, height: maximumResponseHeight),
                 avoiding: newFrame
             )
+            let proposedFrame = CGRect(origin: placementFrame.origin, size: responseSizing.size)
             let responseFrame = responseAnchorPolicy.frame(
                 current: responseAnchorFrame,
                 proposed: proposedFrame,
@@ -221,7 +224,7 @@ public final class CompanionPanelController {
         }
     }
 
-    private func measuredResponseSize(_ text: String, availableHeight: CGFloat) -> CGSize {
+    private func measuredResponseSizing(_ text: String, availableHeight: CGFloat) -> CompanionResponseSizing {
         let panelWidth = min(600, max(300, visibleFrameWidthFallback - 16))
         let textWidth = panelWidth - 40
         let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
@@ -231,13 +234,11 @@ public final class CompanionPanelController {
             attributes: [.font: font]
         )
         let measuredHeight = ceil(bounds.height) + 48
-        responsePanel.ignoresMouseEvents = responseInteractionPolicy.mode(
-            measuredContentHeight: measuredHeight,
-            maximumPanelHeight: availableHeight
-        ) == .clickThrough
-        return NSSize(
+        return responseSizingPolicy.resolve(
             width: panelWidth,
-            height: min(max(92, measuredHeight), availableHeight)
+            measuredContentHeight: measuredHeight,
+            maximumPanelHeight: availableHeight,
+            minimumPanelHeight: 92
         )
     }
 

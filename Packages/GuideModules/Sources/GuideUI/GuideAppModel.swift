@@ -80,9 +80,11 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private let guidanceSpeaker: LocalSpeechOutputService
     @ObservationIgnored private let talkCredentialStore: any TalkCredentialStoring
     @ObservationIgnored private let talkCredentialVerifier: any TalkCredentialVerifying
+    @ObservationIgnored private let talkVerificationExpirySleeper: any TalkVerificationExpirySleeping
     @ObservationIgnored private let talkGenerator: TalkGenerationRouter
     @ObservationIgnored private var verifiedTalkCredential: String?
     @ObservationIgnored private var talkCredentialGeneration = 0
+    @ObservationIgnored private var talkVerificationExpiryTask: Task<Void, Never>?
     @ObservationIgnored private let presentation: CompanionPresentation
     @ObservationIgnored private let companionController: CompanionPanelController
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
@@ -122,6 +124,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         localGuidanceService: LocalGuidanceService,
         talkCredentialStore: any TalkCredentialStoring,
         talkCredentialVerifier: any TalkCredentialVerifying,
+        talkVerificationExpirySleeper: any TalkVerificationExpirySleeping,
         talkGenerator: TalkGenerationRouter
     ) {
         self.defaults = defaults
@@ -135,6 +138,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guidanceSpeaker = LocalSpeechOutputService()
         self.talkCredentialStore = talkCredentialStore
         self.talkCredentialVerifier = talkCredentialVerifier
+        self.talkVerificationExpirySleeper = talkVerificationExpirySleeper
         let provider = TalkProviderSelection(
             rawValue: defaults.string(forKey: Keys.talkProvider) ?? ""
         ) ?? .local
@@ -235,6 +239,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             && talkDisclosureAccepted
             && talkCredentialAvailable
             && talkCredentialVerification.isVerified()
+            && verifiedTalkCredential != nil
     }
 
     public var talkThinkingStatus: String {
@@ -247,6 +252,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         do {
+            cancelTalkVerificationExpiry()
             try talkCredentialStore.saveCredential(talkCredentialDraft)
             talkCredentialGeneration += 1
             verifiedTalkCredential = nil
@@ -291,16 +297,20 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                 verifiedTalkCredential = credential
                 talkCredentialVerification = .verified(until: expiry)
                 talkCredentialStatus = "Provider verified for 15 minutes. OpenAI Talk may now send an explicitly disclosed turn."
+                scheduleTalkVerificationExpiry(at: expiry, credential: credential)
             } else {
+                cancelTalkVerificationExpiry()
                 verifiedTalkCredential = nil
                 talkCredentialVerification = .verifiedInvalid
                 talkCredentialStatus = "OpenAI rejected the saved key. Delete it and save a valid tester-owned key."
             }
         } catch is CancellationError {
+            cancelTalkVerificationExpiry()
             verifiedTalkCredential = nil
             talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
             talkCredentialStatus = "Provider verification was cancelled. No screen content was sent."
         } catch {
+            cancelTalkVerificationExpiry()
             verifiedTalkCredential = nil
             talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
             let failure = normalize(error, stage: .guidance)
@@ -315,6 +325,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         do {
+            cancelTalkVerificationExpiry()
             try talkCredentialStore.deleteCredential()
             talkCredentialGeneration += 1
             verifiedTalkCredential = nil
@@ -359,6 +370,34 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             credentialVerifiedUntil: verifiedUntil,
             verifiedCredential: verifiedTalkCredential
         )
+    }
+
+    private func scheduleTalkVerificationExpiry(at expiry: Date, credential: String) {
+        cancelTalkVerificationExpiry()
+        let generation = talkCredentialGeneration
+        talkVerificationExpiryTask = Task { [weak self, talkVerificationExpirySleeper] in
+            do {
+                try await talkVerificationExpirySleeper.sleep(until: expiry)
+                try Task.checkCancellation()
+                guard let self,
+                      talkCredentialGeneration == generation,
+                      verifiedTalkCredential == credential,
+                      case .verified = talkCredentialVerification
+                else { return }
+                verifiedTalkCredential = nil
+                talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
+                talkCredentialStatus = "Provider verification expired. Choose Verify Provider before the next OpenAI Talk turn."
+                configureTalkGenerator()
+                talkVerificationExpiryTask = nil
+            } catch {
+                // Cancellation is owned by save/delete/stop or a newer lease.
+            }
+        }
+    }
+
+    private func cancelTalkVerificationExpiry() {
+        talkVerificationExpiryTask?.cancel()
+        talkVerificationExpiryTask = nil
     }
 
     public func start() async {
@@ -425,6 +464,13 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guideTurnCoordinator.cancel()
         guideResponseDismissalTask?.cancel()
         guideResponseDismissalTask = nil
+        cancelTalkVerificationExpiry()
+        verifiedTalkCredential = nil
+        if case .verified = talkCredentialVerification {
+            talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
+            talkCredentialStatus = "Provider verification ended with the app session. Verify Provider before the next OpenAI Talk turn."
+        }
+        configureTalkGenerator()
         companionController.hide()
         hotKeyRegistered = false
     }

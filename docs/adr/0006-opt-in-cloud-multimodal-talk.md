@@ -32,8 +32,11 @@ questions, and answers are not written to disk or content logs.
 
 The production adapter targets `gpt-5.6-terra` through `POST /v1/responses`.
 Official OpenAI documentation confirms image input and streaming support for
-that model and endpoint. The model has no audio output; SERPy forms complete
-sentence events and speaks them locally.
+that model and endpoint. A strict JSON-schema output makes the spoken answer
+required and a point optional in the same response, avoiding a point-only tool
+result. SERPy incrementally extracts answer text from structured SSE deltas,
+forms complete sentence events, and speaks them locally. The model has no audio
+output.
 
 ## Security qualification
 

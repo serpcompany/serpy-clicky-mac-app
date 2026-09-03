@@ -35,7 +35,9 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertFalse(rendered.contains("ORCHID RIVER 731"))
         XCTAssertFalse(rendered.contains("TextEdit"))
         XCTAssertFalse(rendered.contains("window_id"))
-        XCTAssertTrue(rendered.contains("locked-window"))
+        XCTAssertTrue(rendered.contains("serpy_guidance"))
+        XCTAssertTrue(rendered.contains("json_schema"))
+        XCTAssertNil(object["tools"])
         XCTAssertTrue(rendered.contains("untrusted visual evidence"))
         XCTAssertEqual(urlRequest.value(forHTTPHeaderField: "Authorization"), "Bearer test-key-never-sent")
     }
@@ -75,9 +77,9 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
     func testSSEDecoderOrdersDeltasProducesEachSentenceOnceAndPreservesRemainder() throws {
         var decoder = OpenAIResponsesSSEDecoder()
         let lines = [
-            #"data: {"type":"response.output_text.delta","delta":"The phrase is "}"#,
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"The phrase is "}"#,
             #"data: {"type":"response.output_text.delta","delta":"ORCHID RIVER 731. Next"}"#,
-            #"data: {"type":"response.output_text.delta","delta":" step"}"#,
+            #"data: {"type":"response.output_text.delta","delta":" step\",\"point\":null}"}"#,
             #"data: {"type":"response.completed"}"#
         ]
         let events = try lines.flatMap { try decoder.consume(line: $0) }
@@ -97,11 +99,10 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         }
     }
 
-    func testSSEDecoderPreservesTextAndIndependentPointFunctionOutputInOneResponse() throws {
+    func testSSEDecoderPreservesRequiredAnswerAndOptionalPointInOneStructuredOutput() throws {
         var decoder = OpenAIResponsesSSEDecoder()
         let lines = [
-            #"data: {"type":"response.output_text.delta","delta":"Choose Continue."}"#,
-            #"data: {"type":"response.output_item.done","item":{"type":"function_call","name":"point","arguments":"{\"evidence_id\":\"locked-window\",\"x\":0.25,\"y\":0.75,\"confidence\":0.92,\"label\":\"Continue\"}"}}"#,
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Choose Continue.\",\"point\":{\"x\":0.25,\"y\":0.75,\"confidence\":0.92,\"label\":\"Continue\"}}"}"#,
             #"data: {"type":"response.completed"}"#
         ]
 
@@ -115,6 +116,30 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
             label: "Continue"
         ))))
         XCTAssertEqual(events.last, .completed)
+    }
+
+    func testSSEDecoderAcceptsAnswerOnlyStructuredOutput() throws {
+        var decoder = OpenAIResponsesSSEDecoder()
+        let lines = [
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Use Settings.\",\"point\":null}"}"#,
+            #"data: {"type":"response.completed"}"#
+        ]
+
+        let events = try lines.flatMap { try decoder.consume(line: $0) }
+
+        XCTAssertEqual(events.filterTextDeltas, ["Use Settings."])
+        XCTAssertFalse(events.contains { if case .spatialAction = $0 { true } else { false } })
+        XCTAssertEqual(events.last, .completed)
+    }
+
+    func testSSEDecoderRejectsMalformedOrMissingRequiredAnswer() throws {
+        var missing = OpenAIResponsesSSEDecoder()
+        _ = try missing.consume(line: #"data: {"type":"response.output_text.delta","delta":"{\"point\":null}"}"#)
+        XCTAssertThrowsError(try missing.consume(line: #"data: {"type":"response.completed"}"#))
+
+        var malformed = OpenAIResponsesSSEDecoder()
+        _ = try malformed.consume(line: #"data: {"type":"response.output_text.delta","delta":"{\"answer\":"}"#)
+        XCTAssertThrowsError(try malformed.consume(line: #"data: {"type":"response.completed"}"#))
     }
 
     func testImmediatelyFailingStreamDoesNotLeaveStaleRequestOwnership() async throws {

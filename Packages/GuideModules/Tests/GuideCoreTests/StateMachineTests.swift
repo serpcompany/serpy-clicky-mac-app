@@ -170,6 +170,44 @@ final class GuidanceValidationTests: XCTestCase {
 }
 
 final class CompanionResponseLayoutPolicyTests: XCTestCase {
+    func testStreamingResponseKeepsOriginButGrowsUntilActualOverflow() {
+        let anchor = CompanionResponseAnchorPolicy()
+        let sizing = CompanionResponseSizingPolicy()
+        let initial = CGRect(x: 200, y: 180, width: 600, height: 92)
+
+        let medium = sizing.resolve(
+            width: 600,
+            measuredContentHeight: 280,
+            maximumPanelHeight: 500,
+            minimumPanelHeight: 92
+        )
+        let grown = anchor.frame(
+            current: initial,
+            proposed: CGRect(x: 40, y: 40, width: medium.size.width, height: medium.size.height),
+            responseIsVisible: true
+        )
+
+        XCTAssertEqual(grown.origin, initial.origin)
+        XCTAssertEqual(grown.height, 280)
+        XCTAssertEqual(medium.interactionMode, .clickThrough)
+
+        let overflow = sizing.resolve(
+            width: 600,
+            measuredContentHeight: 720,
+            maximumPanelHeight: 500,
+            minimumPanelHeight: 92
+        )
+        let capped = anchor.frame(
+            current: grown,
+            proposed: CGRect(x: 20, y: 20, width: overflow.size.width, height: overflow.size.height),
+            responseIsVisible: true
+        )
+
+        XCTAssertEqual(capped.origin, initial.origin)
+        XCTAssertEqual(capped.height, 500)
+        XCTAssertEqual(overflow.interactionMode, .scrollableVisibleControl)
+    }
+
     func testOnlyOverflowingVisibleAnswerBecomesIntentionallyScrollable() {
         let policy = CompanionResponseInteractionPolicy()
 

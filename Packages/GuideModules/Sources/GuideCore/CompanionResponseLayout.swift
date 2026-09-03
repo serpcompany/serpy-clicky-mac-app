@@ -30,6 +30,41 @@ public struct CompanionResponseInteractionPolicy: Sendable {
     }
 }
 
+public struct CompanionResponseSizing: Equatable, Sendable {
+    public let size: CGSize
+    public let interactionMode: CompanionResponseInteractionMode
+
+    public init(size: CGSize, interactionMode: CompanionResponseInteractionMode) {
+        self.size = size
+        self.interactionMode = interactionMode
+    }
+}
+
+public struct CompanionResponseSizingPolicy: Sendable {
+    private let interaction = CompanionResponseInteractionPolicy()
+
+    public init() {}
+
+    public func resolve(
+        width: CGFloat,
+        measuredContentHeight: CGFloat,
+        maximumPanelHeight: CGFloat,
+        minimumPanelHeight: CGFloat
+    ) -> CompanionResponseSizing {
+        let mode = interaction.mode(
+            measuredContentHeight: measuredContentHeight,
+            maximumPanelHeight: maximumPanelHeight
+        )
+        return CompanionResponseSizing(
+            size: CGSize(
+                width: width,
+                height: min(max(minimumPanelHeight, measuredContentHeight), maximumPanelHeight)
+            ),
+            interactionMode: mode
+        )
+    }
+}
+
 public struct CompanionResponseAnchorPolicy: Sendable {
     public init() {}
 
@@ -39,7 +74,7 @@ public struct CompanionResponseAnchorPolicy: Sendable {
         responseIsVisible: Bool
     ) -> CGRect {
         if responseIsVisible, let current {
-            return current
+            return CGRect(origin: current.origin, size: proposed.size)
         }
         return proposed
     }

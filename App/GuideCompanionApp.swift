@@ -20,6 +20,7 @@ private enum GuideAppComposition {
             localGuidanceService: local,
             talkCredentialStore: credentialStore,
             talkCredentialVerifier: credentialVerifier,
+            talkVerificationExpirySleeper: SystemTalkVerificationExpirySleeper(),
             talkGenerator: router
         )
     }()
