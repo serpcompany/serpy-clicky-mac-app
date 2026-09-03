@@ -76,6 +76,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertTrue(events.values.contains("speech:stop"))
         XCTAssertTrue(events.values.contains("response:dismiss"))
         XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
+        XCTAssertEqual(overlay.presentations.last?.target, target)
         XCTAssertEqual(overlay.scheduledRestoreDelays, [.milliseconds(1_200)])
         XCTAssertTrue(coordinator.conversation.isEmpty)
     }

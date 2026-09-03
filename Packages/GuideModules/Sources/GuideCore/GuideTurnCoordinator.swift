@@ -169,6 +169,7 @@ public final class GuideTurnCoordinator {
     private let failurePolicy = GuideTurnFailurePolicy()
     private var activeTurnTask: Task<Void, Never>?
     private var activeTurnID: UUID?
+    private var activeTarget: GuideWindowTarget?
     private var cancellationRequested = false
     private var finishContinuation: AsyncStream<Void>.Continuation?
 
@@ -197,6 +198,7 @@ public final class GuideTurnCoordinator {
         let finishStream = AsyncStream<Void> { finishContinuation = $0 }
         let turnID = UUID()
         activeTurnID = turnID
+        activeTarget = target
         cancellationRequested = false
         phase = .listening
         overlay.present(.init(stage: .listening, statusText: "Listening…", context: target.identity, target: target))
@@ -225,7 +227,12 @@ public final class GuideTurnCoordinator {
         speech.stop()
         overlay.dismissResponse()
         phase = .idle
-        overlay.present(.init(stage: .cancelled, statusText: "Cancelled"))
+        overlay.present(.init(
+            stage: .cancelled,
+            statusText: "Cancelled",
+            context: activeTarget?.identity,
+            target: activeTarget
+        ))
         overlay.restoreIdleVisibility(after: .milliseconds(1_200))
     }
 
@@ -364,6 +371,7 @@ public final class GuideTurnCoordinator {
         if activeTurnID == id {
             finishContinuation = nil
             activeTurnID = nil
+            activeTarget = nil
             activeTurnTask = nil
             cancellationRequested = false
         }

@@ -4,91 +4,6 @@ import CoreGraphics
 import Foundation
 import GuideCore
 
-public struct GlobalHotKeyConfiguration: Codable, Equatable, Sendable {
-    public let keyCode: UInt32
-    public let modifiers: UInt32
-    public let displayName: String
-
-    public var cocoaModifiers: UInt {
-        var result: UInt = 0
-        if modifiers & UInt32(controlKey) != 0 { result |= NSEvent.ModifierFlags.control.rawValue }
-        if modifiers & UInt32(optionKey) != 0 { result |= NSEvent.ModifierFlags.option.rawValue }
-        if modifiers & UInt32(cmdKey) != 0 { result |= NSEvent.ModifierFlags.command.rawValue }
-        if modifiers & UInt32(shiftKey) != 0 { result |= NSEvent.ModifierFlags.shift.rawValue }
-        return result
-    }
-
-    public init(keyCode: UInt32, modifiers: UInt32, displayName: String) {
-        self.keyCode = keyCode
-        self.modifiers = modifiers
-        self.displayName = displayName
-    }
-
-    public static let dictation = GlobalHotKeyConfiguration(
-        keyCode: UInt32(kVK_Space),
-        modifiers: UInt32(optionKey),
-        displayName: "⌥Space"
-    )
-}
-
-public struct GlobalModifierChordConfiguration: Codable, Equatable, Hashable, Sendable, Identifiable {
-    public let modifiers: UInt32
-    public let displayName: String
-
-    public var id: UInt32 { modifiers }
-
-    public init(modifiers: UInt32, displayName: String) {
-        self.modifiers = modifiers
-        self.displayName = displayName
-    }
-
-    public static let guideDefault = GlobalModifierChordConfiguration(
-        modifiers: UInt32(controlKey | optionKey),
-        displayName: "Control–Option"
-    )
-
-    public static let guideChoices: [GlobalModifierChordConfiguration] = [
-        guideDefault,
-        .init(modifiers: UInt32(controlKey | cmdKey), displayName: "Control–Command"),
-        .init(modifiers: UInt32(optionKey | cmdKey), displayName: "Option–Command")
-    ]
-}
-
-public struct KeyboardEventSnapshot: Sendable {
-    public let keyCode: UInt16
-    public let modifierFlags: UInt
-    public let isKeyDown: Bool
-
-    public init(keyCode: UInt16, modifierFlags: UInt, isKeyDown: Bool) {
-        self.keyCode = keyCode
-        self.modifierFlags = modifierFlags
-        self.isKeyDown = isKeyDown
-    }
-}
-
-public enum GlobalHotKeyTransition: Equatable, Sendable {
-    case pressed
-    case released
-}
-
-public enum GlobalShortcutEventKind: Equatable, Sendable {
-    case keyDown
-    case keyUp
-    case flagsChanged
-}
-
-public struct GlobalShortcutEventSnapshot: Equatable, Sendable {
-    public let keyCode: UInt16
-    public let modifierFlags: UInt
-    public let kind: GlobalShortcutEventKind
-
-    public init(keyCode: UInt16, modifierFlags: UInt, kind: GlobalShortcutEventKind) {
-        self.keyCode = keyCode
-        self.modifierFlags = modifierFlags
-        self.kind = kind
-    }
-}
-
 public struct GlobalShortcutEventAdapter: Sendable {
     public init() {}
 
@@ -103,163 +18,16 @@ public struct GlobalShortcutEventAdapter: Sendable {
         case .flagsChanged: kind = .flagsChanged
         default: return nil
         }
-        var modifierFlags: UInt = 0
-        if event.flags.contains(.maskControl) { modifierFlags |= NSEvent.ModifierFlags.control.rawValue }
-        if event.flags.contains(.maskAlternate) { modifierFlags |= NSEvent.ModifierFlags.option.rawValue }
-        if event.flags.contains(.maskCommand) { modifierFlags |= NSEvent.ModifierFlags.command.rawValue }
-        if event.flags.contains(.maskShift) { modifierFlags |= NSEvent.ModifierFlags.shift.rawValue }
+        var modifiers: GlobalShortcutModifiers = []
+        if event.flags.contains(.maskControl) { modifiers.insert(.control) }
+        if event.flags.contains(.maskAlternate) { modifiers.insert(.option) }
+        if event.flags.contains(.maskCommand) { modifiers.insert(.command) }
+        if event.flags.contains(.maskShift) { modifiers.insert(.shift) }
         return .init(
             keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
-            modifierFlags: modifierFlags,
+            modifiers: modifiers,
             kind: kind
         )
-    }
-}
-
-public enum GlobalShortcutGesture: Equatable, Sendable {
-    case key(GlobalHotKeyConfiguration)
-    case modifierChord(modifiers: UInt32, displayName: String)
-
-    fileprivate var cocoaModifiers: UInt {
-        let carbonModifiers: UInt32 = switch self {
-        case let .key(configuration): configuration.modifiers
-        case let .modifierChord(modifiers, _): modifiers
-        }
-        var result: UInt = 0
-        if carbonModifiers & UInt32(controlKey) != 0 { result |= NSEvent.ModifierFlags.control.rawValue }
-        if carbonModifiers & UInt32(optionKey) != 0 { result |= NSEvent.ModifierFlags.option.rawValue }
-        if carbonModifiers & UInt32(cmdKey) != 0 { result |= NSEvent.ModifierFlags.command.rawValue }
-        if carbonModifiers & UInt32(shiftKey) != 0 { result |= NSEvent.ModifierFlags.shift.rawValue }
-        return result
-    }
-}
-
-public enum GlobalShortcutID: String, Equatable, Hashable, Sendable {
-    case dictation
-    case guide
-}
-
-public struct GlobalShortcutBinding: Equatable, Sendable {
-    public let id: GlobalShortcutID
-    public let gesture: GlobalShortcutGesture
-
-    public init(id: GlobalShortcutID, gesture: GlobalShortcutGesture) {
-        self.id = id
-        self.gesture = gesture
-    }
-}
-
-public struct GlobalShortcutDelivery: Equatable, Sendable {
-    public let id: GlobalShortcutID
-    public let transition: GlobalHotKeyTransition
-
-    public init(id: GlobalShortcutID, transition: GlobalHotKeyTransition) {
-        self.id = id
-        self.transition = transition
-    }
-}
-
-public struct GlobalShortcutRouteResult: Equatable, Sendable {
-    public let deliveries: [GlobalShortcutDelivery]
-    public let shouldConsume: Bool
-
-    public init(deliveries: [GlobalShortcutDelivery], shouldConsume: Bool) {
-        self.deliveries = deliveries
-        self.shouldConsume = shouldConsume
-    }
-}
-
-/// Pure event-routing seam shared by the installed event tap and deterministic
-/// contract tests. A single router owns every shortcut so registrations cannot
-/// silently diverge across multiple taps.
-public struct GlobalShortcutEventRouter: Sendable {
-    private let bindings: [GlobalShortcutBinding]
-    private var pressedBindingIDs: Set<GlobalShortcutID> = []
-
-    public init(bindings: [GlobalShortcutBinding]) {
-        self.bindings = bindings
-    }
-
-    public mutating func route(_ event: GlobalShortcutEventSnapshot) -> GlobalShortcutRouteResult {
-        let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
-        let significantFlags = event.modifierFlags & significantMask
-        var deliveries: [GlobalShortcutDelivery] = []
-        var shouldConsume = false
-
-        for binding in bindings {
-            switch binding.gesture {
-            case let .key(configuration):
-                guard event.kind == .keyDown || event.kind == .keyUp,
-                      event.keyCode == UInt16(configuration.keyCode)
-                else { continue }
-                let isDown = event.kind == .keyDown
-                if isDown,
-                   significantFlags == configuration.cocoaModifiers,
-                   pressedBindingIDs.insert(binding.id).inserted {
-                    deliveries.append(.init(id: binding.id, transition: .pressed))
-                } else if !isDown, pressedBindingIDs.remove(binding.id) != nil {
-                    deliveries.append(.init(id: binding.id, transition: .released))
-                }
-                if significantFlags == configuration.cocoaModifiers || pressedBindingIDs.contains(binding.id) {
-                    shouldConsume = true
-                }
-
-            case .modifierChord:
-                guard event.kind == .flagsChanged else { continue }
-                let isDown = significantFlags == binding.gesture.cocoaModifiers
-                if isDown, pressedBindingIDs.insert(binding.id).inserted {
-                    deliveries.append(.init(id: binding.id, transition: .pressed))
-                } else if !isDown, pressedBindingIDs.remove(binding.id) != nil {
-                    deliveries.append(.init(id: binding.id, transition: .released))
-                }
-            }
-        }
-
-        return .init(deliveries: deliveries, shouldConsume: shouldConsume)
-    }
-
-    public mutating func reset() {
-        pressedBindingIDs.removeAll(keepingCapacity: false)
-    }
-}
-
-public struct GlobalHotKeyPressState: Sendable {
-    private var isPressed = false
-
-    public init() {}
-
-    public mutating func consume(
-        _ event: KeyboardEventSnapshot,
-        configuration: GlobalHotKeyConfiguration
-    ) -> GlobalHotKeyTransition? {
-        guard event.keyCode == UInt16(configuration.keyCode) else { return nil }
-        if event.isKeyDown {
-            let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
-            guard event.modifierFlags & significantMask == configuration.cocoaModifiers,
-                  !isPressed else { return nil }
-            isPressed = true
-            return .pressed
-        }
-        guard isPressed else { return nil }
-        isPressed = false
-        return .released
-    }
-
-    public mutating func reset() {
-        isPressed = false
-    }
-}
-
-public struct GlobalHotKeyEventPolicy: Sendable {
-    public init() {}
-
-    public func shouldConsume(
-        _ event: KeyboardEventSnapshot,
-        configuration: GlobalHotKeyConfiguration
-    ) -> Bool {
-        guard event.keyCode == UInt16(configuration.keyCode) else { return false }
-        let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
-        return event.modifierFlags & significantMask == configuration.cocoaModifiers
     }
 }
 
@@ -284,6 +52,7 @@ public final class GlobalShortcutService: GlobalShortcutMonitoring {
     private var router: GlobalShortcutEventRouter
     private var eventTap: CFMachPort?
     private var eventTapSource: CFRunLoopSource?
+    private var queuedDeliveryTask: Task<Void, Never>?
 
     public init(
         bindings: [GlobalShortcutBinding],
@@ -320,6 +89,8 @@ public final class GlobalShortcutService: GlobalShortcutMonitoring {
     }
 
     public func stop() {
+        queuedDeliveryTask?.cancel()
+        queuedDeliveryTask = nil
         if let eventTapSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapSource, .commonModes)
             CFRunLoopSourceInvalidate(eventTapSource)
@@ -334,14 +105,12 @@ public final class GlobalShortcutService: GlobalShortcutMonitoring {
 
     fileprivate func route(_ event: GlobalShortcutEventSnapshot) -> Bool {
         if event.kind == .keyDown, event.keyCode == UInt16(kVK_Escape) {
-            Task { @MainActor [cancelled] in cancelled() }
+            enqueue(.cancelled)
             return false
         }
         let result = router.route(event)
-        if !result.deliveries.isEmpty {
-            Task { @MainActor [delivered, deliveries = result.deliveries] in
-                for delivery in deliveries { delivered(delivery) }
-            }
+        for delivery in result.deliveries {
+            enqueue(.delivery(delivery))
         }
         return result.shouldConsume
     }
@@ -349,6 +118,23 @@ public final class GlobalShortcutService: GlobalShortcutMonitoring {
     fileprivate func reenableAfterSystemDisable() {
         guard let eventTap else { return }
         CGEvent.tapEnable(tap: eventTap, enable: true)
+    }
+
+    private enum QueuedCallback: Sendable {
+        case delivery(GlobalShortcutDelivery)
+        case cancelled
+    }
+
+    private func enqueue(_ callback: QueuedCallback) {
+        let previous = queuedDeliveryTask
+        queuedDeliveryTask = Task { @MainActor [weak self] in
+            _ = await previous?.result
+            guard !Task.isCancelled, let self else { return }
+            switch callback {
+            case let .delivery(delivery): delivered(delivery)
+            case .cancelled: cancelled()
+            }
+        }
     }
 }
 

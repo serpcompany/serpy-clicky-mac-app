@@ -8,13 +8,8 @@ import OSLog
 @Observable
 public final class GuideAppModel: GuideTurnOverlayPresenting {
     public typealias ShortcutMonitorFactory = @MainActor (
-        _ dictationConfiguration: GlobalHotKeyConfiguration,
-        _ guideConfiguration: GlobalModifierChordConfiguration,
-        _ dictationPressed: @escaping @MainActor @Sendable () -> Void,
-        _ dictationReleased: @escaping @MainActor @Sendable () -> Void,
-        _ guidePressed: @escaping @MainActor @Sendable () -> Void,
-        _ guideReleased: @escaping @MainActor @Sendable () -> Void,
-        _ cancelled: @escaping @MainActor @Sendable () -> Void
+        _ configuration: GlobalShortcutConfigurationSet,
+        _ callbacks: GlobalShortcutCallbacks
     ) -> any GlobalShortcutMonitoring
     public private(set) var phase: DictationPhase = .idle
     public private(set) var partialTranscript = ""
@@ -1072,16 +1067,17 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guideConfiguration: GlobalModifierChordConfiguration
     ) -> any GlobalShortcutMonitoring {
         shortcutMonitorFactory(
-            dictationConfiguration,
-            guideConfiguration,
-            { [weak self] in self?.hotKeyPressed() },
-            { [weak self] in self?.hotKeyReleased() },
-            { [weak self] in self?.guidanceHeldShortcutPressed() },
-            { [weak self] in self?.guidanceHeldShortcutReleased() },
-            { [weak self] in
-                self?.escapePressed()
-                self?.guidanceEscapePressed()
-            }
+            .init(dictation: dictationConfiguration, guide: guideConfiguration),
+            .init(
+                dictationPressed: { [weak self] in self?.hotKeyPressed() },
+                dictationReleased: { [weak self] in self?.hotKeyReleased() },
+                guidePressed: { [weak self] in self?.guidanceHeldShortcutPressed() },
+                guideReleased: { [weak self] in self?.guidanceHeldShortcutReleased() },
+                cancelled: { [weak self] in
+                    self?.escapePressed()
+                    self?.guidanceEscapePressed()
+                }
+            )
         )
     }
 

@@ -69,7 +69,7 @@ public final class CompanionPanelController {
     public func show() {
         updateContentSizeAndPosition()
         panel.orderFrontRegardless()
-        if !presentation.responseText.isEmpty {
+        if presentation.guideStage == nil, !presentation.responseText.isEmpty {
             responsePanel.orderFrontRegardless()
         }
         if pointCuePositionIsValid {
@@ -91,7 +91,7 @@ public final class CompanionPanelController {
         if panel.isVisible {
             panel.orderFrontRegardless()
         }
-        if !presentation.responseText.isEmpty {
+        if presentation.guideStage == nil, !presentation.responseText.isEmpty {
             responsePanel.orderFrontRegardless()
         } else {
             responseAnchorFrame = nil
@@ -162,9 +162,12 @@ public final class CompanionPanelController {
         guard let visibleFrame = screen?.visibleFrame else { return }
         let hasCaption = !presentation.caption.isEmpty
         let isGuideVisible = presentation.guideStage != nil
+        let guideSizing = isGuideVisible && hasCaption
+            ? measuredGuidePanelSizing(visibleFrame: visibleFrame)
+            : nil
         let size: NSSize
-        if isGuideVisible, hasCaption {
-            size = measuredGuidePanelSizing(visibleFrame: visibleFrame).size
+        if let guideSizing {
+            size = guideSizing.size
         } else {
             size = hasCaption ? NSSize(width: 250, height: 58) : NSSize(width: 46, height: 46)
         }
@@ -187,7 +190,7 @@ public final class CompanionPanelController {
             )
         statusAnchorFrame = isGuideVisible ? newFrame : nil
         panel.ignoresMouseEvents = !isGuideVisible
-            || measuredGuidePanelSizing(visibleFrame: visibleFrame).interactionMode == .clickThrough
+            || guideSizing?.interactionMode == .clickThrough
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             panel.setFrame(newFrame, display: true)
         } else {

@@ -1,6 +1,4 @@
-import AppKit
-import Carbon
-import GuideMac
+import GuideCore
 import Testing
 
 @Suite("Global shortcut event router")
@@ -12,41 +10,38 @@ struct GlobalShortcutEventRouterTests {
                 .init(id: .dictation, gesture: .key(.dictation)),
                 .init(
                     id: .guide,
-                    gesture: .modifierChord(
-                        modifiers: UInt32(controlKey | optionKey),
-                        displayName: "⌃⌥"
-                    )
+                    gesture: .modifierChord(.guideDefault)
                 )
             ]
         )
 
         let guideDown = router.route(.init(
-            keyCode: UInt16(kVK_Option),
-            modifierFlags: NSEvent.ModifierFlags([.control, .option]).rawValue,
+            keyCode: 58,
+            modifiers: [.control, .option],
             kind: .flagsChanged
         ))
         #expect(guideDown.deliveries == [.init(id: .guide, transition: .pressed)])
         #expect(!guideDown.shouldConsume)
 
         let guideUp = router.route(.init(
-            keyCode: UInt16(kVK_Option),
-            modifierFlags: NSEvent.ModifierFlags.control.rawValue,
+            keyCode: 58,
+            modifiers: .control,
             kind: .flagsChanged
         ))
         #expect(guideUp.deliveries == [.init(id: .guide, transition: .released)])
         #expect(!guideUp.shouldConsume)
 
         let dictationDown = router.route(.init(
-            keyCode: UInt16(kVK_Space),
-            modifierFlags: NSEvent.ModifierFlags.option.rawValue,
+            keyCode: 49,
+            modifiers: .option,
             kind: .keyDown
         ))
         #expect(dictationDown.deliveries == [.init(id: .dictation, transition: .pressed)])
         #expect(dictationDown.shouldConsume)
 
         let dictationUp = router.route(.init(
-            keyCode: UInt16(kVK_Space),
-            modifierFlags: NSEvent.ModifierFlags.option.rawValue,
+            keyCode: 49,
+            modifiers: .option,
             kind: .keyUp
         ))
         #expect(dictationUp.deliveries == [.init(id: .dictation, transition: .released)])

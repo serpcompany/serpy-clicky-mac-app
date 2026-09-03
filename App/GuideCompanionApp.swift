@@ -27,34 +27,26 @@ private enum GuideAppComposition {
     }()
 
     private static func makeShortcutMonitor(
-        dictationConfiguration: GlobalHotKeyConfiguration,
-        guideConfiguration: GlobalModifierChordConfiguration,
-        dictationPressed: @escaping @MainActor @Sendable () -> Void,
-        dictationReleased: @escaping @MainActor @Sendable () -> Void,
-        guidePressed: @escaping @MainActor @Sendable () -> Void,
-        guideReleased: @escaping @MainActor @Sendable () -> Void,
-        cancelled: @escaping @MainActor @Sendable () -> Void
+        configuration: GlobalShortcutConfigurationSet,
+        callbacks: GlobalShortcutCallbacks
     ) -> any GlobalShortcutMonitoring {
         GlobalShortcutService(
             bindings: [
-                .init(id: .dictation, gesture: .key(dictationConfiguration)),
+                .init(id: .dictation, gesture: .key(configuration.dictation)),
                 .init(
                     id: .guide,
-                    gesture: .modifierChord(
-                        modifiers: guideConfiguration.modifiers,
-                        displayName: guideConfiguration.displayName
-                    )
+                    gesture: .modifierChord(configuration.guide)
                 )
             ],
             delivered: { delivery in
                 switch (delivery.id, delivery.transition) {
-                case (.dictation, .pressed): dictationPressed()
-                case (.dictation, .released): dictationReleased()
-                case (.guide, .pressed): guidePressed()
-                case (.guide, .released): guideReleased()
+                case (.dictation, .pressed): callbacks.dictationPressed()
+                case (.dictation, .released): callbacks.dictationReleased()
+                case (.guide, .pressed): callbacks.guidePressed()
+                case (.guide, .released): callbacks.guideReleased()
                 }
             },
-            cancelled: cancelled
+            cancelled: callbacks.cancelled
         )
     }
 }

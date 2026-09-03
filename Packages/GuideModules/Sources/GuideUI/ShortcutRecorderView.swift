@@ -1,6 +1,6 @@
 import AppKit
 import Carbon
-import GuideMac
+import GuideCore
 import SwiftUI
 
 struct ShortcutRecorderView: NSViewRepresentable {
@@ -74,25 +74,25 @@ final class ShortcutRecorderButton: NSButton {
         }
 
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        var carbonModifiers: UInt32 = 0
+        var shortcutModifiers: GlobalShortcutModifiers = []
         var modifierSymbols = ""
         if flags.contains(.control) {
-            carbonModifiers |= UInt32(controlKey)
+            shortcutModifiers.insert(.control)
             modifierSymbols += "⌃"
         }
         if flags.contains(.option) {
-            carbonModifiers |= UInt32(optionKey)
+            shortcutModifiers.insert(.option)
             modifierSymbols += "⌥"
         }
         if flags.contains(.shift) {
-            carbonModifiers |= UInt32(shiftKey)
+            shortcutModifiers.insert(.shift)
             modifierSymbols += "⇧"
         }
         if flags.contains(.command) {
-            carbonModifiers |= UInt32(cmdKey)
+            shortcutModifiers.insert(.command)
             modifierSymbols += "⌘"
         }
-        guard carbonModifiers != 0 else {
+        guard !shortcutModifiers.isEmpty else {
             NSSound.beep()
             title = "Include a modifier"
             return
@@ -100,8 +100,8 @@ final class ShortcutRecorderButton: NSButton {
 
         let keyName = Self.keyName(for: event)
         let updated = GlobalHotKeyConfiguration(
-            keyCode: UInt32(event.keyCode),
-            modifiers: carbonModifiers,
+            keyCode: event.keyCode,
+            modifiers: shortcutModifiers,
             displayName: modifierSymbols + keyName
         )
         configuration = updated

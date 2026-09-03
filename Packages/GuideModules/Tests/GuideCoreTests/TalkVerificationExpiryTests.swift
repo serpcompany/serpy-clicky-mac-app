@@ -23,7 +23,7 @@ final class TalkVerificationExpiryTests: XCTestCase {
             talkCredentialVerifier: AlwaysValidCredentialVerifier(),
             talkVerificationExpirySleeper: sleeper,
             talkGenerator: router,
-            shortcutMonitorFactory: { _, _, _, _, _, _, _ in ExpiryNoopShortcutMonitor() }
+            shortcutMonitorFactory: { _, _ in ExpiryNoopShortcutMonitor() }
         )
         model.talkProviderSelection = .openAI
         model.talkDisclosureAccepted = true
@@ -93,7 +93,7 @@ final class TalkVerificationExpiryTests: XCTestCase {
             talkCredentialVerifier: AlwaysValidCredentialVerifier(),
             talkVerificationExpirySleeper: sleeper,
             talkGenerator: router,
-            shortcutMonitorFactory: { _, _, _, _, _, _, _ in ExpiryNoopShortcutMonitor() }
+            shortcutMonitorFactory: { _, _ in ExpiryNoopShortcutMonitor() }
         )
         model.talkProviderSelection = .openAI
         model.talkDisclosureAccepted = true

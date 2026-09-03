@@ -1,4 +1,5 @@
 import CoreGraphics
+import GuideCore
 import GuideMac
 import Testing
 
@@ -18,7 +19,7 @@ struct GlobalShortcutEventAdapterTests {
 
         #expect(snapshot == .init(
             keyCode: 49,
-            modifierFlags: 524_288,
+            modifiers: .option,
             kind: .keyDown
         ))
     }

@@ -1,5 +1,5 @@
-import Carbon
-import GuideMac
+import Foundation
+import GuideCore
 import Testing
 
 @Suite("Global dictation shortcut")
@@ -7,16 +7,16 @@ struct GlobalHotKeyConfigurationTests {
     @Test("default matches the SERPy toggle shortcut")
     func defaultMatchesSERPyToggleShortcut() {
         let shortcut = GlobalHotKeyConfiguration.dictation
-        #expect(shortcut.keyCode == UInt32(kVK_Space))
-        #expect(shortcut.modifiers == UInt32(optionKey))
+        #expect(shortcut.keyCode == 49)
+        #expect(shortcut.modifiers == .option)
         #expect(shortcut.displayName == "⌥Space")
     }
 
     @Test("configuration survives persistence")
     func configurationRoundTripsThroughJSON() throws {
         let original = GlobalHotKeyConfiguration(
-            keyCode: UInt32(kVK_ANSI_J),
-            modifiers: UInt32(controlKey | optionKey),
+            keyCode: 38,
+            modifiers: [.control, .option],
             displayName: "⌃⌥J"
         )
 

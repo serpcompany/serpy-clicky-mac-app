@@ -1,6 +1,5 @@
 import AppKit
 import GuideCore
-import GuideMac
 import SwiftUI
 
 public struct SettingsView: View {
