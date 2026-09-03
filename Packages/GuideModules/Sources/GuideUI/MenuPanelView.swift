@@ -3,6 +3,7 @@ import GuideCore
 import SwiftUI
 
 public struct MenuPanelView: View {
+    @Environment(\.openSettings) private var openSettings
     @Bindable private var model: GuideAppModel
 
     public init(model: GuideAppModel) {
@@ -74,7 +75,16 @@ public struct MenuPanelView: View {
 
             Divider()
 
-            SettingsLink {
+            Button {
+                SettingsWindowPresentation(
+                    activateApplication: {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    },
+                    openSettings: {
+                        openSettings()
+                    }
+                ).present()
+            } label: {
                 Label("Settings…", systemImage: "gear")
             }
 
