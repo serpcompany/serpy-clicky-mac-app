@@ -85,6 +85,11 @@ edges, target identity across multiple windows, Spaces/full-screen behavior,
 spoken timing, and VoiceOver behavior remain red. See
 `evidence/serpy-p0-ambient-guide-tdd-report.md`.
 
+Build 29 rejects and retries local-model answers that falsely claim the
+captured application is unavailable. ScreenCaptureKit and Foundation Models
+were observed completing against ChatGPT, but the owner's original spoken
+question still needs to be retried before this regression is installed-observed.
+
 ## D — Distribution and Privacy
 
 | ID | Journey | Required evidence | Status |

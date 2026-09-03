@@ -79,6 +79,35 @@ final class StateMachineTests: XCTestCase {
 }
 
 final class GuidanceValidationTests: XCTestCase {
+    func testCapturedChatGPTContextRejectsFalseCannotSeeAnswer() {
+        let policy = GuidanceAnswerGroundingPolicy()
+        let context = ScreenContextIdentity(applicationName: "ChatGPT", windowTitle: "ChatGPT")
+
+        XCTAssertEqual(
+            policy.disposition(
+                for: "I can't see the application.",
+                context: context,
+                hasVisibleText: true
+            ),
+            .retryWithGroundedContext
+        )
+    }
+
+    func testRepeatedFalseCannotSeeAnswerFallsBackToCapturedApp() {
+        let policy = GuidanceAnswerGroundingPolicy()
+        let context = ScreenContextIdentity(applicationName: "ChatGPT", windowTitle: "ChatGPT")
+
+        XCTAssertEqual(
+            policy.resolvedAnswer(
+                initial: "I can't see the application.",
+                retry: "I cannot access the app.",
+                context: context,
+                hasVisibleText: true
+            ),
+            "I captured ChatGPT, but I could not identify the specific control from the visible text. Bring that control into view and ask again."
+        )
+    }
+
     func testGuideAnswerRemovesEchoedInternalPrompt() {
         let answer = """
             Use the Export button in the upper-right corner.

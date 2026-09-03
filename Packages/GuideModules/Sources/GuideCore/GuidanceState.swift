@@ -228,6 +228,72 @@ public enum GuidanceAnswerSanitizer {
     }
 }
 
+public enum GuidanceAnswerGroundingDisposition: Equatable, Sendable {
+    case accept
+    case retryWithGroundedContext
+}
+
+public struct GuidanceAnswerGroundingPolicy: Sendable {
+    public init() {}
+
+    public func disposition(
+        for answer: String,
+        context: ScreenContextIdentity,
+        hasVisibleText: Bool
+    ) -> GuidanceAnswerGroundingDisposition {
+        guard hasVisibleText,
+              !context.applicationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return .accept }
+
+        let normalized = answer.lowercased()
+        let falseVisibilityClaims = [
+            "can't see the application",
+            "cannot see the application",
+            "can't see the app",
+            "cannot see the app",
+            "can't access the application",
+            "cannot access the application",
+            "can't access the app",
+            "cannot access the app",
+            "can't see your screen",
+            "cannot see your screen"
+        ]
+        return falseVisibilityClaims.contains(where: normalized.contains)
+            ? .retryWithGroundedContext
+            : .accept
+    }
+
+    public func resolvedAnswer(
+        initial: String,
+        retry: String?,
+        context: ScreenContextIdentity,
+        hasVisibleText: Bool
+    ) -> String {
+        if disposition(
+            for: initial,
+            context: context,
+            hasVisibleText: hasVisibleText
+        ) == .accept {
+            return initial
+        }
+        if let retry,
+           disposition(
+               for: retry,
+               context: context,
+               hasVisibleText: hasVisibleText
+           ) == .accept {
+            return retry
+        }
+
+        let application = String(
+            context.applicationName
+                .replacingOccurrences(of: "\n", with: " ")
+                .prefix(48)
+        )
+        return "I captured \(application), but I could not identify the specific control from the visible text. Bring that control into view and ask again."
+    }
+}
+
 @MainActor
 public protocol GuidanceSpeaking: AnyObject {
     var isSpeaking: Bool { get }
