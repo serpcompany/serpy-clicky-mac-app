@@ -75,6 +75,7 @@ struct GuideCompanionApp: App {
 @MainActor
 final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        applyPresence(for: .running(settingsVisible: NSApp.windows.contains(where: \.isVisible)))
         Task {
             await GuideAppComposition.model.start()
             if CommandLine.arguments.contains("--ui-testing"),
@@ -85,6 +86,25 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        applyPresence(for: .terminating)
         GuideAppComposition.model.stop()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        applyPresence(for: .running(settingsVisible: flag))
+        if !flag {
+            sender.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            sender.activate(ignoringOtherApps: true)
+        }
+        return true
+    }
+
+    private func applyPresence(for state: ApplicationLifetimeState) {
+        let policy = ApplicationPresencePolicy()
+        let activationPolicy: NSApplication.ActivationPolicy = switch policy.presence(for: state) {
+        case .regular: .regular
+        case .prohibited: .prohibited
+        }
+        NSApp.setActivationPolicy(activationPolicy)
     }
 }

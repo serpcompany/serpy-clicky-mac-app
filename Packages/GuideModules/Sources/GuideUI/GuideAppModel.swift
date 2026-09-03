@@ -97,6 +97,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private let companionVisibilityPolicy = CompanionVisibilityPolicy()
+    @ObservationIgnored private let transientSurfaceVisibilityPolicy = TransientCompanionSurfaceVisibilityPolicy()
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
     @ObservationIgnored private var guideResponseDismissalTask: Task<Void, Never>?
@@ -1320,6 +1321,14 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func applyCompanionVisibility() {
+        guard transientSurfaceVisibilityPolicy.isVisible(
+            persistedCompanionEnabled: companionEnabled,
+            guidePhase: guidancePhase,
+            hasTransientCaption: !presentation.caption.isEmpty
+        ) else {
+            companionController.hide()
+            return
+        }
         let resolvedVisibility = companionVisibilityPolicy.visibility(
             persistedEnabled: companionEnabled,
             guidancePhase: guidancePhase

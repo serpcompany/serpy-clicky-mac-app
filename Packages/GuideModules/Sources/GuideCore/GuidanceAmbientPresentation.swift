@@ -122,3 +122,18 @@ public struct GuidanceAmbientPresentationPolicy: Sendable {
         )
     }
 }
+
+/// Resolves whether there is meaningful transient content to show. The saved
+/// companion preference no longer creates an idle cursor-following badge.
+public struct TransientCompanionSurfaceVisibilityPolicy: Sendable {
+    public init() {}
+
+    public func isVisible(
+        persistedCompanionEnabled: Bool,
+        guidePhase: GuidancePhase,
+        hasTransientCaption: Bool
+    ) -> Bool {
+        _ = persistedCompanionEnabled
+        return guidePhase.isActive || hasTransientCaption
+    }
+}

@@ -241,6 +241,7 @@ public enum GuidanceStreamEvent: Equatable, Sendable {
     case textDelta(String)
     case sentenceReady(String)
     case spatialAction(GuidanceSpatialAction)
+    case planReady(GuidancePlan)
     case completed
 }
 

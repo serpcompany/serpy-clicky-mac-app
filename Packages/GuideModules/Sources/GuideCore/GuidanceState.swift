@@ -201,15 +201,53 @@ public struct ScreenContext: Equatable, Sendable {
     }
 }
 
+public struct GuidanceStepPoint: Equatable, Sendable {
+    public let normalizedPoint: CGPoint
+    public let confidence: Float
+    public let label: String?
+
+    public init(normalizedPoint: CGPoint, confidence: Float, label: String? = nil) {
+        self.normalizedPoint = normalizedPoint
+        self.confidence = confidence
+        self.label = label
+    }
+}
+
+public struct GuidanceStep: Equatable, Sendable, Identifiable {
+    public let id: Int
+    public let text: String
+    public let point: GuidanceStepPoint?
+    public let completionEvidence: [String]
+
+    public init(
+        id: Int,
+        text: String,
+        point: GuidanceStepPoint? = nil,
+        completionEvidence: [String] = []
+    ) {
+        self.id = id
+        self.text = text
+        self.point = point
+        self.completionEvidence = completionEvidence
+    }
+}
+
 public struct GuidancePlan: Equatable, Sendable {
     public let answer: String
     public let point: CGPoint?
     public let confidence: Float
+    public let steps: [GuidanceStep]
 
-    public init(answer: String, point: CGPoint? = nil, confidence: Float) {
+    public init(
+        answer: String,
+        point: CGPoint? = nil,
+        confidence: Float,
+        steps: [GuidanceStep] = []
+    ) {
         self.answer = answer
         self.point = point
         self.confidence = confidence
+        self.steps = steps
     }
 }
 
@@ -219,7 +257,7 @@ public enum GuidancePlanValidator {
               let point = plan.point,
               windowFrame.contains(point)
         else {
-            return GuidancePlan(answer: plan.answer, confidence: plan.confidence)
+            return GuidancePlan(answer: plan.answer, confidence: plan.confidence, steps: plan.steps)
         }
         return plan
     }
@@ -236,6 +274,11 @@ public enum GuidanceAnswerSanitizer {
 
     public static func sanitize(_ answer: String) -> String {
         var result = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let data = result.data(using: .utf8),
+           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let structuredAnswer = object["answer"] as? String {
+            result = structuredAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         if let boundary = promptMarkers.compactMap({ result.range(of: $0)?.lowerBound }).min() {
             result = String(result[..<boundary]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
@@ -244,7 +287,35 @@ public enum GuidanceAnswerSanitizer {
             result = result.trimmingCharacters(in: .whitespacesAndNewlines)
             break
         }
+        if result.count >= 2 {
+            let wrappingPairs: [(Character, Character)] = [("\"", "\""), ("“", "”"), ("‘", "’")]
+            for (opening, closing) in wrappingPairs
+            where result.first == opening && result.last == closing {
+                result.removeFirst()
+                result.removeLast()
+                result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+                break
+            }
+        }
         return result
+    }
+}
+
+public struct GuidanceSpeechQueuePolicy: Sendable {
+    private var accepted: Set<String> = []
+    private var isCancelled = false
+
+    public init() {}
+
+    public mutating func accept(_ providerChunk: String) -> String? {
+        guard !isCancelled else { return nil }
+        let safe = GuidanceAnswerSanitizer.sanitize(providerChunk)
+        guard !safe.isEmpty, accepted.insert(safe).inserted else { return nil }
+        return safe
+    }
+
+    public mutating func cancel() {
+        isCancelled = true
     }
 }
 

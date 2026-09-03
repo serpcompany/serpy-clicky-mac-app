@@ -78,6 +78,8 @@ public struct GuideTurnPresentation: Equatable, Sendable {
     public let failure: GuideFailure?
     public let pointCue: GuidePointCue?
     public let target: GuideWindowTarget?
+    public let stepNumber: Int?
+    public let stepCount: Int?
 
     public init(
         stage: GuidanceAmbientStage,
@@ -86,7 +88,9 @@ public struct GuideTurnPresentation: Equatable, Sendable {
         responseText: String = "",
         failure: GuideFailure? = nil,
         pointCue: GuidePointCue? = nil,
-        target: GuideWindowTarget? = nil
+        target: GuideWindowTarget? = nil,
+        stepNumber: Int? = nil,
+        stepCount: Int? = nil
     ) {
         self.stage = stage
         self.statusText = statusText
@@ -95,6 +99,8 @@ public struct GuideTurnPresentation: Equatable, Sendable {
         self.failure = failure
         self.pointCue = pointCue
         self.target = target
+        self.stepNumber = stepNumber
+        self.stepCount = stepCount
     }
 
     public var guidancePhase: GuidancePhase {
@@ -172,6 +178,8 @@ public final class GuideTurnCoordinator {
     private var activeTarget: GuideWindowTarget?
     private var cancellationRequested = false
     private var finishContinuation: AsyncStream<Void>.Continuation?
+    private var activePlan: GuidancePlan?
+    private var activeStepIndex = 0
 
     public init(
         capture: any GuideTurnContextCapturing,
@@ -217,7 +225,9 @@ public final class GuideTurnCoordinator {
     }
 
     public func cancel() {
-        guard activeTurnTask != nil, !cancellationRequested else { return }
+        guard activeTurnTask != nil || phase != .idle else { return }
+        guard !cancellationRequested else { return }
+        let hadActiveTask = activeTurnTask != nil
         cancellationRequested = true
         activeTurnTask?.cancel()
         finishContinuation?.finish()
@@ -225,6 +235,8 @@ public final class GuideTurnCoordinator {
         transcription.cancel()
         (generation as? any GuideTurnStreamingGenerating)?.cancelGeneration()
         speech.stop()
+        activePlan = nil
+        activeStepIndex = 0
         overlay.dismissResponse()
         phase = .idle
         overlay.present(.init(
@@ -234,11 +246,17 @@ public final class GuideTurnCoordinator {
             target: activeTarget
         ))
         overlay.restoreIdleVisibility(after: .milliseconds(1_200))
+        if !hadActiveTask {
+            activeTarget = nil
+            cancellationRequested = false
+        }
     }
 
     public func resetConversation() {
         guard activeTurnTask == nil else { return }
         conversation.removeAll(keepingCapacity: false)
+        activePlan = nil
+        activeStepIndex = 0
     }
 
     public func waitUntilIdle() async {
@@ -252,6 +270,15 @@ public final class GuideTurnCoordinator {
         target: GuideWindowTarget,
         finishStream: AsyncStream<Void>
     ) async {
+        defer {
+            if activeTurnID == id {
+                finishContinuation = nil
+                activeTurnID = nil
+                activeTarget = nil
+                activeTurnTask = nil
+                cancellationRequested = false
+            }
+        }
         do {
             try Task.checkCancellation()
             guard !cancellationRequested, activeTurnID == id else {
@@ -287,6 +314,15 @@ public final class GuideTurnCoordinator {
             catch is CancellationError { throw CancellationError() }
             catch { throw failurePolicy.failure(for: error, at: .capture) }
             try Task.checkCancellation()
+            if let plan = activePlan, !plan.steps.isEmpty {
+                try await presentProgression(
+                    plan: plan,
+                    question: question,
+                    target: target,
+                    context: context
+                )
+                return
+            }
             let priorConversation = conversation
             phase = .thinking
             let thinkingStatus = (generation as? any GuideTurnStreamingGenerating)?.thinkingStatusText
@@ -325,28 +361,42 @@ public final class GuideTurnCoordinator {
             }
             conversation.append(.init(role: .user, content: question))
             conversation.append(.init(role: .guide, content: completeAnswer, contextLabel: target.identity.compactLabel))
+            if !generated.plan.steps.isEmpty {
+                activePlan = generated.plan
+                activeStepIndex = 0
+            }
+            let activeStep = generated.plan.steps.first
+            let visibleResponse = activeStep?.text ?? completeAnswer
+            let activeCue = activeStep.flatMap { pointCue(for: $0, target: target) } ?? generated.pointCue
+            let stepNumber = activeStep == nil ? nil : 1
+            let stepCount = activeStep == nil ? nil : generated.plan.steps.count
+            let status = stepNumber.map { "Step \($0) of \(stepCount ?? 1)" } ?? "Speaking…"
             phase = .presenting
             overlay.present(.init(
                 stage: .speaking,
-                statusText: "Speaking…",
+                statusText: status,
                 context: target.identity,
-                responseText: completeAnswer,
-                pointCue: generated.pointCue,
-                target: target
+                responseText: visibleResponse,
+                pointCue: activeCue,
+                target: target,
+                stepNumber: stepNumber,
+                stepCount: stepCount
             ))
             if !generated.speechCompleted {
-                do { try await speech.speak(completeAnswer) }
+                do { try await speech.speak(visibleResponse) }
                 catch is CancellationError { throw CancellationError() }
                 catch { throw failurePolicy.failure(for: error, at: .speaking) }
             }
             try Task.checkCancellation()
             overlay.present(.init(
                 stage: .readyForFollowUp,
-                statusText: "Ready for a follow-up",
+                statusText: stepNumber.map { "Step \($0) of \(stepCount ?? 1)" } ?? "Ready for a follow-up",
                 context: target.identity,
-                responseText: completeAnswer,
-                pointCue: generated.pointCue,
-                target: target
+                responseText: visibleResponse,
+                pointCue: activeCue,
+                target: target,
+                stepNumber: stepNumber,
+                stepCount: stepCount
             ))
         } catch is CancellationError {
             // cancel() owns visible cancellation and cleanup.
@@ -368,13 +418,6 @@ public final class GuideTurnCoordinator {
                 overlay.restoreIdleVisibility(after: .seconds(4))
             }
         }
-        if activeTurnID == id {
-            finishContinuation = nil
-            activeTurnID = nil
-            activeTarget = nil
-            activeTurnTask = nil
-            cancellationRequested = false
-        }
     }
 
     private func consumeStreamingAnswer(
@@ -393,13 +436,12 @@ public final class GuideTurnCoordinator {
         var answer = ""
         var confidence: Float = 0
         var pointCue: GuidePointCue?
-        var queuedSentence = false
+        var structuredPlan: GuidancePlan?
+        var speechQueuePolicy = GuidanceSpeechQueuePolicy()
+        var queuedSentences: [String] = []
         let evidenceBounds = ["locked-window": CGRect(x: 0, y: 0, width: 1, height: 1)]
         let validator = SpatialActionValidator()
-        let (sentenceStream, sentenceContinuation) = AsyncStream<String>.makeStream()
-        async let speechPlayback: Void = speakSentences(sentenceStream)
         var completed = false
-        defer { sentenceContinuation.finish() }
         for try await event in stream {
             try Task.checkCancellation()
             switch event {
@@ -417,10 +459,8 @@ public final class GuideTurnCoordinator {
                     ))
                 }
             case let .sentenceReady(sentence):
-                let safeSentence = GuidanceAnswerSanitizer.sanitize(sentence)
-                if !safeSentence.isEmpty {
-                    queuedSentence = true
-                    sentenceContinuation.yield(safeSentence)
+                if let safeSentence = speechQueuePolicy.accept(sentence) {
+                    queuedSentences.append(safeSentence)
                 }
             case let .spatialAction(action):
                 guard let valid = validator.validate(action, evidenceBounds: evidenceBounds) else { continue }
@@ -432,6 +472,8 @@ public final class GuideTurnCoordinator {
                     )
                     confidence = score
                 }
+            case let .planReady(plan):
+                structuredPlan = plan
             case .completed:
                 completed = true
             }
@@ -443,21 +485,101 @@ public final class GuideTurnCoordinator {
                 recovery: "Check the network and try again. SERPy will not silently switch providers."
             )
         }
-        sentenceContinuation.finish()
-        do { try await speechPlayback }
-        catch is CancellationError { throw CancellationError() }
-        catch { throw failurePolicy.failure(for: error, at: .speaking) }
+        let speechItems: [String]
+        if let firstStep = structuredPlan?.steps.first {
+            speechItems = [firstStep.text]
+        } else {
+            speechItems = queuedSentences
+        }
+        do {
+            for item in speechItems {
+                try Task.checkCancellation()
+                try await speech.speak(item)
+            }
+        } catch is CancellationError {
+            speechQueuePolicy.cancel()
+            throw CancellationError()
+        } catch {
+            throw failurePolicy.failure(for: error, at: .speaking)
+        }
         return GeneratedTurn(
-            plan: GuidancePlan(answer: answer, confidence: confidence),
-            speechCompleted: queuedSentence,
+            plan: structuredPlan ?? GuidancePlan(answer: answer, confidence: confidence),
+            speechCompleted: !speechItems.isEmpty,
             pointCue: pointCue
         )
     }
 
-    private func speakSentences(_ sentences: AsyncStream<String>) async throws {
-        for await sentence in sentences {
-            try Task.checkCancellation()
-            try await speech.speak(sentence)
+    private func presentProgression(
+        plan: GuidancePlan,
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext
+    ) async throws {
+        let decision = GuideProgressionPolicy().evaluate(
+            plan: plan,
+            activeStepIndex: activeStepIndex,
+            observation: .init(visibleText: context.promptText)
+        )
+        let statusText: String
+        let responseText: String
+        let cue: GuidePointCue?
+        let stepNumber: Int?
+        switch decision {
+        case let .advance(to: index):
+            activeStepIndex = index
+            let step = plan.steps[index]
+            statusText = "Step \(index + 1) of \(plan.steps.count)"
+            responseText = step.text
+            cue = pointCue(for: step, target: target)
+            stepNumber = index + 1
+        case let .stay(reason):
+            let step = plan.steps[activeStepIndex]
+            statusText = reason
+            responseText = step.text
+            cue = pointCue(for: step, target: target)
+            stepNumber = activeStepIndex + 1
+        case .complete:
+            statusText = "Done"
+            responseText = "Done. This walkthrough is complete."
+            cue = nil
+            stepNumber = nil
+            activePlan = nil
+            activeStepIndex = 0
         }
+        conversation.append(.init(role: .user, content: question))
+        conversation.append(.init(role: .guide, content: responseText, contextLabel: target.identity.compactLabel))
+        phase = .presenting
+        overlay.present(.init(
+            stage: .speaking,
+            statusText: statusText,
+            context: target.identity,
+            responseText: responseText,
+            pointCue: cue,
+            target: target,
+            stepNumber: stepNumber,
+            stepCount: stepNumber == nil ? nil : plan.steps.count
+        ))
+        try Task.checkCancellation()
+        try await speech.speak(responseText)
+        try Task.checkCancellation()
+        overlay.present(.init(
+            stage: .readyForFollowUp,
+            statusText: statusText,
+            context: target.identity,
+            responseText: responseText,
+            pointCue: cue,
+            target: target,
+            stepNumber: stepNumber,
+            stepCount: stepNumber == nil ? nil : plan.steps.count
+        ))
+    }
+
+    private func pointCue(for step: GuidanceStep, target: GuideWindowTarget) -> GuidePointCue? {
+        guard let point = step.point,
+              point.confidence >= 0.75,
+              (0...1).contains(point.normalizedPoint.x),
+              (0...1).contains(point.normalizedPoint.y)
+        else { return nil }
+        return GuidePointCue(target: target, normalizedPoint: point.normalizedPoint, label: point.label)
     }
 }

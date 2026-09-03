@@ -22,8 +22,6 @@
     <string>$(CURRENT_PROJECT_VERSION)</string>
     <key>LSMinimumSystemVersion</key>
     <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSAccessibilityUsageDescription</key>
     <string>SERPy uses Accessibility only to insert your local dictation into the text field you chose.</string>
     <key>NSMicrophoneUsageDescription</key>

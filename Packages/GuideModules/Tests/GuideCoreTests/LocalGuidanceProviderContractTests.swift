@@ -45,6 +45,24 @@ final class LocalGuidanceProviderContractTests: XCTestCase {
         XCTAssertTrue(session.prompts[0].contains("New chat"))
         XCTAssertTrue(session.prompts[1].contains("Do not claim"))
     }
+
+    func testProviderDecodesOrderedWalkthroughStepsFromIndependentFixture() async throws {
+        let session = FakeGuidanceSession(responses: [
+            #"{"answer":"Open a new Chrome window.","steps":[{"text":"Open File.","completionEvidence":["New Window"]},{"text":"Choose New Window.","completionEvidence":["New Tab"]}]}"#
+        ])
+        let service = LocalGuidanceService(provider: FakeGuidanceProvider(session: session))
+        let context = ScreenContext(
+            applicationName: "Chrome",
+            windowTitle: "New Tab",
+            windowFrame: .zero,
+            textBlocks: [.init(text: "File Edit View", normalizedBounds: .zero, confidence: 0.99)]
+        )
+
+        let plan = try await service.answer(question: "Show me how to open a new window", context: context)
+
+        XCTAssertEqual(plan.steps.map(\.text), ["Open File.", "Choose New Window."])
+        XCTAssertEqual(plan.steps[0].completionEvidence, ["New Window"])
+    }
 }
 
 @MainActor

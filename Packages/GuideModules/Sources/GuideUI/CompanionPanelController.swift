@@ -37,6 +37,7 @@ public final class CompanionPanelController {
     private let responseInteractionPolicy = CompanionResponseInteractionPolicy()
     private let responseSizingPolicy = CompanionResponseSizingPolicy()
     private let guideLayoutPolicy = GuideAmbientPanelLayoutPolicy()
+    private let guideInteractionPolicy = GuideSurfaceInteractionPolicy()
     private let pointCueProjector = GuidePointCueProjector()
     private var trackingTimer: Timer?
     private var statusAnchorFrame: CGRect?
@@ -190,7 +191,10 @@ public final class CompanionPanelController {
             )
         statusAnchorFrame = isGuideVisible ? newFrame : nil
         panel.ignoresMouseEvents = !isGuideVisible
-            || guideSizing?.interactionMode == .clickThrough
+            || guideInteractionPolicy.mode(
+                for: .status,
+                contentOverflows: guideSizing?.interactionMode == .scrollableVisibleControl
+            ) == .clickThrough
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             panel.setFrame(newFrame, display: true)
         } else {
@@ -209,7 +213,10 @@ public final class CompanionPanelController {
                 presentation.responseText,
                 availableHeight: maximumResponseHeight
             )
-            responsePanel.ignoresMouseEvents = responseSizing.interactionMode == .clickThrough
+            responsePanel.ignoresMouseEvents = guideInteractionPolicy.mode(
+                for: .answer,
+                contentOverflows: responseSizing.interactionMode == .scrollableVisibleControl
+            ) == .clickThrough
             let placementFrame = responseLayoutPolicy.frame(
                 pointer: pointer,
                 visibleFrame: visibleFrame,

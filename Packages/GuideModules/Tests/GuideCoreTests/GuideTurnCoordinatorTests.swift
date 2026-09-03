@@ -372,6 +372,95 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.conversation.last?.content, "Answer for Updated phrase")
     }
 
+    func testExplicitReinvocationUsesFreshCaptureAndShowsOnlyTheAdvancedStep() async throws {
+        let events = EventRecorder()
+        let updatedTarget = GuideWindowTarget(
+            processIdentifier: fixtureTarget.processIdentifier,
+            windowIdentifier: 902,
+            applicationName: fixtureTarget.applicationName,
+            windowTitle: "Updated phrase",
+            frame: fixtureTarget.frame
+        )
+        let capture = SequenceCapture(targets: [fixtureTarget, updatedTarget], events: events)
+        let generation = PlanGeneration(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: capture,
+            transcription: SequenceTranscription(results: ["Show me how", "Next"], events: events),
+            generation: generation,
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+        XCTAssertEqual(overlay.presentations.last?.stepNumber, 1)
+        XCTAssertEqual(overlay.presentations.last?.stepCount, 2)
+        XCTAssertEqual(overlay.presentations.last?.responseText, "Open File.")
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(capture.capturedWindowIDs, [901, 902])
+        XCTAssertEqual(generation.requestCount, 1)
+        XCTAssertEqual(overlay.presentations.last?.stepNumber, 2)
+        XCTAssertEqual(overlay.presentations.last?.responseText, "Choose New Window.")
+        XCTAssertEqual(overlay.presentations.last?.pointCue?.label, "New Window")
+    }
+
+    func testStructuredStreamingPlanSpeaksOnlyTheActiveStepExactlyOnce() async throws {
+        let events = EventRecorder()
+        let speech = FakeSpeech(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: fixtureTarget, context: fixtureContext(fixtureTarget), events: events),
+            transcription: FakeTranscription(result: "Show me how", events: events),
+            generation: StreamingPlanGeneration(),
+            speech: speech,
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(speech.spokenTexts, ["Open File."])
+        XCTAssertEqual(overlay.presentations.last?.responseText, "Open File.")
+        XCTAssertEqual(overlay.presentations.last?.stepNumber, 1)
+    }
+
+    func testCancellationAtReadyForFollowUpClearsPlanCueAndPendingProgressionIdempotently() async throws {
+        let events = EventRecorder()
+        let generation = PlanGeneration(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: fixtureTarget, context: fixtureContext(fixtureTarget), events: events),
+            transcription: FakeTranscription(result: "Show me how", events: events),
+            generation: generation,
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+        XCTAssertEqual(coordinator.phase, .presenting)
+
+        coordinator.cancel()
+        coordinator.cancel()
+
+        XCTAssertEqual(coordinator.phase, .idle)
+        XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
+        XCTAssertEqual(overlay.scheduledRestoreDelays, [.milliseconds(1_200)])
+        XCTAssertEqual(events.values.filter { $0 == "response:dismiss" }.count, 2)
+    }
+
     private var fixtureTarget: GuideWindowTarget {
         GuideWindowTarget(
             processIdentifier: 41,
@@ -753,6 +842,65 @@ private final class SequenceGeneration: GuideTurnGenerating {
         receivedConversations.append(conversation)
         return GuidancePlan(answer: "Answer for \(context.windowTitle)", confidence: 0.7)
     }
+}
+
+@MainActor
+private final class PlanGeneration: GuideTurnGenerating {
+    let events: EventRecorder
+    var requestCount = 0
+
+    init(events: EventRecorder) { self.events = events }
+
+    func answer(question: String, context: ScreenContext, conversation: [GuidanceMessage]) async throws -> GuidancePlan {
+        requestCount += 1
+        return GuidancePlan(
+            answer: "Open a new window.",
+            confidence: 0.96,
+            steps: [
+                GuidanceStep(id: 1, text: "Open File.", completionEvidence: ["Updated phrase"]),
+                GuidanceStep(
+                    id: 2,
+                    text: "Choose New Window.",
+                    point: GuidanceStepPoint(normalizedPoint: CGPoint(x: 0.25, y: 0.2), confidence: 0.96, label: "New Window"),
+                    completionEvidence: ["Done"]
+                )
+            ]
+        )
+    }
+}
+
+@MainActor
+private final class StreamingPlanGeneration: GuideTurnStreamingGenerating {
+    let thinkingStatusText = "Planning…"
+
+    func answer(question: String, context: ScreenContext, conversation: [GuidanceMessage]) async throws -> GuidancePlan {
+        GuidancePlan(answer: "unused", confidence: 0)
+    }
+
+    func streamAnswer(
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) throws -> AsyncThrowingStream<GuidanceStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let plan = GuidancePlan(
+                answer: "Open a new window.",
+                confidence: 0.96,
+                steps: [
+                    GuidanceStep(id: 1, text: "Open File.", completionEvidence: ["New Window"]),
+                    GuidanceStep(id: 2, text: "Choose New Window.", completionEvidence: ["New Tab"])
+                ]
+            )
+            continuation.yield(.textDelta(plan.answer))
+            continuation.yield(.sentenceReady(plan.answer))
+            continuation.yield(.planReady(plan))
+            continuation.yield(.completed)
+            continuation.finish()
+        }
+    }
+
+    func cancelGeneration() {}
 }
 
 @MainActor

@@ -53,6 +53,8 @@ Notes and Slack are not yet observed.
 | B7 | Settings behaves as a normal non-floating window | App-switch/Spaces recording | installed-observed |
 | B8 | Reduce Motion and accessibility labels are respected | Inspection + HIL | implemented |
 | B9 | Menu-bar content uses a native menu, remains fully visible, and routes detailed setup to Settings | Installed screenshot + accessibility inspection | implemented |
+| B10 | Running lifetime remains visible in Dock and Command-Tab; Dock activation opens the normal surface and Dock Quit terminates | Policy test + installed lifecycle recording | unit-tested |
+| B11 | Idle state has no persistent cursor-following badge; transient surfaces remain click-through | Policy/interaction tests + installed hit-test recording | unit-tested |
 
 ## C — Screen Guidance
 
@@ -80,6 +82,9 @@ Notes and Slack are not yet observed.
 | C20 | Structured output requires a non-empty answer plus optional point; Unicode-safe answer deltas remain ordered, complete text is preserved, and speech receives each complete sentence once | JSON-schema/SSE/grapheme-split and speech-queue tests + installed observation | unit-tested |
 | C21 | Cloud cancellation terminates URLSession streaming, queued speech, and overlays without a delayed answer | Blocking URLProtocol + coordinator cancellation fixtures + installed observation | unit-tested |
 | C22 | Spatial points are exact-screenshot-bound, confidence-gated, projected across Quartz/AppKit display coordinates, and rendered in a click-through cue without pointer movement/click | Validator/projector/coordinator tests + controlled one-point HIL | unit-tested |
+| C23 | Provider-neutral responses retain ordered steps and show only the active validated cue as `Step n of m` | Local/OpenAI fixtures + coordinator test + installed Chrome/Slack walkthrough | unit-tested |
+| C24 | Explicit reinvocation captures fresh context and returns advance, stay with reason, or complete without polling or autonomous action | Pure progression/coordinator tests + installed multi-turn walkthrough | unit-tested |
+| C25 | Visible and spoken step text is sanitized, ordered, deduplicated, and cancellation clears queued/late output including ready-for-follow-up | Speech/coordinator tests + installed audio/cancellation observation | unit-tested |
 
 The owner reported that the guidance journeys after the initial companion
 checks did not work during first use. The C rows above describe implementation
@@ -125,6 +130,15 @@ without a live provider call. The signed artifact,
 provider access, answer quality, cost, disclosure comprehension, installed
 streaming/audio behavior, and filesystem privacy audit remain red until
 `docs/hil/serpy-build-34-openai-talk-demo.md` is completed by the owner.
+
+Issue #7 source work on `codex/issue-7-guide-parity` removes `LSUIElement`,
+defines regular lifetime presence, removes the rejected idle cursor badge,
+makes Guide overlays click-through, adds ordered provider-neutral walkthrough
+plans and explicit fresh-capture progression, presents one active `Step n of m`
+cue, and sanitizes/deduplicates ordered speech. These rows are unit-tested only.
+The installed artifact, Dock/Command-Tab behavior, focus/hit-testing, physical
+voice, Chrome/Slack walkthroughs, audible speech quality, accessibility,
+multi-display/Spaces/full-screen behavior, and owner acceptance remain red.
 
 ## D — Distribution and Privacy
 

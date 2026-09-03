@@ -144,7 +144,10 @@ overlay commands:
 ```text
 GuidancePlan
   answer: String
-  point: CGPoint?
+  steps: [GuidanceStep]
+    text: String
+    completionEvidence: [String]
+    point: normalized point + confidence + optional label
   confidence: Float
 ```
 
@@ -152,6 +155,12 @@ Coordinates are accepted only when they reference the exact locked-window
 screenshot, fall within its normalized bounds, convert inside its captured
 window frame, and pass the confidence threshold. Low-confidence responses
 provide prose without pointing.
+
+`GuideProgressionPolicy` is pure. Only a new explicit Guide invocation may feed
+it a fresh request-scoped observation. Given the retained plan and active step,
+it returns exactly `advance`, `stay(reason)`, or `complete`. It cannot capture,
+poll, click, type, mutate a provider, or schedule work. The coordinator keeps
+one active validated cue and clears it on advance, completion, reset, or Escape.
 
 ## Important Protocol Seams
 
@@ -167,6 +176,10 @@ provide prose without pointing.
 - `TalkCredentialStoring`
 - `OverlayPresenting`
 - `ModelInstalling`
+
+Application lifetime presence is a separate pure policy: every running state is
+`.regular`, regardless of Settings visibility. Only termination is
+`.prohibited`; `LSUIElement` is not used.
 
 Each external dependency implements one of these seams. Product state refers to
 capabilities and failures, never vendor names.

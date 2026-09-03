@@ -23,3 +23,27 @@ struct GuideAmbientPanelLayoutTests {
         #expect(visibleFrame.insetBy(dx: 8, dy: 8).contains(first))
     }
 }
+
+@Suite("Transient companion surface visibility")
+struct TransientCompanionSurfaceVisibilityTests {
+    @Test("idle never shows the rejected persistent cursor badge")
+    func idleBadgeIsRemoved() {
+        let policy = TransientCompanionSurfaceVisibilityPolicy()
+
+        #expect(!policy.isVisible(persistedCompanionEnabled: true, guidePhase: .idle, hasTransientCaption: false))
+        #expect(policy.isVisible(persistedCompanionEnabled: false, guidePhase: .listening, hasTransientCaption: false))
+        #expect(policy.isVisible(persistedCompanionEnabled: false, guidePhase: .idle, hasTransientCaption: true))
+    }
+}
+
+@Suite("Guide surface interaction")
+struct GuideSurfaceInteractionTests {
+    @Test("every Guide-owned overlay stays click-through")
+    func overlaysDoNotBlockTheWorkSurface() {
+        let policy = GuideSurfaceInteractionPolicy()
+
+        #expect(policy.mode(for: .status, contentOverflows: false) == .clickThrough)
+        #expect(policy.mode(for: .answer, contentOverflows: true) == .clickThrough)
+        #expect(policy.mode(for: .pointCue, contentOverflows: false) == .clickThrough)
+    }
+}

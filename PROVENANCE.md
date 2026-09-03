@@ -60,3 +60,12 @@ adaptation commit is not in this branch. Current HeyClicky `1.0.48 (57)` is
 used only through installed screenshots, accessibility output, and observable
 interaction; private/account regions are not committed. No additional MIT
 notice is required unless a later commit passes the import gate above.
+
+## 2026-09-04 issue #7 implementation
+
+Branch `codex/issue-7-guide-parity` is an independent implementation from the
+SERPy build-40 checkpoint. It imports no HeyClicky or OpenClicky source, assets,
+protocols, prompts, sounds, identity, or credentials. Issue #7's owner recording
+is used only as behavioral evidence. The implementation adds downstream-owned
+presence, progression, structured-plan, overlay, and speech policies; no MIT
+notice or import record is required for this branch.

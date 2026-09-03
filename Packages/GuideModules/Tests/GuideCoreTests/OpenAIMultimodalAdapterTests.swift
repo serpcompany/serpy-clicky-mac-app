@@ -118,6 +118,25 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertEqual(events.last, .completed)
     }
 
+    func testSSEDecoderProducesAnOrderedTwoStepGuidancePlanFixture() throws {
+        var decoder = OpenAIResponsesSSEDecoder()
+        let lines = [
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Open a new Chrome window.\",\"steps\":[{\"text\":\"Open the File menu.\",\"completionEvidence\":[\"New Window\"],\"point\":{\"x\":0.08,\"y\":0.03,\"confidence\":0.96,\"label\":\"File\"}},{\"text\":\"Choose New Window.\",\"completionEvidence\":[\"New Tab\"],\"point\":null}],\"point\":null}"}"#,
+            #"data: {"type":"response.completed"}"#
+        ]
+
+        let events = try lines.flatMap { try decoder.consume(line: $0) }
+        let plan = try XCTUnwrap(events.compactMap { event -> GuidancePlan? in
+            guard case let .planReady(plan) = event else { return nil }
+            return plan
+        }.first)
+
+        XCTAssertEqual(plan.steps.map(\.text), ["Open the File menu.", "Choose New Window."])
+        XCTAssertEqual(plan.steps[0].point?.normalizedPoint, CGPoint(x: 0.08, y: 0.03))
+        XCTAssertEqual(plan.steps[0].completionEvidence, ["New Window"])
+        XCTAssertNil(plan.steps[1].point)
+    }
+
     func testSSEDecoderAcceptsAnswerOnlyStructuredOutput() throws {
         var decoder = OpenAIResponsesSSEDecoder()
         let lines = [

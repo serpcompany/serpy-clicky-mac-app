@@ -8,6 +8,13 @@ Rejected candidate: installed `/Applications/SERPy.app` `0.1.0 (39)`
 
 Replacement branch: `codex/heyclicky-guide-rebuild` from `ef12f96`
 
+Issue #7 implementation branch: `codex/issue-7-guide-parity` from build-40
+checkpoint `6bfe1ed`. Its source adds regular application presence, removes the
+idle cursor-following badge, makes transient Guide surfaces click-through,
+retains ordered steps and one active cue, advances only after explicit fresh
+capture, and sanitizes/deduplicates speech. These facts do not advance any
+installed row; the issue #7 candidate has not yet been packaged or observed.
+
 Statuses describe installed evidence, not source intent. `FAIL` means a directly
 observed mismatch or an architecture that cannot produce the required behavior.
 `UNRESOLVED` means the row was not safely exercised. `UNTESTED` means the new

@@ -25,14 +25,14 @@ API key, or metered provider.
    invoking an assistant.
 7. The same journey works offline after model installation.
 
-### Journey B — Persistent companion
+### Journey B — Normal app presence and transient companion
 
-1. The user enables the cursor companion.
-2. It appears immediately and remains present across ordinary app switches,
-   idle time, settings closure, and failed guidance requests.
-3. It does not cover menu-bar controls or intercept clicks outside its visible
-   controls.
-4. The user can hide it explicitly and the preference survives relaunch.
+1. SERPy remains visible in the Dock and Command-Tab for its running lifetime.
+2. Closing Settings does not hide the running app; Dock activation foregrounds
+   its normal surface and Dock Quit terminates it.
+3. No persistent cursor-following badge covers the work surface while idle.
+4. Dictation and Guide surfaces appear transiently when meaningful, remain
+   nonactivating and click-through, then clear deterministically.
 
 ### Journey C — Ask for screen guidance
 
@@ -50,11 +50,14 @@ API key, or metered provider.
    engine sends only the spoken question, bounded recent Talk text, and exact
    locked-window image after an explicit disclosure and provider selection.
 7. The app streams the answer in one compact top-centered ambient surface on
-   the locked window's display and speaks complete sentence chunks locally.
+   the locked window's display. Walkthroughs retain an ordered plan, show only
+   the active cue as `Step n of m`, and speak its sanitized text once locally.
    The surface remains nonactivating and click-through unless actual overflow
    exposes scrolling. An optional normal window can show the transient
    conversation transcript.
-8. The user can invoke the guide again and ask a spoken follow-up.
+8. The user can invoke the guide again. A fresh request-scoped capture either
+   advances the retained walkthrough, stays with a reason, completes, or asks
+   a spoken follow-up.
 9. It never clicks, types, runs shell commands, or performs the task itself.
 
 ## Product Principles
@@ -93,7 +96,8 @@ Included:
 - Crash-safe Last Dictation recovery with explicit Copy, Retry, and Delete.
 - Optional local transcript history; optional audio history is a separate
   opt-in and remains off by default.
-- Persistent cursor companion and short captions.
+- Normal Dock/Command-Tab lifetime presence plus transient status, answer, and
+  independently validated point-cue overlays; no idle cursor-following badge.
 - Explicit, request-scoped voice conversation with local spoken guidance.
 - Optional request-scoped OpenAI multimodal Talk, disabled by default, with a
   Keychain-held tester credential and precise send-time disclosure.
