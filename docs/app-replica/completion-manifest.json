@@ -4,7 +4,7 @@
   "scope_statement": "AI Guide only: reproduce the observable voice-first HeyClicky journey across global held invocation, ambient state presentation, exact request-scoped vision, streamed readable and spoken guidance, follow-up continuity, safe spatial guidance, cancellation, truthful recovery, Settings entry, privacy, and installed distribution while preserving SERPy identity and the explicit product boundaries",
   "inventory_complete": false,
   "primary_workflow_passed": false,
-  "installed_artifact_verified": false,
+  "installed_artifact_verified": true,
   "independent_verification": {
     "required": true,
     "passed": false,
@@ -28,26 +28,26 @@
       "id": "G02.held-shortcut",
       "kind": "both",
       "in_scope": true,
-      "status": "fail",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg", "evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/shortcuts-reference.txt"],
-        "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/guide-settings-candidate.txt"],
+        "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-40/candidate/guidance-settings.jpeg"],
         "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"],
-        "behavior": ["Reference holds Control-Option and releases to send; rejected candidate advertises Control-Option-G toggle"]
+        "behavior": ["Build 40 exposes the matching configurable held chord; physical-key installed activation remains owner HIL"]
       }
     },
     {
       "id": "G03.global-invocation",
       "kind": "behavior",
       "in_scope": true,
-      "status": "fail",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/shortcuts-reference.txt"],
-        "candidate": ["scope.md#controlling-rejected-build-observation"],
+        "candidate": ["heyclicky-1.0.48-vs-serpy-build-40.md#installed-observations"],
         "comparison": [],
-        "behavior": ["Controlled build-39 invocation leaked a control character to TextEdit and SERPy stayed ready; physical-key HIL remains required"]
+        "behavior": ["Computer Use cannot issue a modifier-only chord; physical-key work-surface HIL remains required"]
       }
     },
     {
@@ -63,8 +63,8 @@
       "kind": "both",
       "in_scope": true,
       "status": "unresolved",
-      "exercised": false,
-      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+      "exercised": true,
+      "evidence": {"reference": [], "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-40/candidate/listening.jpeg"], "comparison": [], "behavior": ["Installed manual Start entered listening and Escape returned ready; paired reference and global-focus proof remain absent"]}
     },
     {
       "id": "G06.live-transcript",
@@ -110,13 +110,13 @@
       "id": "G11.complete-readable-answer",
       "kind": "both",
       "in_scope": true,
-      "status": "fail",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": [],
-        "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/candidate/guide-settings.jpeg"],
-        "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"],
-        "behavior": ["Owner rejected build-39 observable Guide UI"]
+        "candidate": ["heyclicky-1.0.48-vs-serpy-build-40.md#differential-result"],
+        "comparison": [],
+        "behavior": ["Build 40 uses one ambient answer surface in source; installed streamed answer remains owner HIL"]
       }
     },
     {
@@ -259,9 +259,9 @@
       "id": "G29.settings-entry-recovery",
       "kind": "both",
       "in_scope": true,
-      "status": "fail",
+      "status": "unresolved",
       "exercised": true,
-      "evidence": {"reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg"], "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/candidate/guide-settings.jpeg"], "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "behavior": ["Build 38 open/reopen worked; owner rejected build-39 Guide UX"]}
+      "evidence": {"reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg"], "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-40/candidate/guidance-settings.jpeg"], "comparison": [], "behavior": ["Installed build-40 Settings opened as a normal window; owner UX acceptance remains pending"]}
     },
     {
       "id": "G30.ephemeral-privacy",
@@ -275,9 +275,9 @@
       "id": "G31.installed-distribution",
       "kind": "behavior",
       "in_scope": true,
-      "status": "fail",
+      "status": "pass",
       "exercised": true,
-      "evidence": {"reference": ["scope.md#frozen-observation-environment"], "candidate": ["scope.md#frozen-observation-environment"], "comparison": [], "behavior": ["Build 39 is strict-signed but Gatekeeper rejects it as unnotarized"]}
+      "evidence": {"reference": ["scope.md#frozen-observation-environment"], "candidate": ["heyclicky-1.0.48-vs-serpy-build-40.md#exact-artifacts"], "comparison": [], "behavior": ["Commit-tied build 40 DMG was notarized and stapled; installed executable hash matches reviewed Release; Gatekeeper accepts"]}
     },
     {
       "id": "G32.identity-boundary",
