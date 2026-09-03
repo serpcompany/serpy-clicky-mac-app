@@ -36,15 +36,19 @@ API key, or metered provider.
 
 ### Journey C — Ask for screen guidance
 
-1. The user explicitly invokes the guide shortcut.
+1. The user explicitly opens the AI Guide from the menu or guide shortcut.
 2. The app explains and requests Screen Recording permission if it has not
    already been granted.
-3. The app captures only the chosen window/display context for that request.
-4. A local guidance engine receives structured accessibility/OCR context and,
+3. A normal conversation window opens so the user can ask a question and
+   continue with follow-up questions.
+4. For each submitted turn, the app captures only the chosen window/display
+   context for that request.
+5. A local guidance engine receives the recent conversation plus structured
+   accessibility/OCR context and,
    only when required, the transient image.
-5. The app answers in text and optionally speech, then points or captions a
+6. The app answers in text and optionally speech, then points or captions a
    validated location.
-6. It never clicks, types, runs shell commands, or performs the task itself.
+7. It never clicks, types, runs shell commands, or performs the task itself.
 
 ## Product Principles
 
@@ -63,7 +67,8 @@ API key, or metered provider.
 - **Privacy is structural.** Screenshots and audio are transient by default.
   One completed transcript is retained briefly for crash and failed-paste
   recovery; longer transcript history and audio history require explicit
-  opt-in. Content is never used for analytics or training.
+  opt-in. Guide conversations remain in memory only and disappear when the app
+  quits. Content is never used for analytics or training.
 
 ## First-Product Scope
 
@@ -78,7 +83,7 @@ Included:
 - Optional local transcript history; optional audio history is a separate
   opt-in and remains off by default.
 - Persistent cursor companion and short captions.
-- Explicit, request-scoped screen guidance.
+- Explicit, request-scoped conversational screen guidance.
 - Local logs that redact dictated and captured content.
 - Direct-download Developer ID/notarized DMG.
 

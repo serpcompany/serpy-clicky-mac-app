@@ -66,6 +66,8 @@ Notes and Slack are not yet observed.
 | C7 | Low confidence produces prose without misleading pointing | Deterministic test | unit-tested |
 | C8 | The guide never clicks, types, executes, or submits | Capability audit + HIL | implemented |
 | C9 | Dictation remains available when guidance is unavailable | Failure-injection test | unimplemented |
+| C10 | Guide opens a conversation and supports contextual follow-up questions | State tests + installed multi-turn observation | installed-observed |
+| C11 | Guide conversations and screenshots are not persisted after quit | Filesystem/log audit + relaunch observation | implemented |
 
 The owner reported that the guidance journeys after the initial companion
 checks did not work during first use. The C rows above describe implementation

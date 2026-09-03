@@ -15,7 +15,7 @@ Disposable probes:
 3. Show a nonactivating cursor overlay across multiple displays without
    intercepting unrelated clicks or covering the menu bar.
 4. Capture one explicitly chosen window, extract Accessibility/OCR context, and
-   obtain one local guidance answer on the owner's Mac.
+   obtain a two-turn local guidance conversation on the owner's Mac.
 5. Package a minimal signed probe using the intended stable bundle namespace to
    characterize TCC behavior.
 
@@ -64,7 +64,8 @@ Done when Acceptance B1–B8 pass and the cursor never blocks menu-bar access.
 
 ## Phase 3 — Local Screen Guidance
 
-Goal: answer an explicit question about the current screen and point safely.
+Goal: hold an explicit back-and-forth conversation about the current screen and
+point safely.
 
 Build:
 
@@ -72,6 +73,7 @@ Build:
 - Request-scoped content selection and capture.
 - Accessibility and OCR context extraction.
 - Selected local guidance adapter.
+- Transient multi-turn conversation state with a normal non-floating window.
 - Structured guidance-plan validation.
 - Caption, speech, and cursor pointing without autonomous action.
 

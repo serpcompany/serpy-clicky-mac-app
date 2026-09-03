@@ -176,24 +176,20 @@ public struct MenuPanelView: View {
 
     private var guidanceCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Guide current screen")
+            Text("AI Guide")
                 .font(.headline)
-            TextField("What should I do next?", text: $model.guidanceQuestion)
-                .textFieldStyle(.roundedBorder)
+            Text("Ask questions about what is on your screen, then keep talking with SERPy until you know what to do.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
             Button {
-                Task { await model.guideCurrentScreen() }
+                model.openGuideConversation()
             } label: {
-                Label(model.guidancePhase.isActive ? "Reading screen…" : "Guide Current Screen", systemImage: "sparkles.rectangle.stack")
+                Label("Open AI Guide", systemImage: "bubble.left.and.bubble.right")
             }
-            .disabled(model.guidancePhase.isActive)
-            Text("Control–Option–G · Captures one window only after you ask. No clicks or automatic actions.")
+            .buttonStyle(.borderedProminent)
+            Text("Control–Option–G · Each question reads the selected app window. The guide advises but never clicks or types.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            if !model.guidanceAnswer.isEmpty {
-                Text(model.guidanceAnswer)
-                    .font(.callout)
-                    .textSelection(.enabled)
-            }
         }
         .padding(14)
         .background(.purple.opacity(0.10), in: .rect(cornerRadius: 12))

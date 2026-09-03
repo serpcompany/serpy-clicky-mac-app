@@ -6,22 +6,37 @@ import Vision
 
 @MainActor
 public final class ScreenContextService {
+    private var preferredApplicationPID: pid_t?
+
     public init() {}
+
+    public func rememberFrontmostApplication() {
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        guard let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              frontPID != ownPID
+        else { return }
+        preferredApplicationPID = frontPID
+    }
 
     public func captureFrontmostContext() async throws -> ScreenContext {
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         let ownPID = ProcessInfo.processInfo.processIdentifier
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        if let frontPID, frontPID != ownPID {
+            preferredApplicationPID = frontPID
+        }
+        let targetPID = frontPID == ownPID ? preferredApplicationPID : frontPID
         let candidates = content.windows.filter { window in
             window.isOnScreen && window.owningApplication?.processID != ownPID && window.frame.width > 160 && window.frame.height > 100
         }
-        guard let window = candidates.first(where: { $0.owningApplication?.processID == frontPID }) ?? candidates.first else {
+        guard let window = candidates.first(where: { $0.owningApplication?.processID == targetPID }) ?? candidates.first else {
             throw GuideFailure(
                 stage: .capture,
                 message: "No readable app window is available.",
-                recovery: "Open the app you want help with, then try Guide Current Screen again."
+                recovery: "Open the app you want help with, then reopen the AI Guide."
             )
         }
+        preferredApplicationPID = window.owningApplication?.processID
 
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let configuration = SCStreamConfiguration()

@@ -28,6 +28,10 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task {
             await GuideAppModel.shared.start()
+            if CommandLine.arguments.contains("--ui-testing"),
+               CommandLine.arguments.contains("--open-ai-guide") {
+                GuideAppModel.shared.openGuideConversation()
+            }
         }
     }
 

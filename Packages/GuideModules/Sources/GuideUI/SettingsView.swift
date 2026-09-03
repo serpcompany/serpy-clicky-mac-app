@@ -145,13 +145,12 @@ public struct SettingsView: View {
 
     private var guidanceForm: some View {
         Form {
-            Section("Local screen guidance") {
+            Section("Local AI Guide") {
                 LabeledContent("Shortcut", value: "Control–Option–G")
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-                Text("Screen access is requested only after you invoke guidance. SERPy reads one visible window, uses on-device intelligence, and never clicks or types for you.")
+                Text("Open a back-and-forth conversation and ask about the app on screen. SERPy reads one visible window for each question, uses on-device intelligence, and never clicks or types for you.")
                     .foregroundStyle(.secondary)
-                Button("Guide Current Screen") { Task { await model.guideCurrentScreen() } }
-                    .disabled(model.guidancePhase.isActive)
+                Button("Open AI Guide") { model.openGuideConversation() }
             }
         }
         .formStyle(.grouped)
@@ -160,7 +159,7 @@ public struct SettingsView: View {
     private var privacyForm: some View {
         Form {
             Section("Privacy") {
-                Text("Dictation and guidance use on-device system models without an API key. One short-lived Last Dictation is stored locally before delivery so a failed paste cannot lose your words. Longer transcript history and all audio storage are separate opt-ins. Screenshots are not stored.")
+                Text("Dictation and guidance use on-device system models without an API key. One short-lived Last Dictation is stored locally before delivery so a failed paste cannot lose your words. Longer transcript history and all audio storage are separate opt-ins. Guide conversations remain in memory only; screenshots and guide conversations are not stored.")
                     .foregroundStyle(.secondary)
             }
             Section("Storage location") {

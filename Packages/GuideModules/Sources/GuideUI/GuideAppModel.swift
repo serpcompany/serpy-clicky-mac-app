@@ -17,7 +17,8 @@ public final class GuideAppModel {
     public private(set) var permissions: PermissionSnapshot
     public private(set) var lastInsertionMethod: TextInsertionMethod?
     public private(set) var guidancePhase: GuidancePhase = .idle
-    public private(set) var guidanceAnswer = ""
+    public private(set) var guidanceMessages: [GuidanceMessage] = []
+    public private(set) var guidanceContextLabel = "No screen context captured yet"
     public private(set) var hotKeyRegistered = false
     public private(set) var dictationAttemptCount = 0
     public private(set) var lastActivationMessage = "No dictation activation received yet."
@@ -27,7 +28,7 @@ public final class GuideAppModel {
     public private(set) var transcriptHistory: [TranscriptHistoryEntry] = []
     public private(set) var historyStatusMessage = "Loading local history…"
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
-    public var guidanceQuestion = "What should I do next?"
+    public var guidanceDraft = ""
     public var companionEnabled: Bool {
         didSet {
             guard oldValue != companionEnabled else { return }
@@ -64,9 +65,11 @@ public final class GuideAppModel {
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var guidanceHotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
+    @ObservationIgnored private var guidanceMachine = GuidanceConversationStateMachine()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
+    @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
     @ObservationIgnored private var started = false
 
     @ObservationIgnored private static let logger = Logger(
@@ -174,7 +177,7 @@ public final class GuideAppModel {
                     displayName: "Control–Option–G"
                 ),
                 pressed: { [weak self] in
-                    Task { await self?.guideCurrentScreen() }
+                    Task { @MainActor in self?.openGuideConversation() }
                 },
                 released: {}
             )
@@ -322,13 +325,38 @@ public final class GuideAppModel {
         permissionService.openSystemSettings(for: permission)
     }
 
-    public func guideCurrentScreen() async {
+    public func openGuideConversation() {
+        screenContextService.rememberFrontmostApplication()
+        if guideWindowController == nil {
+            guideWindowController = GuideConversationWindowController(model: self)
+        }
+        guideWindowController?.present()
+    }
+
+    public func startNewGuidanceConversation() {
         guard !guidancePhase.isActive else { return }
-        let question = guidanceQuestion.trimmingCharacters(in: .whitespacesAndNewlines)
+        guidanceMachine.reset()
+        guidanceMessages = guidanceMachine.messages
+        guidancePhase = guidanceMachine.phase
+        guidanceContextLabel = "No screen context captured yet"
+        guidanceDraft = ""
+    }
+
+    public func sendGuidanceMessage() async {
+        guard !guidancePhase.isActive else { return }
+        let question = guidanceDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty else {
-            guidanceAnswer = "Type a short question about the current screen first."
             return
         }
+
+        let priorConversation = guidanceMessages
+        do {
+            try guidanceMachine.submit(question: question)
+        } catch {
+            return
+        }
+        guidanceDraft = ""
+        syncGuidanceState()
 
         refreshPermissions()
         if !permissions.screenRecording.isGranted {
@@ -342,8 +370,8 @@ public final class GuideAppModel {
                     message: "Screen access was not granted.",
                     recovery: "Open Screen & System Audio Recording settings, enable SERPy, then try again."
                 )
-                guidancePhase = .failed(failure)
-                guidanceAnswer = failure.recovery
+                guidanceMachine.fail(failure)
+                syncGuidanceState()
                 presentGuidanceCaption(failure.message, mode: .error)
                 return
             }
@@ -353,6 +381,7 @@ public final class GuideAppModel {
             guidancePhase = .capturing
             presentGuidanceCaption("Reading current window…", mode: .working)
             let context = try await screenContextService.captureFrontmostContext()
+            guidanceContextLabel = "\(context.applicationName) — \(context.windowTitle)"
             guard !context.promptText.isEmpty else {
                 throw GuideFailure(
                     stage: .understanding,
@@ -360,21 +389,34 @@ public final class GuideAppModel {
                     recovery: "Bring the relevant window forward and try again."
                 )
             }
-            guidancePhase = .thinking
+            try guidanceMachine.beginThinking()
+            syncGuidanceState()
             presentGuidanceCaption("Thinking locally…", mode: .working)
-            let plan = try await localGuidanceService.answer(question: question, context: context)
+            let plan = try await localGuidanceService.answer(
+                question: question,
+                context: context,
+                conversation: priorConversation
+            )
             let validated = GuidancePlanValidator.validate(plan, in: context.windowFrame)
-            guidanceAnswer = validated.answer
-            guidancePhase = .presenting
+            try guidanceMachine.complete(
+                answer: validated.answer,
+                contextLabel: guidanceContextLabel
+            )
+            syncGuidanceState()
             statusMessage = "Local guidance is ready."
             recoveryMessage = ""
             presentGuidanceCaption(validated.answer, mode: .success)
         } catch {
             let failure = normalize(error, stage: .guidance)
-            guidancePhase = .failed(failure)
-            guidanceAnswer = failure.message + " " + failure.recovery
+            guidanceMachine.fail(failure)
+            syncGuidanceState()
             presentGuidanceCaption(failure.message, mode: .error)
         }
+    }
+
+    private func syncGuidanceState() {
+        guidancePhase = guidanceMachine.phase
+        guidanceMessages = guidanceMachine.messages
     }
 
     public func cancelDictation() {

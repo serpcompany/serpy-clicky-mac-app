@@ -19,7 +19,8 @@ flowchart LR
     D --> STT["Local transcription adapter"]
     STT --> I["Focused-field insertion"]
 
-    G["Guide shortcut"] --> C["Request-scoped context capture"]
+    G["Guide shortcut or menu"] --> T["Transient guide conversation"]
+    T --> C["Request-scoped context capture"]
     C --> X["Accessibility tree and OCR"]
     X --> A["Local guidance engine"]
     A --> P["Validated guidance plan"]
@@ -110,13 +111,18 @@ enabledTemporarilyHidden(reason, returnPolicy)
 Invariant: when the persisted preference is enabled and no documented blocker
 exists, every temporary hide path must return to `enabledVisible`.
 
-### Guidance request
+### Guidance conversation and request
 
 ```text
-idle -> selectingContext -> capturing -> understanding -> planning
-     -> presenting -> complete
-     -> failed(stage, recovery)
+conversation idle -> userTurn -> capturing -> understanding -> planning
+                  -> guideTurn -> readyForFollowUp
+                  -> failed(stage, recovery) -> readyForFollowUp
+                  -> reset -> conversation idle
 ```
+
+The recent conversation is held in memory and supplied with each new request.
+It is not written to transcript history or logs. Each turn captures fresh
+context; prior screen pixels are neither retained nor replayed.
 
 The engine returns a structured `GuidancePlan`, not arbitrary overlay commands:
 
@@ -184,6 +190,9 @@ transcript.
 ## Screen Guidance Strategy
 
 - Capture only after explicit activation.
+- Open a normal, non-floating conversation window before capture; submitting a
+  question is the capture action.
+- Include recent in-memory turns so follow-up questions retain meaning.
 - Prefer accessibility structure and Vision OCR over sending raw pixels into
   the reasoning layer.
 - Use the system content-sharing picker where it improves user control.
