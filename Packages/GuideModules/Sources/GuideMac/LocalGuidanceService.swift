@@ -130,20 +130,22 @@ public final class LocalGuidanceService {
                 conversation: conversation
             )
             let initialRaw = try await session.respond(to: prompt)
-            let initialPlan = Self.decodePlan(initialRaw)
+            let initialPlan = try Self.decodePlan(initialRaw)
             let initialAnswer = initialPlan?.answer ?? GuidanceAnswerSanitizer.sanitize(initialRaw)
             let identity = ScreenContextIdentity(
                 applicationName: context.applicationName,
                 windowTitle: context.windowTitle
             )
             var retryAnswer: String?
+            var retryPlan: GuidancePlan?
             if groundingPolicy.disposition(
                 for: initialAnswer,
                 context: identity,
                 hasVisibleText: !context.promptText.isEmpty
             ) == .retryWithGroundedContext {
                 let retryRaw = try await session.respond(to: promptBuilder.groundingRetryPrompt(context: context))
-                retryAnswer = Self.decodePlan(retryRaw)?.answer ?? GuidanceAnswerSanitizer.sanitize(retryRaw)
+                retryPlan = try Self.decodePlan(retryRaw)
+                retryAnswer = retryPlan?.answer ?? GuidanceAnswerSanitizer.sanitize(retryRaw)
             }
             let answer = groundingPolicy.resolvedAnswer(
                 initial: initialAnswer,
@@ -161,7 +163,9 @@ public final class LocalGuidanceService {
             return GuidancePlan(
                 answer: answer,
                 confidence: 0.70,
-                steps: answer == initialAnswer ? (initialPlan?.steps ?? []) : []
+                steps: retryAnswer == answer
+                    ? (retryPlan?.steps ?? [])
+                    : (initialPlan?.steps ?? [])
             )
     }
 
@@ -173,34 +177,37 @@ public final class LocalGuidanceService {
         )
     }
 
-    private static func decodePlan(_ raw: String) -> GuidancePlan? {
-        guard let data = raw.data(using: .utf8),
+    private static func decodePlan(_ raw: String) throws -> GuidancePlan? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("{") else { return nil }
+        guard let data = trimmed.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let answer = object["answer"] as? String,
-              !GuidanceAnswerSanitizer.sanitize(answer).isEmpty,
-              let rawSteps = object["steps"] as? [[String: Any]],
-              !rawSteps.isEmpty,
-              rawSteps.count <= 6
-        else { return nil }
+              let rawSteps = object["steps"] as? [[String: Any]]
+        else { throw malformedPlanFailure }
         var steps: [GuidanceStep] = []
         for (index, rawStep) in rawSteps.enumerated() {
-            guard let text = rawStep["text"] as? String else { return nil }
-            let safeText = GuidanceAnswerSanitizer.sanitize(text)
-            guard !safeText.isEmpty else { return nil }
-            let evidence = (rawStep["completionEvidence"] as? [String] ?? [])
-                .map(GuidanceAnswerSanitizer.sanitize)
-                .filter { !$0.isEmpty }
-                .prefix(4)
+            guard let text = rawStep["text"] as? String,
+                  let evidence = rawStep["completionEvidence"] as? [String]
+            else { throw malformedPlanFailure }
             steps.append(GuidanceStep(
                 id: index + 1,
-                text: safeText,
-                completionEvidence: Array(evidence)
+                text: text,
+                completionEvidence: evidence
             ))
         }
-        return GuidancePlan(
-            answer: GuidanceAnswerSanitizer.sanitize(answer),
+        return try GuidancePlanContractValidator().validate(GuidancePlan(
+            answer: answer,
             confidence: 0.70,
             steps: steps
+        ))
+    }
+
+    private static var malformedPlanFailure: GuideFailure {
+        GuideFailure(
+            stage: .guidance,
+            message: "The local guide returned malformed structured guidance.",
+            recovery: "Try the question again. SERPy did not present incomplete steps."
         )
     }
 }

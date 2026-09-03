@@ -8,7 +8,6 @@ public struct SettingsView: View {
 
     private enum SettingsTab: Hashable {
         case setup
-        case companion
         case guidance
         case history
         case privacy
@@ -23,9 +22,6 @@ public struct SettingsView: View {
             setupForm
                 .tabItem { Label("Setup", systemImage: "checklist") }
                 .tag(SettingsTab.setup)
-            companionForm
-                .tabItem { Label("Companion", systemImage: "location.north.circle") }
-                .tag(SettingsTab.companion)
             guidanceForm
                 .tabItem { Label("Guidance", systemImage: "sparkles.rectangle.stack") }
                 .tag(SettingsTab.guidance)
@@ -44,9 +40,6 @@ public struct SettingsView: View {
         .onAppear {
             settingsWindowLifecycle.didAppear()
         }
-        .onDisappear {
-            settingsWindowLifecycle.didDisappear()
-        }
     }
 
     private var settingsWindowLifecycle: SettingsWindowVisibilityLifecycle {
@@ -56,9 +49,6 @@ public struct SettingsView: View {
             },
             activateApplication: {
                 NSApplication.shared.activate(ignoringOtherApps: true)
-            },
-            restoreMenuBarMode: {
-                NSApplication.shared.setActivationPolicy(.accessory)
             }
         )
     }
@@ -148,17 +138,6 @@ public struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var companionForm: some View {
-        Form {
-            Section("Cursor companion") {
-                Toggle("Keep the cursor companion visible", isOn: $model.companionEnabled)
-                Text("The companion is click-through, follows the pointer, and stays below the usable menu-bar area.")
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

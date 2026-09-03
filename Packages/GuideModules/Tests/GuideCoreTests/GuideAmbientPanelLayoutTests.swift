@@ -42,8 +42,6 @@ struct GuideSurfaceInteractionTests {
     func overlaysDoNotBlockTheWorkSurface() {
         let policy = GuideSurfaceInteractionPolicy()
 
-        #expect(policy.mode(for: .status, contentOverflows: false) == .clickThrough)
-        #expect(policy.mode(for: .answer, contentOverflows: true) == .clickThrough)
-        #expect(policy.mode(for: .pointCue, contentOverflows: false) == .clickThrough)
+        #expect(policy.mode == .clickThrough)
     }
 }

@@ -409,7 +409,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(generation.requestCount, 1)
         XCTAssertEqual(overlay.presentations.last?.stepNumber, 2)
         XCTAssertEqual(overlay.presentations.last?.responseText, "Choose New Window.")
-        XCTAssertEqual(overlay.presentations.last?.pointCue?.label, "New Window")
+        XCTAssertNil(overlay.presentations.last?.pointCue)
     }
 
     func testStructuredStreamingPlanSpeaksOnlyTheActiveStepExactlyOnce() async throws {
@@ -459,6 +459,49 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
         XCTAssertEqual(overlay.scheduledRestoreDelays, [.milliseconds(1_200)])
         XCTAssertEqual(events.values.filter { $0 == "response:dismiss" }.count, 2)
+    }
+
+    func testResetConversationClearsThePresentedCueAtTheCoordinatorSeam() async throws {
+        let events = EventRecorder()
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: fixtureTarget, context: fixtureContext(fixtureTarget), events: events),
+            transcription: FakeTranscription(result: "Show me how", events: events),
+            generation: PlanGeneration(events: events),
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+        let dismissalsBeforeReset = events.values.filter { $0 == "response:dismiss" }.count
+
+        coordinator.resetConversation()
+
+        XCTAssertEqual(coordinator.phase, .idle)
+        XCTAssertEqual(events.values.filter { $0 == "response:dismiss" }.count, dismissalsBeforeReset + 1)
+    }
+
+    func testSpeechFailureKeepsTheSanitizedVisibleAnswerAndRecovery() async throws {
+        let events = EventRecorder()
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: fixtureTarget, context: fixtureContext(fixtureTarget), events: events),
+            transcription: FakeTranscription(result: "What is visible?", events: events),
+            generation: FakeGeneration(answer: "“Read this answer.”", events: events),
+            speech: FailingSpeech(),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(overlay.presentations.last?.stage, .error)
+        XCTAssertEqual(overlay.presentations.last?.responseText, "Read this answer.")
+        XCTAssertEqual(overlay.presentations.last?.failure?.stage, .presentation)
     }
 
     private var fixtureTarget: GuideWindowTarget {
@@ -939,6 +982,19 @@ private final class BlockingSpeech: GuideTurnSpeaking {
     func stop() {
         events.values.append("speech:stop")
     }
+}
+
+@MainActor
+private final class FailingSpeech: GuideTurnSpeaking {
+    func speak(_ text: String) async throws {
+        throw GuideFailure(
+            stage: .presentation,
+            message: "Speech output is unavailable.",
+            recovery: "Read the visible answer and check sound output."
+        )
+    }
+
+    func stop() {}
 }
 
 @MainActor

@@ -96,7 +96,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
-    @ObservationIgnored private let companionVisibilityPolicy = CompanionVisibilityPolicy()
     @ObservationIgnored private let transientSurfaceVisibilityPolicy = TransientCompanionSurfaceVisibilityPolicy()
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
@@ -439,7 +438,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                     try? await Task.sleep(for: .seconds(10))
                     guard let self, !phase.isActive, !guidancePhase.isActive else { return }
                     presentation.caption = ""
-                    companionController.refresh()
+                    applyCompanionVisibility()
                 }
             }
         } catch {
@@ -1315,7 +1314,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             partialTranscript = ""
             presentation.mode = .ready
             presentation.caption = ""
-            companionController.refresh()
+            applyCompanionVisibility()
             refreshPermissions()
         }
     }
@@ -1329,15 +1328,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             companionController.hide()
             return
         }
-        let resolvedVisibility = companionVisibilityPolicy.visibility(
-            persistedEnabled: companionEnabled,
-            guidancePhase: guidancePhase
-        )
-        switch resolvedVisibility {
-        case .visible:
-            companionController.show()
-        case .disabled, .blocked, .temporarilyHidden:
-            companionController.hide()
-        }
+        companionController.show()
     }
 }

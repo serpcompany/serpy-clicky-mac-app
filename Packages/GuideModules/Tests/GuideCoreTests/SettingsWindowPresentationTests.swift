@@ -25,18 +25,14 @@ final class SettingsWindowPresentationTests: XCTestCase {
         XCTAssertEqual(events, ["regular", "activate", "open", "schedule", "activate"])
     }
 
-    func testSettingsVisibilityTemporarilyUsesRegularApplicationMode() {
+    func testSettingsVisibilityNeverRequestsAnAccessoryMode() {
         var events: [String] = []
         let lifecycle = SettingsWindowVisibilityLifecycle(
             enterRegularMode: { events.append("regular") },
-            activateApplication: { events.append("activate") },
-            restoreMenuBarMode: { events.append("accessory") }
+            activateApplication: { events.append("activate") }
         )
 
         lifecycle.didAppear()
         XCTAssertEqual(events, ["regular", "activate"])
-
-        lifecycle.didDisappear()
-        XCTAssertEqual(events, ["regular", "activate", "accessory"])
     }
 }

@@ -79,7 +79,7 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         let lines = [
             #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"The phrase is "}"#,
             #"data: {"type":"response.output_text.delta","delta":"ORCHID RIVER 731. Next"}"#,
-            #"data: {"type":"response.output_text.delta","delta":" step\",\"point\":null}"}"#,
+            #"data: {"type":"response.output_text.delta","delta":" step\",\"steps\":[{\"text\":\"Read the phrase.\",\"completionEvidence\":[\"ORCHID\"],\"point\":null},{\"text\":\"Continue.\",\"completionEvidence\":[\"Next\"],\"point\":null}],\"point\":null}"}"#,
             #"data: {"type":"response.completed"}"#
         ]
         let events = try lines.flatMap { try decoder.consume(line: $0) }
@@ -102,7 +102,7 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
     func testSSEDecoderPreservesRequiredAnswerAndOptionalPointInOneStructuredOutput() throws {
         var decoder = OpenAIResponsesSSEDecoder()
         let lines = [
-            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Choose Continue.\",\"point\":{\"x\":0.25,\"y\":0.75,\"confidence\":0.92,\"label\":\"Continue\"}}"}"#,
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Choose Continue.\",\"steps\":[{\"text\":\"Find Continue.\",\"completionEvidence\":[\"Continue\"],\"point\":null},{\"text\":\"Choose it.\",\"completionEvidence\":[\"Done\"],\"point\":null}],\"point\":{\"x\":0.25,\"y\":0.75,\"confidence\":0.92,\"label\":\"Continue\"}}"}"#,
             #"data: {"type":"response.completed"}"#
         ]
 
@@ -137,10 +137,10 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertNil(plan.steps[1].point)
     }
 
-    func testSSEDecoderAcceptsAnswerOnlyStructuredOutput() throws {
+    func testSSEDecoderAcceptsStructuredPlanWithoutPoints() throws {
         var decoder = OpenAIResponsesSSEDecoder()
         let lines = [
-            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Use Settings.\",\"point\":null}"}"#,
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Use Settings.\",\"steps\":[{\"text\":\"Open Settings.\",\"completionEvidence\":[\"Settings\"],\"point\":null},{\"text\":\"Choose the option.\",\"completionEvidence\":[\"Done\"],\"point\":null}],\"point\":null}"}"#,
             #"data: {"type":"response.completed"}"#
         ]
 
@@ -166,7 +166,7 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         let lines = [
             #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Cafe"}"#,
             #"data: {"type":"response.output_text.delta","delta":"́ 👩"}"#,
-            #"data: {"type":"response.output_text.delta","delta":"‍💻\",\"point\":null}"}"#,
+            #"data: {"type":"response.output_text.delta","delta":"‍💻\",\"steps\":[{\"text\":\"Read the label.\",\"completionEvidence\":[\"Cafe\"],\"point\":null},{\"text\":\"Continue.\",\"completionEvidence\":[\"Done\"],\"point\":null}],\"point\":null}"}"#,
             #"data: {"type":"response.completed"}"#
         ]
 

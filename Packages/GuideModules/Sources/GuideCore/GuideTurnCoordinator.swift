@@ -180,6 +180,7 @@ public final class GuideTurnCoordinator {
     private var finishContinuation: AsyncStream<Void>.Continuation?
     private var activePlan: GuidancePlan?
     private var activeStepIndex = 0
+    private var lastReadablePresentation: GuideTurnPresentation?
 
     public init(
         capture: any GuideTurnContextCapturing,
@@ -203,13 +204,14 @@ public final class GuideTurnCoordinator {
     public func start(target: GuideWindowTarget) throws {
         guard activeTurnTask == nil else { throw GuidanceConversationError.turnAlreadyActive }
         overlay.dismissResponse()
+        lastReadablePresentation = nil
         let finishStream = AsyncStream<Void> { finishContinuation = $0 }
         let turnID = UUID()
         activeTurnID = turnID
         activeTarget = target
         cancellationRequested = false
         phase = .listening
-        overlay.present(.init(stage: .listening, statusText: "Listening…", context: target.identity, target: target))
+        presentOverlay(.init(stage: .listening, statusText: "Listening…", context: target.identity, target: target))
 
         activeTurnTask = Task { [weak self] in
             guard let self else { return }
@@ -237,9 +239,10 @@ public final class GuideTurnCoordinator {
         speech.stop()
         activePlan = nil
         activeStepIndex = 0
+        lastReadablePresentation = nil
         overlay.dismissResponse()
         phase = .idle
-        overlay.present(.init(
+        presentOverlay(.init(
             stage: .cancelled,
             statusText: "Cancelled",
             context: activeTarget?.identity,
@@ -257,6 +260,9 @@ public final class GuideTurnCoordinator {
         conversation.removeAll(keepingCapacity: false)
         activePlan = nil
         activeStepIndex = 0
+        phase = .idle
+        lastReadablePresentation = nil
+        overlay.dismissResponse()
     }
 
     public func waitUntilIdle() async {
@@ -287,7 +293,7 @@ public final class GuideTurnCoordinator {
             do {
                 try transcription.start { [weak self] text in
                     guard let self, phase == .listening else { return }
-                    overlay.present(.init(
+                    presentOverlay(.init(
                         stage: .liveTranscript,
                         statusText: transcriptPreview.displayText(for: text),
                         context: target.identity,
@@ -304,7 +310,7 @@ public final class GuideTurnCoordinator {
             for await _ in finishStream { break }
             try Task.checkCancellation()
             phase = .capturing
-            overlay.present(.init(stage: .capturing, statusText: "Reading this screen…", context: target.identity, target: target))
+            presentOverlay(.init(stage: .capturing, statusText: "Reading this screen…", context: target.identity, target: target))
             let question: String
             do { question = try await transcription.stop() }
             catch is CancellationError { throw CancellationError() }
@@ -327,7 +333,7 @@ public final class GuideTurnCoordinator {
             phase = .thinking
             let thinkingStatus = (generation as? any GuideTurnStreamingGenerating)?.thinkingStatusText
                 ?? "Thinking locally…"
-            overlay.present(.init(stage: .thinking, statusText: thinkingStatus, context: target.identity, target: target))
+            presentOverlay(.init(stage: .thinking, statusText: thinkingStatus, context: target.identity, target: target))
             let generated: GeneratedTurn
             do {
                 if let streamingGeneration = generation as? any GuideTurnStreamingGenerating {
@@ -372,7 +378,7 @@ public final class GuideTurnCoordinator {
             let stepCount = activeStep == nil ? nil : generated.plan.steps.count
             let status = stepNumber.map { "Step \($0) of \(stepCount ?? 1)" } ?? "Speaking…"
             phase = .presenting
-            overlay.present(.init(
+            presentOverlay(.init(
                 stage: .speaking,
                 statusText: status,
                 context: target.identity,
@@ -388,7 +394,7 @@ public final class GuideTurnCoordinator {
                 catch { throw failurePolicy.failure(for: error, at: .speaking) }
             }
             try Task.checkCancellation()
-            overlay.present(.init(
+            presentOverlay(.init(
                 stage: .readyForFollowUp,
                 statusText: stepNumber.map { "Step \($0) of \(stepCount ?? 1)" } ?? "Ready for a follow-up",
                 context: target.identity,
@@ -408,12 +414,17 @@ public final class GuideTurnCoordinator {
                     recovery: "Try again."
                 )
                 phase = .failed(failure)
-                overlay.present(.init(
+                let readable = lastReadablePresentation
+                presentOverlay(.init(
                     stage: .error,
                     statusText: failure.message,
                     context: target.identity,
+                    responseText: readable?.responseText ?? "",
                     failure: failure,
-                    target: target
+                    pointCue: readable?.pointCue,
+                    target: target,
+                    stepNumber: readable?.stepNumber,
+                    stepCount: readable?.stepCount
                 ))
                 overlay.restoreIdleVisibility(after: .seconds(4))
             }
@@ -450,7 +461,7 @@ public final class GuideTurnCoordinator {
                 let visible = GuidanceAnswerSanitizer.sanitize(answer)
                 if !visible.isEmpty {
                     phase = .presenting
-                    overlay.present(.init(
+                    presentOverlay(.init(
                         stage: .speaking,
                         statusText: "Answering…",
                         context: target.identity,
@@ -530,13 +541,15 @@ public final class GuideTurnCoordinator {
             let step = plan.steps[index]
             statusText = "Step \(index + 1) of \(plan.steps.count)"
             responseText = step.text
-            cue = pointCue(for: step, target: target)
+            // A retained coordinate belongs to the prior screenshot. Fresh
+            // progression may reuse text, never stale spatial geometry.
+            cue = nil
             stepNumber = index + 1
         case let .stay(reason):
             let step = plan.steps[activeStepIndex]
             statusText = reason
             responseText = step.text
-            cue = pointCue(for: step, target: target)
+            cue = nil
             stepNumber = activeStepIndex + 1
         case .complete:
             statusText = "Done"
@@ -549,7 +562,7 @@ public final class GuideTurnCoordinator {
         conversation.append(.init(role: .user, content: question))
         conversation.append(.init(role: .guide, content: responseText, contextLabel: target.identity.compactLabel))
         phase = .presenting
-        overlay.present(.init(
+        presentOverlay(.init(
             stage: .speaking,
             statusText: statusText,
             context: target.identity,
@@ -562,7 +575,7 @@ public final class GuideTurnCoordinator {
         try Task.checkCancellation()
         try await speech.speak(responseText)
         try Task.checkCancellation()
-        overlay.present(.init(
+        presentOverlay(.init(
             stage: .readyForFollowUp,
             statusText: statusText,
             context: target.identity,
@@ -581,5 +594,12 @@ public final class GuideTurnCoordinator {
               (0...1).contains(point.normalizedPoint.y)
         else { return nil }
         return GuidePointCue(target: target, normalizedPoint: point.normalizedPoint, label: point.label)
+    }
+
+    private func presentOverlay(_ presentation: GuideTurnPresentation) {
+        if !presentation.responseText.isEmpty {
+            lastReadablePresentation = presentation
+        }
+        overlay.present(presentation)
     }
 }

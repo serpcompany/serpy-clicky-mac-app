@@ -9,7 +9,8 @@ struct GuidanceSpeechQueuePolicyTests {
 
         #expect(policy.accept("“Open File.”") == "Open File.")
         #expect(policy.accept("Open File.") == nil)
-        #expect(policy.accept(#"{"answer":"Choose New Window."}"#) == "Choose New Window.")
+        #expect(policy.accept(#"{"answer":"must not expose syntax"}"#) == nil)
+        #expect(policy.accept("Choose New Window.") == "Choose New Window.")
         #expect(policy.accept("Then continue.") == "Then continue.")
     }
 

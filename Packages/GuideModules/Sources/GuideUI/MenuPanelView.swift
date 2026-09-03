@@ -55,8 +55,6 @@ public struct MenuPanelView: View {
                 }
             }
 
-            Toggle("Show Cursor Companion", isOn: $model.companionEnabled)
-
             if model.hasRecoverableTranscript {
                 Menu("Last Dictation") {
                     Button("Retry in 4 Seconds") {

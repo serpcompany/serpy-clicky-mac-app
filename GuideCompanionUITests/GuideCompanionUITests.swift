@@ -1,7 +1,7 @@
 import XCTest
 
 final class GuideCompanionUITests: XCTestCase {
-    func testApplicationLaunchesAsMenuBarUtility() {
+    func testApplicationLaunchesAndRemainsAvailableWithoutAWindow() {
         let application = XCUIApplication()
         application.launchArguments = ["--ui-testing"]
         application.launch()

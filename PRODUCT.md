@@ -40,7 +40,8 @@ API key, or metered provider.
    Guide modifier chord while speaking, then releases it to send.
 2. The app explains and requests Screen Recording permission if it has not
    already been granted.
-3. The cursor companion shows that it is listening; no typing window opens.
+3. The transient ambient surface shows that it is listening; no typing window
+   opens.
 4. The user asks a question out loud and invokes the guide again to finish, or
    presses Escape to cancel.
 5. For each spoken turn, the app captures only the chosen window/display

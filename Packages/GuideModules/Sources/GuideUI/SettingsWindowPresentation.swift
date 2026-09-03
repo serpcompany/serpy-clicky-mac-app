@@ -31,24 +31,17 @@ public struct SettingsWindowPresentation {
 public struct SettingsWindowVisibilityLifecycle {
     private let enterRegularMode: () -> Void
     private let activateApplication: () -> Void
-    private let restoreMenuBarMode: () -> Void
 
     public init(
         enterRegularMode: @escaping () -> Void,
-        activateApplication: @escaping () -> Void,
-        restoreMenuBarMode: @escaping () -> Void
+        activateApplication: @escaping () -> Void
     ) {
         self.enterRegularMode = enterRegularMode
         self.activateApplication = activateApplication
-        self.restoreMenuBarMode = restoreMenuBarMode
     }
 
     public func didAppear() {
         enterRegularMode()
         activateApplication()
-    }
-
-    public func didDisappear() {
-        restoreMenuBarMode()
     }
 }

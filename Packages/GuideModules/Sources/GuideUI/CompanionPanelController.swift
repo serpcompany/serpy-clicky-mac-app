@@ -191,10 +191,7 @@ public final class CompanionPanelController {
             )
         statusAnchorFrame = isGuideVisible ? newFrame : nil
         panel.ignoresMouseEvents = !isGuideVisible
-            || guideInteractionPolicy.mode(
-                for: .status,
-                contentOverflows: guideSizing?.interactionMode == .scrollableVisibleControl
-            ) == .clickThrough
+            || guideInteractionPolicy.mode == .clickThrough
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             panel.setFrame(newFrame, display: true)
         } else {
@@ -213,10 +210,7 @@ public final class CompanionPanelController {
                 presentation.responseText,
                 availableHeight: maximumResponseHeight
             )
-            responsePanel.ignoresMouseEvents = guideInteractionPolicy.mode(
-                for: .answer,
-                contentOverflows: responseSizing.interactionMode == .scrollableVisibleControl
-            ) == .clickThrough
+            responsePanel.ignoresMouseEvents = guideInteractionPolicy.mode == .clickThrough
             let placementFrame = responseLayoutPolicy.frame(
                 pointer: pointer,
                 visibleFrame: visibleFrame,

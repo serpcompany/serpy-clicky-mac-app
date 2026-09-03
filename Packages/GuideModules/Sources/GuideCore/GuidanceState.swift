@@ -274,11 +274,6 @@ public enum GuidanceAnswerSanitizer {
 
     public static func sanitize(_ answer: String) -> String {
         var result = answer.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let data = result.data(using: .utf8),
-           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let structuredAnswer = object["answer"] as? String {
-            result = structuredAnswer.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
         if let boundary = promptMarkers.compactMap({ result.range(of: $0)?.lowerBound }).min() {
             result = String(result[..<boundary]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
@@ -310,12 +305,59 @@ public struct GuidanceSpeechQueuePolicy: Sendable {
     public mutating func accept(_ providerChunk: String) -> String? {
         guard !isCancelled else { return nil }
         let safe = GuidanceAnswerSanitizer.sanitize(providerChunk)
-        guard !safe.isEmpty, accepted.insert(safe).inserted else { return nil }
+        guard !safe.isEmpty,
+              !safe.contains("{"), !safe.contains("}"),
+              accepted.insert(safe).inserted
+        else { return nil }
         return safe
     }
 
     public mutating func cancel() {
         isCancelled = true
+    }
+}
+
+public struct GuidancePlanContractValidator: Sendable {
+    public init() {}
+
+    public func validate(_ plan: GuidancePlan) throws -> GuidancePlan {
+        let answer = GuidanceAnswerSanitizer.sanitize(plan.answer)
+        guard !answer.isEmpty, (2...6).contains(plan.steps.count) else {
+            throw invalidPlanFailure
+        }
+        let steps = try plan.steps.enumerated().map { index, step in
+            let text = GuidanceAnswerSanitizer.sanitize(step.text)
+            guard !text.isEmpty else { throw invalidPlanFailure }
+            let evidence = step.completionEvidence
+                .map(GuidanceAnswerSanitizer.sanitize)
+                .filter { !$0.isEmpty }
+                .prefix(4)
+            if let point = step.point {
+                guard (0...1).contains(point.normalizedPoint.x),
+                      (0...1).contains(point.normalizedPoint.y),
+                      (0...1).contains(point.confidence)
+                else { throw invalidPlanFailure }
+            }
+            return GuidanceStep(
+                id: index + 1,
+                text: text,
+                point: step.point,
+                completionEvidence: Array(evidence)
+            )
+        }
+        return GuidancePlan(
+            answer: answer,
+            confidence: plan.confidence,
+            steps: steps
+        )
+    }
+
+    private var invalidPlanFailure: GuideFailure {
+        GuideFailure(
+            stage: .guidance,
+            message: "The selected Talk provider returned an incomplete guidance plan.",
+            recovery: "Try the question again. SERPy did not present malformed or partial steps."
+        )
     }
 }
 

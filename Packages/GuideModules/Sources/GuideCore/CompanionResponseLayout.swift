@@ -27,25 +27,11 @@ public enum CompanionResponseInteractionMode: Equatable, Sendable {
     case scrollableVisibleControl
 }
 
-public enum GuideSurface: Equatable, Sendable {
-    case status
-    case answer
-    case pointCue
-}
-
 /// Guide surfaces explain and point; they never become controls over the work
 /// surface. Overflow remains readable through truncation/transcript review.
 public struct GuideSurfaceInteractionPolicy: Sendable {
     public init() {}
-
-    public func mode(
-        for surface: GuideSurface,
-        contentOverflows: Bool
-    ) -> CompanionResponseInteractionMode {
-        _ = surface
-        _ = contentOverflows
-        return .clickThrough
-    }
+    public let mode = CompanionResponseInteractionMode.clickThrough
 }
 
 public struct CompanionResponseInteractionPolicy: Sendable {

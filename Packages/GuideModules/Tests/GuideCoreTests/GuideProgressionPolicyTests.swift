@@ -20,4 +20,26 @@ struct GuideProgressionPolicyTests {
         #expect(policy.evaluate(plan: plan, activeStepIndex: 0, observation: .init(visibleText: "Chrome new tab")) == .stay(reason: "The expected result for Step 1 is not visible yet."))
         #expect(policy.evaluate(plan: plan, activeStepIndex: 1, observation: .init(visibleText: "New Tab  History")) == .complete)
     }
+
+    @Test("malformed, one-step, and out-of-bounds walkthroughs are rejected")
+    func planContractRejectsIncompleteOutput() {
+        let validator = GuidancePlanContractValidator()
+        #expect(throws: GuideFailure.self) {
+            try validator.validate(GuidancePlan(
+                answer: "Too short",
+                confidence: 0.9,
+                steps: [GuidanceStep(id: 1, text: "Only step")]
+            ))
+        }
+        #expect(throws: GuideFailure.self) {
+            try validator.validate(GuidancePlan(
+                answer: "Bad point",
+                confidence: 0.9,
+                steps: [
+                    GuidanceStep(id: 1, text: "First", point: .init(normalizedPoint: .init(x: 2, y: 0.5), confidence: 0.9)),
+                    GuidanceStep(id: 2, text: "Second")
+                ]
+            ))
+        }
+    }
 }

@@ -146,7 +146,7 @@ public struct OpenAIResponsesRequestBuilder: Sendable {
                 ],
                 "steps": [
                     "type": "array",
-                    "minItems": 1,
+                    "minItems": 2,
                     "maxItems": 6,
                     "items": [
                         "type": "object",
@@ -266,14 +266,15 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
                 events += chunker.append(remainderDelta).map(GuidanceStreamEvent.sentenceReady)
             }
             if let remainder = chunker.finish() { events.append(.sentenceReady(remainder)) }
-            if let rawSteps = output["steps"] as? [[String: Any]] {
-                let steps = try Self.decodeSteps(rawSteps)
-                events.append(.planReady(GuidancePlan(
+            guard let rawSteps = output["steps"] as? [[String: Any]] else {
+                throw Self.malformedPlanFailure
+            }
+            let steps = try Self.decodeSteps(rawSteps)
+            events.append(.planReady(try GuidancePlanContractValidator().validate(GuidancePlan(
                     answer: answer,
                     confidence: steps.compactMap(\.point?.confidence).max() ?? 0,
                     steps: steps
-                )))
-            }
+                ))))
             if let point = output["point"] as? [String: Any],
                let x = point["x"] as? Double,
                let y = point["y"] as? Double,
@@ -303,7 +304,6 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
     }
 
     private static func decodeSteps(_ rawSteps: [[String: Any]]) throws -> [GuidanceStep] {
-        guard !rawSteps.isEmpty, rawSteps.count <= 6 else { throw malformedPlanFailure }
         return try rawSteps.enumerated().map { index, raw in
             guard let text = raw["text"] as? String,
                   !GuidanceAnswerSanitizer.sanitize(text).isEmpty
@@ -324,15 +324,13 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
             } else {
                 throw malformedPlanFailure
             }
-            let completionEvidence = (raw["completionEvidence"] as? [String] ?? [])
-                .map(GuidanceAnswerSanitizer.sanitize)
-                .filter { !$0.isEmpty }
-                .prefix(4)
+            guard let completionEvidence = raw["completionEvidence"] as? [String]
+            else { throw malformedPlanFailure }
             return GuidanceStep(
                 id: index + 1,
                 text: GuidanceAnswerSanitizer.sanitize(text),
                 point: point,
-                completionEvidence: Array(completionEvidence)
+                completionEvidence: completionEvidence
             )
         }
     }

@@ -44,17 +44,15 @@ Notes and Slack are not yet observed.
 
 | ID | Journey | Required evidence | Status |
 | --- | --- | --- | --- |
-| B1 | Enabling companion shows it immediately | Installed observation | installed-observed |
-| B2 | It survives app switches, idle, settings closure, and failed requests | Lifecycle test + observation | installed-observed |
-| B3 | It survives relaunch when enabled | Installed observation | installed-observed |
-| B4 | Explicit disable hides it and persists | State test + observation | installed-observed |
+| B1 | Idle shows no persistent cursor-following badge | Policy test + installed observation | unit-tested |
+| B2 | Dictation and Guide surfaces appear only while meaningful and clear deterministically | Lifecycle test + installed observation | unit-tested |
+| B3 | The running app remains available through Dock and Command-Tab after Settings closes | Policy test + installed observation | unit-tested |
+| B4 | Rejected persistent-companion controls are absent from menu and Settings | Source inspection + installed observation | implemented |
 | B5 | It never blocks menu-bar/status-item clicks | Crowded-menu HIL recording | unimplemented |
 | B6 | It behaves correctly at display edges and on negative-origin displays | Geometry tests + multi-display HIL | unit-tested |
 | B7 | Settings behaves as a normal non-floating window | App-switch/Spaces recording | installed-observed |
 | B8 | Reduce Motion and accessibility labels are respected | Inspection + HIL | implemented |
 | B9 | Menu-bar content uses a native menu, remains fully visible, and routes detailed setup to Settings | Installed screenshot + accessibility inspection | implemented |
-| B10 | Running lifetime remains visible in Dock and Command-Tab; Dock activation opens the normal surface and Dock Quit terminates | Policy test + installed lifecycle recording | unit-tested |
-| B11 | Idle state has no persistent cursor-following badge; transient surfaces remain click-through | Policy/interaction tests + installed hit-test recording | unit-tested |
 
 ## C — Screen Guidance
 
@@ -71,9 +69,9 @@ Notes and Slack are not yet observed.
 | C9 | Dictation remains available when guidance is unavailable | Failure-injection test | unimplemented |
 | C10 | Guide supports spoken contextual questions and spoken follow-ups without opening a typing window | State tests + installed multi-turn voice observation | installed-observed |
 | C11 | Guide conversations and screenshots are not persisted after quit | Filesystem/log audit + relaunch observation | implemented |
-| C12 | Guide answers are captioned by the cursor and spoken locally | Installed audio observation | implemented |
+| C12 | Guide answers appear in the stable top-centered ambient surface and are spoken locally | Installed audio observation | implemented |
 | C13 | Active guide turns force the companion visible without changing a disabled saved preference | Policy test + installed preference-off lifecycle | installed-observed |
-| C14 | A streamed answer grows from its first delta while remaining edge/status-safe; overflow becomes an intentional nonactivating scroll control | Small→medium→maximum layout/interaction sequences + installed corner observation | unit-tested |
+| C14 | A streamed answer grows from its first delta while remaining edge/status-safe and click-through; the optional transcript window preserves overflow | Small→medium→maximum layout/interaction sequences + installed corner observation | unit-tested |
 | C15 | Each turn locks PID, exact window ID, app/title, and frame before presentation and never falls back to a sibling window | Policy/adapter tests + installed same-app multi-window observation | unit-tested |
 | C16 | Escape cancels the owned listening, capture, thinking, or speaking work and restores companion visibility idempotently | Coordinator tests + installed phase-by-phase observation | unit-tested |
 | C17 | Listening acknowledgement precedes capture work and Vision OCR never blocks the main actor | Coordinator ordering + adapter contract test + installed latency observation | unit-tested |
