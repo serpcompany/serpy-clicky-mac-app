@@ -1,0 +1,17 @@
+Capture time: 2026-09-04 03:50 Asia/Tokyo
+Target: /Applications/HeyClicky.app
+
+Window: "", App: HeyClicky.
+0 system dialog Secondary Actions: Raise
+    1 unknown HeyClicky companion status
+2 menu bar
+    3 HeyClicky
+    4 Edit
+    5 View
+    6 Window
+    7 Help
+
+The focused UI element was the system dialog. The passive screenshot showed a
+compact black notch surface centered against the upper screen edge, with a
+small blue triangular action/status glyph. No conventional Talk window was
+present.

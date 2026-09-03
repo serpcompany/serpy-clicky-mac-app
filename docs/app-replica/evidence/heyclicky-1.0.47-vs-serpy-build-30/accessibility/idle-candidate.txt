@@ -1,0 +1,11 @@
+Capture attempts: 2026-09-04 03:50-03:53 Asia/Tokyo
+Target: /Applications/SERPy.app
+
+The installed process was running, but two read-only accessibility capture
+attempts against the exact installed path and display name both timed out after
+five seconds. A bundle-identifier attempt was ambiguous because LaunchServices
+reported installed, DerivedData, release-build, and mounted-DMG copies/globally
+registered copies with the same bundle identifier.
+
+No candidate screenshot or accessibility tree is presented as fresh evidence.
+This is an UNRESOLVED observation, not evidence that SERPy has no UI.

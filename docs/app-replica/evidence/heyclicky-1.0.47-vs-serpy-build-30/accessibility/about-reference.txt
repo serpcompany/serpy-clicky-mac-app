@@ -1,0 +1,18 @@
+Capture time: 2026-09-04 03:52 Asia/Tokyo
+Target: /Applications/HeyClicky.app
+
+Window: "", App: HeyClicky.
+0 dialog Secondary Actions: Raise
+    1 image HeyClicky icon
+    2 text HeyClicky Version 1.0.47 (56)
+    3 close button
+    4 zoom button (disabled)
+5 menu bar
+    6 HeyClicky
+    7 Edit
+    8 View
+    9 Window
+    10 Help
+
+The About panel was opened only to verify the installed version/build. No
+account, subscription, credential, or conversation surface was inspected.

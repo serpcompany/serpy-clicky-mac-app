@@ -1,0 +1,11 @@
+Capture time: 2026-09-04 03:51 Asia/Tokyo
+Target: TextEdit, unsaved document "Untitled"
+
+Window: "Untitled", App: TextEdit.
+0 standard window Untitled
+    1 scroll area
+        2 text entry area Value: ORCHID RIVER 731, ID: First Text View
+
+The document contained only the benign phrase ORCHID RIVER 731. It remained
+focused and unsaved. No unrelated screen or document content was captured for
+the comparison.
