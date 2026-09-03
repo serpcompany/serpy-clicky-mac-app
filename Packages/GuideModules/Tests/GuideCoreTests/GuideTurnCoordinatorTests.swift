@@ -1,0 +1,578 @@
+import CoreGraphics
+import GuideCore
+import XCTest
+
+@MainActor
+final class GuideTurnCoordinatorTests: XCTestCase {
+    func testAmbientTurnLocksTargetBeforeListeningAndAnswersWithFreshContext() async throws {
+        let target = GuideWindowTarget(
+            processIdentifier: 41,
+            windowIdentifier: 901,
+            applicationName: "Fixture App",
+            windowTitle: "Unique phrase",
+            frame: CGRect(x: 40, y: 50, width: 900, height: 700)
+        )
+        let events = EventRecorder()
+        let context = ScreenContext(
+            applicationName: target.applicationName,
+            windowTitle: target.windowTitle,
+            windowFrame: target.frame,
+            textBlocks: [.init(text: "ORCHID RIVER 731", normalizedBounds: .zero, confidence: 0.99)]
+        )
+        let capture = FakeCapture(target: target, context: context, events: events)
+        let transcription = FakeTranscription(result: "What phrase is visible?", events: events)
+        let generation = FakeGeneration(answer: "The visible phrase is ORCHID RIVER 731.", events: events)
+        let speech = FakeSpeech(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: capture,
+            transcription: transcription,
+            generation: generation,
+            speech: speech,
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(events.values.first, "target:901")
+        XCTAssertLessThan(
+            try XCTUnwrap(events.values.firstIndex(of: "present:listening")),
+            try XCTUnwrap(events.values.firstIndex(of: "capture:901"))
+        )
+        XCTAssertEqual(capture.capturedTargets, [target])
+        XCTAssertEqual(generation.receivedContexts.first?.promptText, "ORCHID RIVER 731")
+        XCTAssertEqual(coordinator.conversation.map(\.content), [
+            "What phrase is visible?",
+            "The visible phrase is ORCHID RIVER 731."
+        ])
+        XCTAssertEqual(overlay.presentations.last?.stage, .readyForFollowUp)
+    }
+
+    func testCancellingListeningStopsEveryBoundaryAndReturnsThroughCancelledToReady() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let capture = FakeCapture(target: target, context: fixtureContext(target), events: events)
+        let transcription = FakeTranscription(result: "unused", events: events)
+        let speech = FakeSpeech(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: capture,
+            transcription: transcription,
+            generation: FakeGeneration(answer: "unused", events: events),
+            speech: speech,
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.cancel()
+        coordinator.cancel()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertTrue(events.values.contains("transcription:cancel"))
+        XCTAssertTrue(events.values.contains("speech:stop"))
+        XCTAssertTrue(events.values.contains("response:dismiss"))
+        XCTAssertEqual(overlay.presentations.suffix(2).map(\.stage), [.cancelled, .ready])
+        XCTAssertEqual(events.values.filter { $0 == "visibility:restore" }.count, 1)
+        XCTAssertTrue(coordinator.conversation.isEmpty)
+    }
+
+    func testCancellingWhileExactWindowCaptureIsPendingCannotProduceAnAnswer() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let capture = BlockingCapture(target: target, events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: capture,
+            transcription: FakeTranscription(result: "What phrase is visible?", events: events),
+            generation: FakeGeneration(answer: "must not appear", events: events),
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await wait(for: "capture:pending", in: events)
+        coordinator.finishListening()
+        await wait(for: "present:capturing", in: events)
+        XCTAssertEqual(coordinator.phase, .capturing)
+        coordinator.cancel()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertFalse(events.values.contains("generation"))
+        XCTAssertTrue(coordinator.conversation.isEmpty)
+        XCTAssertEqual(overlay.presentations.last?.stage, .ready)
+    }
+
+    func testCancellationRetainsTaskOwnershipUntilStructuredWorkTerminates() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let coordinator = GuideTurnCoordinator(
+            capture: BlockingCapture(target: target, events: events),
+            transcription: FakeTranscription(result: "unused", events: events),
+            generation: FakeGeneration(answer: "unused", events: events),
+            speech: FakeSpeech(events: events),
+            overlay: FakeOverlay(events: events)
+        )
+
+        try coordinator.start()
+        await wait(for: "capture:pending", in: events)
+        coordinator.cancel()
+        XCTAssertThrowsError(try coordinator.start(target: target)) { error in
+            XCTAssertEqual(error as? GuidanceConversationError, .turnAlreadyActive)
+        }
+        await coordinator.waitUntilIdle()
+        XCTAssertNoThrow(try coordinator.start(target: target))
+        coordinator.cancel()
+        await coordinator.waitUntilIdle()
+    }
+
+    func testCaptureFailurePreservesStageCauseAndExactRecovery() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let overlay = FakeOverlay(events: events)
+        let failure = GuideFailure(
+            stage: .capture,
+            message: "The selected window disappeared.",
+            recovery: "Bring that exact window forward and start again."
+        )
+        let coordinator = GuideTurnCoordinator(
+            capture: FailingCapture(target: target, failure: failure),
+            transcription: FakeTranscription(result: "Where is it?", events: events),
+            generation: FakeGeneration(answer: "unused", events: events),
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(overlay.presentations.last?.failure, failure)
+    }
+
+    func testCancellingWhileThinkingDiscardsTheUnfinishedTurn() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "What phrase is visible?", events: events),
+            generation: BlockingGeneration(events: events),
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await wait(for: "generation:pending", in: events)
+        XCTAssertEqual(coordinator.phase, .thinking)
+        coordinator.cancel()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertFalse(events.values.contains("speech"))
+        XCTAssertTrue(coordinator.conversation.isEmpty)
+        XCTAssertEqual(overlay.presentations.last?.stage, .ready)
+    }
+
+    func testCancellingWhileSpeakingStopsAudioAndDismissesTheReadableAnswer() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let overlay = FakeOverlay(events: events)
+        let speech = BlockingSpeech(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "What phrase is visible?", events: events),
+            generation: FakeGeneration(answer: "The phrase is ORCHID RIVER 731.", events: events),
+            speech: speech,
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await wait(for: "speech:pending", in: events)
+        XCTAssertEqual(coordinator.phase, .presenting)
+        XCTAssertFalse(overlay.presentations.last?.responseText.isEmpty == true)
+        coordinator.cancel()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertTrue(events.values.contains("speech:stop"))
+        XCTAssertTrue(events.values.contains("response:dismiss"))
+        XCTAssertEqual(overlay.presentations.last?.stage, .ready)
+    }
+
+    func testFollowUpLocksFreshWindowContextAndReceivesPriorConversation() async throws {
+        let events = EventRecorder()
+        let secondTarget = GuideWindowTarget(
+            processIdentifier: 52,
+            windowIdentifier: 902,
+            applicationName: "Fixture App",
+            windowTitle: "Updated phrase",
+            frame: fixtureTarget.frame
+        )
+        let capture = SequenceCapture(targets: [fixtureTarget, secondTarget], events: events)
+        let generation = SequenceGeneration(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: capture,
+            transcription: SequenceTranscription(
+                results: ["What phrase is visible?", "What changed?"],
+                events: events
+            ),
+            generation: generation,
+            speech: FakeSpeech(events: events),
+            overlay: FakeOverlay(events: events)
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(capture.capturedWindowIDs, [901, 902])
+        XCTAssertEqual(generation.receivedConversations.count, 2)
+        XCTAssertEqual(generation.receivedConversations[1].map(\.content), [
+            "What phrase is visible?",
+            "Answer for Unique phrase"
+        ])
+        XCTAssertEqual(coordinator.conversation.last?.content, "Answer for Updated phrase")
+    }
+
+    private var fixtureTarget: GuideWindowTarget {
+        GuideWindowTarget(
+            processIdentifier: 41,
+            windowIdentifier: 901,
+            applicationName: "Fixture App",
+            windowTitle: "Unique phrase",
+            frame: CGRect(x: 40, y: 50, width: 900, height: 700)
+        )
+    }
+
+    private func fixtureContext(_ target: GuideWindowTarget) -> ScreenContext {
+        ScreenContext(
+            applicationName: target.applicationName,
+            windowTitle: target.windowTitle,
+            windowFrame: target.frame,
+            textBlocks: [.init(text: "ORCHID RIVER 731", normalizedBounds: .zero, confidence: 0.99)]
+        )
+    }
+
+    private func wait(for event: String, in recorder: EventRecorder) async {
+        for _ in 0..<2_000 {
+            if recorder.values.contains(event) { return }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for \(event)")
+    }
+}
+
+final class ExactWindowTargetPolicyTests: XCTestCase {
+    func testFrontToBackCandidateLocksTheVisibleWindowAmongSameProcessWindows() throws {
+        let policy = ExactWindowTargetPolicy()
+        let front = GuideWindowTarget(
+            processIdentifier: 101,
+            windowIdentifier: 42,
+            applicationName: "ChatGPT",
+            windowTitle: "Billing",
+            frame: CGRect(x: 10, y: 20, width: 800, height: 600)
+        )
+        let behind = GuideWindowTarget(
+            processIdentifier: 101,
+            windowIdentifier: 41,
+            applicationName: "ChatGPT",
+            windowTitle: "Other chat",
+            frame: CGRect(x: 80, y: 90, width: 700, height: 500)
+        )
+
+        XCTAssertEqual(try policy.lockTarget(frontToBack: [front, behind], processIdentifier: 101), front)
+    }
+
+    func testMissingLockedWindowDoesNotFallBackToSiblingFromSameProcess() throws {
+        let policy = ExactWindowTargetPolicy()
+        let locked = GuideWindowTarget(
+            processIdentifier: 101,
+            windowIdentifier: 42,
+            applicationName: "ChatGPT",
+            windowTitle: "Billing",
+            frame: CGRect(x: 10, y: 20, width: 800, height: 600)
+        )
+        let sibling = GuideWindowTarget(
+            processIdentifier: 101,
+            windowIdentifier: 41,
+            applicationName: "ChatGPT",
+            windowTitle: "Other chat",
+            frame: CGRect(x: 80, y: 90, width: 700, height: 500)
+        )
+
+        XCTAssertThrowsError(try policy.resolveExactTarget(locked, available: [sibling])) { error in
+            XCTAssertEqual((error as? GuideFailure)?.stage, .capture)
+        }
+    }
+}
+
+@MainActor
+private final class EventRecorder {
+    var values: [String] = []
+}
+
+@MainActor
+private final class FakeCapture: GuideTurnContextCapturing, @unchecked Sendable {
+    let target: GuideWindowTarget
+    let context: ScreenContext
+    let events: EventRecorder
+    var capturedTargets: [GuideWindowTarget] = []
+
+    init(target: GuideWindowTarget, context: ScreenContext, events: EventRecorder) {
+        self.target = target
+        self.context = context
+        self.events = events
+    }
+
+    func snapshotTarget() throws -> GuideWindowTarget {
+        events.values.append("target:\(target.windowIdentifier)")
+        return target
+    }
+
+    nonisolated func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
+        await MainActor.run {
+            events.values.append("capture:\(target.windowIdentifier)")
+            capturedTargets.append(target)
+        }
+        return context
+    }
+}
+
+@MainActor
+private final class BlockingCapture: GuideTurnContextCapturing, @unchecked Sendable {
+    let target: GuideWindowTarget
+    let events: EventRecorder
+
+    init(target: GuideWindowTarget, events: EventRecorder) {
+        self.target = target
+        self.events = events
+    }
+
+    func snapshotTarget() throws -> GuideWindowTarget {
+        events.values.append("target:\(target.windowIdentifier)")
+        return target
+    }
+
+    nonisolated func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
+        await MainActor.run { events.values.append("capture:pending") }
+        while !Task.isCancelled { await Task.yield() }
+        throw CancellationError()
+    }
+}
+
+@MainActor
+private final class FailingCapture: GuideTurnContextCapturing, @unchecked Sendable {
+    let target: GuideWindowTarget
+    let failure: GuideFailure
+
+    init(target: GuideWindowTarget, failure: GuideFailure) {
+        self.target = target
+        self.failure = failure
+    }
+
+    func snapshotTarget() throws -> GuideWindowTarget { target }
+
+    nonisolated func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
+        throw failure
+    }
+}
+
+@MainActor
+private final class SequenceCapture: GuideTurnContextCapturing, @unchecked Sendable {
+    private var targets: [GuideWindowTarget]
+    let events: EventRecorder
+    var capturedWindowIDs: [UInt32] = []
+
+    init(targets: [GuideWindowTarget], events: EventRecorder) {
+        self.targets = targets
+        self.events = events
+    }
+
+    func snapshotTarget() throws -> GuideWindowTarget {
+        targets.removeFirst()
+    }
+
+    nonisolated func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
+        await MainActor.run { capturedWindowIDs.append(target.windowIdentifier) }
+        return ScreenContext(
+            applicationName: target.applicationName,
+            windowTitle: target.windowTitle,
+            windowFrame: target.frame,
+            textBlocks: [.init(text: target.windowTitle, normalizedBounds: .zero, confidence: 0.99)]
+        )
+    }
+}
+
+@MainActor
+private final class FakeTranscription: GuideTurnTranscribing {
+    let result: String
+    let events: EventRecorder
+
+    init(result: String, events: EventRecorder) {
+        self.result = result
+        self.events = events
+    }
+
+    func start(onPartial: @escaping @MainActor @Sendable (String) -> Void) throws {
+        events.values.append("transcription:start")
+    }
+
+    func stop() async throws -> String {
+        events.values.append("transcription:stop")
+        return result
+    }
+
+    func cancel() {
+        events.values.append("transcription:cancel")
+    }
+}
+
+@MainActor
+private final class SequenceTranscription: GuideTurnTranscribing {
+    private var results: [String]
+    let events: EventRecorder
+
+    init(results: [String], events: EventRecorder) {
+        self.results = results
+        self.events = events
+    }
+
+    func start(onPartial: @escaping @MainActor @Sendable (String) -> Void) throws {}
+
+    func stop() async throws -> String {
+        results.removeFirst()
+    }
+
+    func cancel() {}
+}
+
+@MainActor
+private final class FakeGeneration: GuideTurnGenerating {
+    let answer: String
+    let events: EventRecorder
+    var receivedContexts: [ScreenContext] = []
+
+    init(answer: String, events: EventRecorder) {
+        self.answer = answer
+        self.events = events
+    }
+
+    func answer(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GuidancePlan {
+        events.values.append("generation")
+        receivedContexts.append(context)
+        return GuidancePlan(answer: answer, confidence: 0.7)
+    }
+}
+
+@MainActor
+private final class BlockingGeneration: GuideTurnGenerating {
+    let events: EventRecorder
+
+    init(events: EventRecorder) {
+        self.events = events
+    }
+
+    func answer(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GuidancePlan {
+        events.values.append("generation:pending")
+        while !Task.isCancelled { await Task.yield() }
+        throw CancellationError()
+    }
+}
+
+@MainActor
+private final class SequenceGeneration: GuideTurnGenerating {
+    let events: EventRecorder
+    var receivedConversations: [[GuidanceMessage]] = []
+
+    init(events: EventRecorder) {
+        self.events = events
+    }
+
+    func answer(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GuidancePlan {
+        receivedConversations.append(conversation)
+        return GuidancePlan(answer: "Answer for \(context.windowTitle)", confidence: 0.7)
+    }
+}
+
+@MainActor
+private final class FakeSpeech: GuideTurnSpeaking {
+    let events: EventRecorder
+
+    init(events: EventRecorder) {
+        self.events = events
+    }
+
+    func speak(_ text: String) async throws {
+        events.values.append("speech")
+    }
+
+    func stop() {
+        events.values.append("speech:stop")
+    }
+}
+
+@MainActor
+private final class BlockingSpeech: GuideTurnSpeaking {
+    let events: EventRecorder
+
+    init(events: EventRecorder) {
+        self.events = events
+    }
+
+    func speak(_ text: String) async throws {
+        events.values.append("speech:pending")
+        while !Task.isCancelled { await Task.yield() }
+        throw CancellationError()
+    }
+
+    func stop() {
+        events.values.append("speech:stop")
+    }
+}
+
+@MainActor
+private final class FakeOverlay: GuideTurnOverlayPresenting {
+    let events: EventRecorder
+    var presentations: [GuideTurnPresentation] = []
+
+    init(events: EventRecorder) {
+        self.events = events
+    }
+
+    func present(_ presentation: GuideTurnPresentation) {
+        events.values.append("present:\(presentation.stage)")
+        presentations.append(presentation)
+    }
+
+    func dismissResponse() {
+        events.values.append("response:dismiss")
+    }
+
+    func restoreIdleVisibility() {
+        events.values.append("visibility:restore")
+    }
+}

@@ -7,7 +7,7 @@ import OSLog
 
 @MainActor
 @Observable
-public final class GuideAppModel {
+public final class GuideAppModel: GuideTurnOverlayPresenting {
     public static let shared = GuideAppModel()
 
     public private(set) var phase: DictationPhase = .idle
@@ -67,17 +67,19 @@ public final class GuideAppModel {
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var guidanceHotKeyService: GlobalHotKeyService?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
-    @ObservationIgnored private var guidanceMachine = GuidanceConversationStateMachine()
-    @ObservationIgnored private let guidanceVoicePolicy = GuidanceVoiceActivationPolicy()
-    @ObservationIgnored private let guidanceAmbientPolicy = GuidanceAmbientPresentationPolicy()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
     @ObservationIgnored private let companionVisibilityPolicy = CompanionVisibilityPolicy()
     @ObservationIgnored private var focusedTarget: FocusedTextTarget?
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
-    @ObservationIgnored private var guidanceContextTask: Task<ScreenContext, Error>?
-    @ObservationIgnored private var guidancePresentationTask: Task<Void, Never>?
-    @ObservationIgnored private var guidanceCapturedIdentity: ScreenContextIdentity?
+    @ObservationIgnored private var guideResponseDismissalTask: Task<Void, Never>?
+    @ObservationIgnored private lazy var guideTurnCoordinator = GuideTurnCoordinator(
+        capture: screenContextService,
+        transcription: AppleSpeechGuideTurnTranscriber(transcriber: guidanceTranscriber),
+        generation: localGuidanceService,
+        speech: LocalGuideTurnSpeaker(speaker: guidanceSpeaker),
+        overlay: self
+    )
     @ObservationIgnored private var started = false
 
     @ObservationIgnored private static let logger = Logger(
@@ -243,10 +245,9 @@ public final class GuideAppModel {
         transcriber.cancel()
         guidanceTranscriber.cancel()
         guidanceSpeaker.stop()
-        guidanceContextTask?.cancel()
-        guidanceContextTask = nil
-        guidancePresentationTask?.cancel()
-        guidancePresentationTask = nil
+        guideTurnCoordinator.cancel()
+        guideResponseDismissalTask?.cancel()
+        guideResponseDismissalTask = nil
         companionController.hide()
         hotKeyRegistered = false
     }
@@ -363,12 +364,11 @@ public final class GuideAppModel {
 
     public func startNewGuidanceConversation() {
         guard !guidancePhase.isActive else { return }
-        guidanceMachine.reset()
-        guidanceMessages = guidanceMachine.messages
-        guidancePhase = guidanceMachine.phase
+        guideTurnCoordinator.resetConversation()
+        guidanceMessages = guideTurnCoordinator.conversation
+        guidancePhase = .idle
         guidanceContextLabel = "No screen context captured yet"
         guidancePartialTranscript = ""
-        guidanceCapturedIdentity = nil
         presentation.guideStage = nil
         presentation.contextLabel = nil
         presentation.responseText = ""
@@ -384,97 +384,22 @@ public final class GuideAppModel {
     }
 
     public func cancelGuidanceVoice() {
-        guard guidanceVoicePolicy.escapeAction(for: guidancePhase) == .cancel else { return }
-        guidanceTranscriber.cancel()
-        guidancePresentationTask?.cancel()
-        guidancePresentationTask = nil
-        guidanceContextTask?.cancel()
-        guidanceContextTask = nil
-        guidancePartialTranscript = ""
-        guidancePhase = .idle
-        statusMessage = "Voice guide cancelled."
-        applyGuidanceAmbientPresentation(wasCancelled: true)
-        companionController.show()
-        companionController.refresh()
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
-            guard let self, guidancePhase == .idle else { return }
-            presentation.guideStage = nil
-            presentation.contextLabel = nil
-            presentation.caption = ""
-            applyCompanionVisibility()
-            companionController.refresh()
-        }
-    }
-
-    private func answerGuidanceQuestion(_ question: String, context: ScreenContext) async {
-        let priorConversation = guidanceMessages
-        do {
-            try guidanceMachine.submit(question: question)
-        } catch {
-            return
-        }
-        syncGuidanceState()
-
-        do {
-            guidanceContextLabel = "\(context.applicationName) — \(context.windowTitle)"
-            guidanceCapturedIdentity = ScreenContextIdentity(
-                applicationName: context.applicationName,
-                windowTitle: context.windowTitle
-            )
-            guard !context.promptText.isEmpty else {
-                throw GuideFailure(
-                    stage: .understanding,
-                    message: "I could not read useful text in that window.",
-                    recovery: "Bring the relevant window forward and try again."
-                )
-            }
-            try guidanceMachine.beginThinking()
-            syncGuidanceState()
-            presentGuidanceCaption("Thinking locally…", mode: .working)
-            let plan = try await localGuidanceService.answer(
-                question: question,
-                context: context,
-                conversation: priorConversation
-            )
-            let validated = GuidancePlanValidator.validate(plan, in: context.windowFrame)
-            try guidanceMachine.complete(
-                answer: validated.answer,
-                contextLabel: guidanceContextLabel
-            )
-            syncGuidanceState()
-            statusMessage = "Local guidance is ready."
-            recoveryMessage = ""
-            presentGuidanceCaption(validated.answer, mode: .success)
-            let startedSpeaking = guidanceSpeaker.speak(validated.answer)
-            if !startedSpeaking {
-                recoveryMessage = "The answer is shown, but macOS could not start spoken playback."
-            }
-            applyGuidanceAmbientPresentation(isSpeakingOverride: startedSpeaking)
-            monitorGuidanceSpeechAndDismiss(startedSpeaking: startedSpeaking)
-        } catch {
-            let failure = normalize(error, stage: .guidance)
-            guidanceMachine.fail(failure)
-            syncGuidanceState()
-            presentGuidanceCaption(failure.message, mode: .error)
-        }
+        guideTurnCoordinator.cancel()
     }
 
     private func guidanceHotKeyPressed() {
-        switch guidanceVoicePolicy.shortcutAction(for: guidancePhase) {
-        case .startListening:
+        switch guidancePhase {
+        case .listening:
+            guideTurnCoordinator.finishListening()
+        case .idle, .presenting, .failed:
             startGuidanceVoiceTurn()
-        case .finishListening:
-            finishGuidanceVoiceTurn()
-        case .cancel:
-            cancelGuidanceVoice()
-        case .none:
+        case .requestingPermission, .transcribing, .capturing, .reading, .thinking:
             break
         }
     }
 
     private func guidanceEscapePressed() {
-        if guidanceVoicePolicy.escapeAction(for: guidancePhase) == .cancel {
+        if guidancePhase != .idle {
             cancelGuidanceVoice()
         }
     }
@@ -491,11 +416,17 @@ public final class GuideAppModel {
             return
         }
 
-        guidanceSpeaker.stop()
-        guidancePresentationTask?.cancel()
-        guidancePresentationTask = nil
-        presentation.responseText = ""
-        guidanceCapturedIdentity = nil
+        guideResponseDismissalTask?.cancel()
+        guideResponseDismissalTask = nil
+        screenContextService.rememberFrontmostApplication()
+        let lockedTarget: GuideWindowTarget
+        do {
+            lockedTarget = try screenContextService.snapshotTarget()
+        } catch {
+            presentGuidanceFailure(normalize(error, stage: .capture))
+            return
+        }
+
         refreshPermissions()
         guard permissions.microphone.isGranted,
               permissions.speechRecognition.isGranted,
@@ -529,86 +460,21 @@ public final class GuideAppModel {
             }
         }
 
-        screenContextService.rememberFrontmostApplication()
-        guidanceContextTask?.cancel()
-        guidanceContextTask = Task { [weak self, screenContextService] in
-            let context = try await screenContextService.captureFrontmostContext()
-            guard let self else { return context }
-            guidanceCapturedIdentity = ScreenContextIdentity(
-                applicationName: context.applicationName,
-                windowTitle: context.windowTitle
-            )
-            applyGuidanceAmbientPresentation()
-            return context
-        }
         guidancePartialTranscript = ""
-
         do {
-            try guidanceTranscriber.start { [weak self] text in
-                guard let self else { return }
-                guidancePartialTranscript = text
-                applyGuidanceAmbientPresentation()
-                companionController.refresh()
-            }
-            guidancePhase = .listening
-            applyCompanionVisibility()
+            try guideTurnCoordinator.start(target: lockedTarget)
             statusMessage = "Listening for your guide question. Press Control–Option–G again to ask, or Escape to cancel."
             recoveryMessage = ""
-            applyGuidanceAmbientPresentation()
-            companionController.refresh()
         } catch {
-            guidanceContextTask?.cancel()
-            guidanceContextTask = nil
             presentGuidanceFailure(normalize(error, stage: .recording))
         }
     }
 
-    private func finishGuidanceVoiceTurn() {
-        guard guidancePhase == .listening else { return }
-        guidancePhase = .transcribing
-        applyCompanionVisibility()
-        statusMessage = "Finishing your local voice question…"
-        applyGuidanceAmbientPresentation()
-        companionController.refresh()
-
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let result = try await guidanceTranscriber.stop()
-                guidancePartialTranscript = result.transcript
-                applyGuidanceAmbientPresentation()
-                companionController.refresh()
-                let context: ScreenContext
-                if let task = guidanceContextTask {
-                    context = try await task.value
-                } else {
-                    context = try await screenContextService.captureFrontmostContext()
-                }
-                guidanceContextTask = nil
-                await answerGuidanceQuestion(result.transcript, context: context)
-            } catch is CancellationError {
-                cancelGuidanceVoice()
-            } catch {
-                guidanceContextTask?.cancel()
-                guidanceContextTask = nil
-                presentGuidanceFailure(normalize(error, stage: .guidance))
-            }
-        }
-    }
-
     private func presentGuidanceFailure(_ failure: GuideFailure) {
-        guidanceMachine.fail(failure)
-        syncGuidanceState()
+        guidancePhase = .failed(failure)
         statusMessage = failure.message
         recoveryMessage = failure.recovery
         presentGuidanceCaption(failure.message, mode: .error)
-    }
-
-    private func syncGuidanceState() {
-        guidancePhase = guidanceMachine.phase
-        guidanceMessages = guidanceMachine.messages
-        applyGuidanceAmbientPresentation()
-        applyCompanionVisibility()
     }
 
     public func cancelDictation() {
@@ -1032,7 +898,8 @@ public final class GuideAppModel {
         } else {
             presentation.responseText = ""
         }
-        applyGuidanceAmbientPresentation()
+        presentation.guideStage = .error
+        presentation.caption = text
         applyCompanionVisibility()
         companionController.refresh()
         guard mode != .success else { return }
@@ -1050,49 +917,62 @@ public final class GuideAppModel {
         }
     }
 
-    private func applyGuidanceAmbientPresentation(
-        wasCancelled: Bool = false,
-        isSpeakingOverride: Bool? = nil
-    ) {
-        let ambient = guidanceAmbientPolicy.presentation(
-            for: GuidanceAmbientInput(
-                phase: guidancePhase,
-                partialTranscript: guidancePartialTranscript,
-                context: guidanceCapturedIdentity,
-                isSpeaking: isSpeakingOverride ?? guidanceSpeaker.isSpeaking,
-                wasCancelled: wasCancelled
-            )
-        )
-        presentation.guideStage = ambient.stage
-        presentation.caption = ambient.statusText
-        presentation.contextLabel = ambient.contextLabel
+    public func present(_ turn: GuideTurnPresentation) {
+        guidancePhase = switch turn.stage {
+        case .ready, .cancelled: .idle
+        case .listening, .liveTranscript: .listening
+        case .capturing: .capturing
+        case .thinking: .thinking
+        case .speaking, .readyForFollowUp: .presenting
+        case .error:
+            .failed(turn.failure ?? GuideFailure(
+                stage: .guidance,
+                message: turn.statusText,
+                recovery: "Try again. If the problem continues, open SERPy and check permissions."
+            ))
+        }
+        guidancePartialTranscript = turn.stage == .liveTranscript ? turn.statusText : ""
+        guidanceContextLabel = turn.context?.compactLabel ?? "No screen context captured yet"
+        guidanceMessages = guideTurnCoordinator.conversation
+        presentation.mode = switch turn.stage {
+        case .listening, .liveTranscript: .recording
+        case .capturing, .thinking, .speaking: .working
+        case .readyForFollowUp: .success
+        case .error: .error
+        case .ready, .cancelled: .ready
+        }
+        presentation.guideStage = turn.stage
+        presentation.caption = turn.statusText
+        presentation.contextLabel = turn.context?.compactLabel
+        presentation.responseText = turn.responseText
+        statusMessage = turn.statusText
+        recoveryMessage = turn.failure?.recovery ?? ""
+        applyCompanionVisibility()
+        companionController.refresh()
+        if turn.stage == .readyForFollowUp {
+            guideResponseDismissalTask?.cancel()
+            guideResponseDismissalTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(8))
+                guard !Task.isCancelled, let self, guidancePhase == .presenting else { return }
+                restoreIdleVisibility()
+            }
+        }
+    }
+
+    public func dismissResponse() {
+        presentation.responseText = ""
         companionController.refresh()
     }
 
-    private func monitorGuidanceSpeechAndDismiss(startedSpeaking: Bool) {
-        guidancePresentationTask?.cancel()
-        guidancePresentationTask = Task { [weak self] in
-            guard let self else { return }
-            if startedSpeaking {
-                for _ in 0..<900 {
-                    try? await Task.sleep(for: .milliseconds(100))
-                    guard !Task.isCancelled, guidancePhase == .presenting else { return }
-                    if !guidanceSpeaker.isSpeaking { break }
-                }
-            }
-            guard !Task.isCancelled, guidancePhase == .presenting else { return }
-            applyGuidanceAmbientPresentation(isSpeakingOverride: false)
-            try? await Task.sleep(for: .seconds(8))
-            guard !Task.isCancelled, guidancePhase == .presenting else { return }
-            guidancePhase = .idle
-            presentation.mode = .ready
-            presentation.caption = ""
-            presentation.responseText = ""
-            presentation.guideStage = nil
-            presentation.contextLabel = nil
-            applyCompanionVisibility()
-            companionController.refresh()
-        }
+    public func restoreIdleVisibility() {
+        guidancePhase = .idle
+        guidancePartialTranscript = ""
+        presentation.guideStage = nil
+        presentation.caption = ""
+        presentation.contextLabel = nil
+        presentation.responseText = ""
+        applyCompanionVisibility()
+        companionController.refresh()
     }
 
     private func normalize(_ error: Error, stage: GuideFailureStage) -> GuideFailure {

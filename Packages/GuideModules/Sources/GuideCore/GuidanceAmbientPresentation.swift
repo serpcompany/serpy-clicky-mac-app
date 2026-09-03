@@ -1,5 +1,21 @@
 import Foundation
 
+public struct GuidanceLiveTranscriptPreview: Sendable {
+    public let maxCharacters: Int
+
+    public init(maxCharacters: Int = 180) {
+        self.maxCharacters = max(2, maxCharacters)
+    }
+
+    public func displayText(for transcript: String) -> String {
+        let singleLine = transcript
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard singleLine.count > maxCharacters else { return singleLine }
+        return "…" + singleLine.suffix(maxCharacters - 1)
+    }
+}
+
 public struct ScreenContextIdentity: Equatable, Sendable {
     public let applicationName: String
     public let windowTitle: String

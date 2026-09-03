@@ -2,9 +2,9 @@
   "schema_version": 1,
   "claim": "bounded-slice",
   "scope_statement": "Voice-first guide: hotkey, spoken question, request-scoped screen context, local spoken answer, and spoken follow-up without opening a typing window",
-  "inventory_complete": true,
+  "inventory_complete": false,
   "primary_workflow_passed": false,
-  "installed_artifact_verified": true,
+  "installed_artifact_verified": false,
   "independent_verification": {
     "required": true,
     "passed": false,
@@ -15,26 +15,26 @@
       "id": "voice-guide.start",
       "kind": "behavior",
       "in_scope": true,
-      "status": "pass",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": ["https://www.heyclicky.com/ FAQ: press the hotkey and ask out loud"],
         "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
         "comparison": [],
-        "behavior": ["Installed build 26 accepted a real spoken question without opening a typing composer"]
+        "behavior": ["Historical build 26 observation only; the build 30 branch artifact is not installed or owner-verified"]
       }
     },
     {
       "id": "voice-guide.contextual-answer",
       "kind": "behavior",
       "in_scope": true,
-      "status": "pass",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": ["https://github.com/farzaa/clicky README: transcript plus screenshot enters the guide model"],
         "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
         "comparison": [],
-        "behavior": ["Installed build 26 returned a local answer carrying a visible source-window label"]
+        "behavior": ["Prompt/capture contracts are deterministic; useful contextual answer quality remains an exact-artifact owner gate"]
       }
     },
     {
@@ -54,26 +54,26 @@
       "id": "voice-guide.follow-up",
       "kind": "behavior",
       "in_scope": true,
-      "status": "pass",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": ["https://www.heyclicky.com/ FAQ: talk is the conversation"],
         "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
         "comparison": [],
-        "behavior": ["Installed build 26 transcribed and answered a real spoken follow-up in the same transient conversation"]
+        "behavior": ["Historical build 26 observation only; fresh target lock and follow-up on build 30 remain unobserved"]
       }
     },
     {
       "id": "voice-guide.forced-companion-visibility",
       "kind": "behavior",
       "in_scope": true,
-      "status": "pass",
-      "exercised": true,
+      "status": "unresolved",
+      "exercised": false,
       "evidence": {
         "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: ambient voice turn P0"],
         "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
         "comparison": [],
-        "behavior": ["Installed build 28 forced listening and context UI visible while the saved companion preference was off, then returned to hidden without changing that preference"]
+        "behavior": ["Historical build 28 observation only; coordinator-integrated build 30 preference-off lifecycle remains unobserved"]
       }
     },
     {
@@ -86,7 +86,7 @@
         "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: adaptive response bubble P0"],
         "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
         "comparison": [],
-        "behavior": ["Edge geometry is unit-tested; exact installed 55-word readability remains unobserved"]
+        "behavior": ["Edge geometry, stationary anchoring, and 55-word budgeting are unit-tested; exact installed readability remains unobserved"]
       }
     },
     {
@@ -99,7 +99,33 @@
         "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: continuous ambient interaction P0"],
         "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
         "comparison": [],
-        "behavior": ["State mapping is unit-tested; exact installed timing and accessibility behavior remain unobserved"]
+        "behavior": ["Coordinator ordering and state mapping are unit-tested; exact installed timing and accessibility behavior remain unobserved"]
+      }
+    },
+    {
+      "id": "voice-guide.exact-window-target",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {
+        "reference": ["Issue #6 independent verification amendment: lock PID plus exact window ID and immutable metadata"],
+        "candidate": ["GuideTurnCoordinatorTests", "ExactWindowTargetPolicyTests"],
+        "comparison": [],
+        "behavior": ["Same-PID selection and missing-target failure are unit-tested; installed multi-window behavior is unobserved"]
+      }
+    },
+    {
+      "id": "voice-guide.full-turn-cancellation",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {
+        "reference": ["Issue #6 independent verification amendment: deterministic Escape cancellation for owned active work"],
+        "candidate": ["GuideTurnCoordinatorTests"],
+        "comparison": [],
+        "behavior": ["Listening, capture, thinking, and speaking cancellation are unit-tested; every installed phase remains red until exercised"]
       }
     }
   ]

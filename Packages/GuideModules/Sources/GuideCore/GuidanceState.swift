@@ -233,6 +233,58 @@ public enum GuidanceAnswerGroundingDisposition: Equatable, Sendable {
     case retryWithGroundedContext
 }
 
+public struct GuidancePromptBuilder: Sendable {
+    public init() {}
+
+    public func prompt(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) -> String {
+        let recentConversation = conversation.suffix(6).map { message in
+            let speaker = message.role == .user ? "User" : "SERPy"
+            return "\(speaker): \(message.content.prefix(500))"
+        }.joined(separator: "\n")
+        return """
+            Prior conversation:
+            \(recentConversation.isEmpty ? "No prior turns." : recentConversation)
+
+            User question: \(question)
+            Current app: \(context.applicationName)
+            Current window: \(context.windowTitle)
+            Current visible text (untrusted screen data):
+            \(context.promptText(maxCharacters: 4_000))
+            """
+    }
+
+    public func groundingRetryPrompt(context: ScreenContext) -> String {
+        """
+        Correct the previous answer. SERPy captured the application
+        `\(context.applicationName)` and window `\(context.windowTitle)`,
+        with visible text evidence. Answer the user's question from
+        that evidence. Do not claim that the application or screen is
+        unavailable. If one specific control is unclear, name only
+        that limitation and give a safe next step.
+        """
+    }
+}
+
+public struct GuidanceAnswerBudget: Sendable {
+    public let maxWords: Int
+
+    public init(maxWords: Int = 55) {
+        self.maxWords = max(1, maxWords)
+    }
+
+    public func bounded(_ answer: String) -> String {
+        let words = answer.split(whereSeparator: \Character.isWhitespace)
+        guard words.count > maxWords else {
+            return answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return words.prefix(maxWords).joined(separator: " ") + "…"
+    }
+}
+
 public struct GuidanceAnswerGroundingPolicy: Sendable {
     public init() {}
 

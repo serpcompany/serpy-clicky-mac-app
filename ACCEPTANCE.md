@@ -72,6 +72,9 @@ Notes and Slack are not yet observed.
 | C12 | Guide answers are captioned by the cursor and spoken locally | Installed audio observation | implemented |
 | C13 | Active guide turns force the companion visible without changing a disabled saved preference | Policy test + installed preference-off lifecycle | installed-observed |
 | C14 | A 55-word guide answer is fully readable in an edge-safe bubble without covering guide status | Layout tests + installed corner observation | unit-tested |
+| C15 | Each turn locks PID, exact window ID, app/title, and frame before presentation and never falls back to a sibling window | Policy/adapter tests + installed same-app multi-window observation | unit-tested |
+| C16 | Escape cancels the owned listening, capture, thinking, or speaking work and restores companion visibility idempotently | Coordinator tests + installed phase-by-phase observation | unit-tested |
+| C17 | Listening acknowledgement precedes capture work and Vision OCR never blocks the main actor | Coordinator ordering + adapter contract test + installed latency observation | unit-tested |
 
 The owner reported that the guidance journeys after the initial companion
 checks did not work during first use. The C rows above describe implementation
@@ -89,6 +92,14 @@ Build 29 rejects and retries local-model answers that falsely claim the
 captured application is unavailable. ScreenCaptureKit and Foundation Models
 were observed completing against ChatGPT, but the owner's original spoken
 question still needs to be retried before this regression is installed-observed.
+
+Issue #6 build 30 replaces the split legacy capture/answer tasks with one owned
+guide-turn coordinator, exact-window targeting, cancellable system-boundary
+adapters, off-main Vision OCR, controlled grounding fixtures, and stationary
+bounded answer presentation. These are source and test results only. The branch
+artifact is not installed, hash-matched, or owner-observed; its ambient journey,
+audible output, focus retention, follow-up, and every cancellation phase remain
+red until the HIL is completed against that exact artifact.
 
 ## D — Distribution and Privacy
 

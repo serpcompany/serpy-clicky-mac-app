@@ -1,5 +1,20 @@
 import CoreGraphics
 
+public struct CompanionResponseAnchorPolicy: Sendable {
+    public init() {}
+
+    public func frame(
+        current: CGRect?,
+        proposed: CGRect,
+        responseIsVisible: Bool
+    ) -> CGRect {
+        if responseIsVisible, let current {
+            return current
+        }
+        return proposed
+    }
+}
+
 public struct CompanionResponseLayoutPolicy: Sendable {
     public init() {}
 

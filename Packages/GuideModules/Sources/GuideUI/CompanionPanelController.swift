@@ -29,7 +29,10 @@ public final class CompanionPanelController {
     private let panel: CompanionPanel
     private let responsePanel: CompanionPanel
     private let responseLayoutPolicy = CompanionResponseLayoutPolicy()
+    private let responseAnchorPolicy = CompanionResponseAnchorPolicy()
     private var trackingTimer: Timer?
+    private var statusAnchorFrame: CGRect?
+    private var responseAnchorFrame: CGRect?
 
     public init(presentation: CompanionPresentation) {
         self.presentation = presentation
@@ -72,6 +75,7 @@ public final class CompanionPanelController {
         if !presentation.responseText.isEmpty {
             responsePanel.orderFrontRegardless()
         } else {
+            responseAnchorFrame = nil
             responsePanel.orderOut(nil)
         }
     }
@@ -125,7 +129,13 @@ public final class CompanionPanelController {
         origin.x = min(max(origin.x, visibleFrame.minX + 8), visibleFrame.maxX - size.width - 8)
         origin.y = min(max(origin.y, visibleFrame.minY + 8), visibleFrame.maxY - size.height - 8)
 
-        let newFrame = NSRect(origin: origin, size: size)
+        let proposedStatusFrame = NSRect(origin: origin, size: size)
+        let newFrame = responseAnchorPolicy.frame(
+            current: statusAnchorFrame,
+            proposed: proposedStatusFrame,
+            responseIsVisible: !presentation.responseText.isEmpty
+        )
+        statusAnchorFrame = presentation.responseText.isEmpty ? nil : newFrame
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             panel.setFrame(newFrame, display: true)
         } else {
@@ -137,13 +147,22 @@ public final class CompanionPanelController {
                 presentation.responseText,
                 availableHeight: visibleFrame.height - 16
             )
-            let responseFrame = responseLayoutPolicy.frame(
+            let proposedFrame = responseLayoutPolicy.frame(
                 pointer: pointer,
                 visibleFrame: visibleFrame,
                 contentSize: responseSize,
                 avoiding: newFrame
             )
+            let responseFrame = responseAnchorPolicy.frame(
+                current: responseAnchorFrame,
+                proposed: proposedFrame,
+                responseIsVisible: responsePanel.isVisible
+            )
+            responseAnchorFrame = responseFrame
             responsePanel.setFrame(responseFrame, display: true)
+        } else {
+            statusAnchorFrame = nil
+            responseAnchorFrame = nil
         }
     }
 
@@ -231,7 +250,7 @@ private struct CompanionBubbleView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(presentation.caption)
                         .font(.callout.weight(.medium))
-                        .lineLimit(presentation.guideStage == nil ? 2 : nil)
+                        .lineLimit(presentation.guideStage == .liveTranscript ? 3 : (presentation.guideStage == nil ? 2 : nil))
                         .foregroundStyle(.primary)
                     if let contextLabel = presentation.contextLabel, !contextLabel.isEmpty {
                         Text(contextLabel)

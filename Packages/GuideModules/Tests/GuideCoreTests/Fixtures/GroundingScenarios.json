@@ -1,0 +1,16 @@
+[
+  {
+    "name": "chatgpt",
+    "application": "ChatGPT",
+    "window": "ChatGPT",
+    "question": "Where do I start a new chat?",
+    "visibleText": "ChatGPT\nNew chat\nSearch chats"
+  },
+  {
+    "name": "unique-phrase",
+    "application": "TextEdit",
+    "window": "Untitled",
+    "question": "What unique phrase is visible?",
+    "visibleText": "ORCHID RIVER 731"
+  }
+]

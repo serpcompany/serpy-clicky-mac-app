@@ -25,6 +25,22 @@
   - Repository is MIT licensed, but no source is imported into SERPy by this
     work.
 
+## Evidence labels for issue #6
+
+- **Current HeyClicky observed:** hotkey-driven spoken Talk, no conventional
+  Talk window, request-time screen access, spoken conversational answers,
+  follow-up continuity, and drawing/walkthrough guidance.
+- **Older MIT Clicky source-confirmed:** click-through non-key overlays,
+  waveform/processing/response states, screenshot plus recent conversation,
+  local presentation of a completed response, and transient Talk visibility.
+- **SERPy product criteria:** 150 ms acknowledgement, exact PID/window-ID
+  target lock, compact target label, 55-word budget, local-only processing,
+  cancellation ownership, redacted logs, and no persistence. These are quality
+  requirements, not evidence that HeyClicky uses the same implementation.
+- **Inference/unresolved:** exact current transcript geometry, capture timing,
+  error language, non-notch behavior, accessibility, Reduce Motion, and timing
+  budgets. Promotional material cannot close these rows.
+
 ## Clean-room differences
 
 This is a bounded behavioral slice, not a complete-reference clone. SERPy keeps
@@ -36,3 +52,9 @@ outside the authorized SERPy product boundary.
 
 No HeyClicky binary, private protocol, asset, account, or product identity is
 copied. The official public descriptions are behavioral evidence only.
+
+The branch implementation may only be described as **Reconstructed: bounded
+ambient Talk journey** after the exact installed build passes the owner HIL.
+Pointing/drawing, whole-document and arbitrary visual understanding,
+multi-display/negative-origin/Spaces/full-screen behavior, and the full failure
+matrix remain explicitly outside that claim.
