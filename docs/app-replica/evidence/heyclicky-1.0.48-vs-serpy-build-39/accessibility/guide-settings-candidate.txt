@@ -1,0 +1,9 @@
+Window: "SERPy Settings", App: SERPy.
+- Home and Guide navigation controls
+- Provider: On-device selected; OpenAI multimodal unselected
+- Shortcut: Control–Option–G
+- Screen Recording: Granted
+- Start Voice Question button
+
+Captured from the exact installed rejected build 0.1.0 (39). The presence of
+these controls is not proof that the installed Guide journey works.

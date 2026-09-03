@@ -47,6 +47,126 @@ public enum GlobalHotKeyTransition: Equatable, Sendable {
     case released
 }
 
+public enum GlobalShortcutEventKind: Equatable, Sendable {
+    case keyDown
+    case keyUp
+    case flagsChanged
+}
+
+public struct GlobalShortcutEventSnapshot: Equatable, Sendable {
+    public let keyCode: UInt16
+    public let modifierFlags: UInt
+    public let kind: GlobalShortcutEventKind
+
+    public init(keyCode: UInt16, modifierFlags: UInt, kind: GlobalShortcutEventKind) {
+        self.keyCode = keyCode
+        self.modifierFlags = modifierFlags
+        self.kind = kind
+    }
+}
+
+public enum GlobalShortcutGesture: Equatable, Sendable {
+    case key(GlobalHotKeyConfiguration)
+    case modifierChord(modifiers: UInt32, displayName: String)
+
+    fileprivate var cocoaModifiers: UInt {
+        let carbonModifiers: UInt32 = switch self {
+        case let .key(configuration): configuration.modifiers
+        case let .modifierChord(modifiers, _): modifiers
+        }
+        var result: UInt = 0
+        if carbonModifiers & UInt32(controlKey) != 0 { result |= NSEvent.ModifierFlags.control.rawValue }
+        if carbonModifiers & UInt32(optionKey) != 0 { result |= NSEvent.ModifierFlags.option.rawValue }
+        if carbonModifiers & UInt32(cmdKey) != 0 { result |= NSEvent.ModifierFlags.command.rawValue }
+        if carbonModifiers & UInt32(shiftKey) != 0 { result |= NSEvent.ModifierFlags.shift.rawValue }
+        return result
+    }
+}
+
+public struct GlobalShortcutBinding: Equatable, Sendable {
+    public let id: String
+    public let gesture: GlobalShortcutGesture
+
+    public init(id: String, gesture: GlobalShortcutGesture) {
+        self.id = id
+        self.gesture = gesture
+    }
+}
+
+public struct GlobalShortcutDelivery: Equatable, Sendable {
+    public let id: String
+    public let transition: GlobalHotKeyTransition
+
+    public init(id: String, transition: GlobalHotKeyTransition) {
+        self.id = id
+        self.transition = transition
+    }
+}
+
+public struct GlobalShortcutRouteResult: Equatable, Sendable {
+    public let deliveries: [GlobalShortcutDelivery]
+    public let shouldConsume: Bool
+
+    public init(deliveries: [GlobalShortcutDelivery], shouldConsume: Bool) {
+        self.deliveries = deliveries
+        self.shouldConsume = shouldConsume
+    }
+}
+
+/// Pure event-routing seam shared by the installed event tap and deterministic
+/// contract tests. A single router owns every shortcut so registrations cannot
+/// silently diverge across multiple taps.
+public struct GlobalShortcutEventRouter: Sendable {
+    private let bindings: [GlobalShortcutBinding]
+    private var pressedBindingIDs: Set<String> = []
+
+    public init(bindings: [GlobalShortcutBinding]) {
+        self.bindings = bindings
+    }
+
+    public mutating func route(_ event: GlobalShortcutEventSnapshot) -> GlobalShortcutRouteResult {
+        let significantMask = NSEvent.ModifierFlags.deviceIndependentFlagsMask.rawValue
+        let significantFlags = event.modifierFlags & significantMask
+        var deliveries: [GlobalShortcutDelivery] = []
+        var shouldConsume = false
+
+        for binding in bindings {
+            switch binding.gesture {
+            case let .key(configuration):
+                guard event.kind == .keyDown || event.kind == .keyUp,
+                      event.keyCode == UInt16(configuration.keyCode)
+                else { continue }
+                let isDown = event.kind == .keyDown
+                if isDown,
+                   significantFlags == configuration.cocoaModifiers,
+                   pressedBindingIDs.insert(binding.id).inserted {
+                    deliveries.append(.init(id: binding.id, transition: .pressed))
+                } else if !isDown, pressedBindingIDs.remove(binding.id) != nil {
+                    deliveries.append(.init(id: binding.id, transition: .released))
+                }
+                if significantFlags == configuration.cocoaModifiers || pressedBindingIDs.contains(binding.id) {
+                    shouldConsume = true
+                }
+
+            case .modifierChord:
+                guard event.kind == .flagsChanged else { continue }
+                let isDown = significantFlags == binding.gesture.cocoaModifiers
+                if isDown, pressedBindingIDs.insert(binding.id).inserted {
+                    deliveries.append(.init(id: binding.id, transition: .pressed))
+                } else if !isDown, pressedBindingIDs.remove(binding.id) != nil {
+                    deliveries.append(.init(id: binding.id, transition: .released))
+                }
+            }
+        }
+
+        return .init(deliveries: deliveries, shouldConsume: shouldConsume)
+    }
+
+    public mutating func reset() {
+        pressedBindingIDs.removeAll(keepingCapacity: false)
+    }
+}
+
 public struct GlobalHotKeyPressState: Sendable {
     private var isPressed = false
 
@@ -185,6 +305,107 @@ public enum HotKeyError: LocalizedError {
             "Could not install the global keyboard event tap."
         }
     }
+}
+
+@MainActor
+public final class GlobalShortcutService {
+    public typealias DeliveryHandler = @MainActor @Sendable (GlobalShortcutDelivery) -> Void
+    public typealias CancellationHandler = @MainActor @Sendable () -> Void
+
+    private let delivered: DeliveryHandler
+    private let cancelled: CancellationHandler
+    private var router: GlobalShortcutEventRouter
+    private var eventTap: CFMachPort?
+    private var eventTapSource: CFRunLoopSource?
+
+    public init(
+        bindings: [GlobalShortcutBinding],
+        delivered: @escaping DeliveryHandler,
+        cancelled: @escaping CancellationHandler
+    ) {
+        router = GlobalShortcutEventRouter(bindings: bindings)
+        self.delivered = delivered
+        self.cancelled = cancelled
+    }
+
+    public func start() throws {
+        guard eventTap == nil else { return }
+        let userData = Unmanaged.passUnretained(self).toOpaque()
+        let eventMask = (1 << CGEventType.keyDown.rawValue)
+            | (1 << CGEventType.keyUp.rawValue)
+            | (1 << CGEventType.flagsChanged.rawValue)
+        eventTap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: CGEventMask(eventMask),
+            callback: globalShortcutEventTapHandler,
+            userInfo: userData
+        )
+        guard let eventTap else {
+            stop()
+            throw HotKeyError.eventTapInstallationFailed
+        }
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+        eventTapSource = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+    }
+
+    public func stop() {
+        if let eventTapSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapSource, .commonModes)
+            CFRunLoopSourceInvalidate(eventTapSource)
+            self.eventTapSource = nil
+        }
+        if let eventTap {
+            CFMachPortInvalidate(eventTap)
+            self.eventTap = nil
+        }
+        router.reset()
+    }
+
+    fileprivate func route(_ event: GlobalShortcutEventSnapshot) -> Bool {
+        if event.kind == .keyDown, event.keyCode == UInt16(kVK_Escape) {
+            cancelled()
+            return false
+        }
+        let result = router.route(event)
+        for delivery in result.deliveries {
+            delivered(delivery)
+        }
+        return result.shouldConsume
+    }
+}
+
+private func globalShortcutEventTapHandler(
+    _ proxy: CGEventTapProxy,
+    _ type: CGEventType,
+    _ event: CGEvent,
+    _ userData: UnsafeMutableRawPointer?
+) -> Unmanaged<CGEvent>? {
+    guard let userData else { return Unmanaged.passUnretained(event) }
+    let kind: GlobalShortcutEventKind
+    switch type {
+    case .keyDown: kind = .keyDown
+    case .keyUp: kind = .keyUp
+    case .flagsChanged: kind = .flagsChanged
+    default: return Unmanaged.passUnretained(event)
+    }
+
+    var modifierFlags: UInt = 0
+    if event.flags.contains(.maskControl) { modifierFlags |= NSEvent.ModifierFlags.control.rawValue }
+    if event.flags.contains(.maskAlternate) { modifierFlags |= NSEvent.ModifierFlags.option.rawValue }
+    if event.flags.contains(.maskCommand) { modifierFlags |= NSEvent.ModifierFlags.command.rawValue }
+    if event.flags.contains(.maskShift) { modifierFlags |= NSEvent.ModifierFlags.shift.rawValue }
+    let snapshot = GlobalShortcutEventSnapshot(
+        keyCode: UInt16(event.getIntegerValueField(.keyboardEventKeycode)),
+        modifierFlags: modifierFlags,
+        kind: kind
+    )
+    let service = Unmanaged<GlobalShortcutService>.fromOpaque(userData).takeUnretainedValue()
+    let shouldConsume = MainActor.assumeIsolated { service.route(snapshot) }
+    return shouldConsume ? nil : Unmanaged.passUnretained(event)
 }
 
 private func guideKeyboardEventTapHandler(

@@ -1,0 +1,9 @@
+Window: "", App: HeyClicky.
+Shortcuts
+- Push to talk: Hold to talk to HeyClicky. Release to send. Control–Option.
+- Text mode: Press to type instead of talking. Control–Control.
+- Dictate: Hold and speak. Release to insert. Control–Fn.
+- Hands-free dictation: Press to start, press again to stop. Control–Option–Command.
+
+The screen also exposed Change and Reset to defaults controls. No control was
+changed. Captured from the exact installed 1.0.48 (57) app.

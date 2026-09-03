@@ -1,5 +1,27 @@
 import CoreGraphics
 
+public struct GuideAmbientPanelLayoutPolicy: Sendable {
+    public init() {}
+
+    public func frame(
+        visibleFrame: CGRect,
+        contentSize: CGSize,
+        margin: CGFloat = 8
+    ) -> CGRect {
+        let safeFrame = visibleFrame.insetBy(dx: margin, dy: margin)
+        let size = CGSize(
+            width: min(contentSize.width, safeFrame.width),
+            height: min(contentSize.height, safeFrame.height)
+        )
+        return CGRect(
+            x: safeFrame.midX - size.width / 2,
+            y: safeFrame.maxY - size.height,
+            width: size.width,
+            height: size.height
+        )
+    }
+}
+
 public enum CompanionResponseInteractionMode: Equatable, Sendable {
     case clickThrough
     case scrollableVisibleControl

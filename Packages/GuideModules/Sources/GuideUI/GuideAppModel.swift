@@ -87,8 +87,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var talkVerificationExpiryTask: Task<Void, Never>?
     @ObservationIgnored private let presentation: CompanionPresentation
     @ObservationIgnored private let companionController: CompanionPanelController
-    @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
-    @ObservationIgnored private var guidanceHotKeyService: GlobalHotKeyService?
+    @ObservationIgnored private var shortcutService: GlobalShortcutService?
     @ObservationIgnored private var dictationMachine = DictationStateMachine()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private var companionMachine: CompanionStateMachine
@@ -406,24 +405,12 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         refreshPermissions()
         await loadTranscriptHistory()
 
-        let service = makeDictationHotKeyService(configuration: dictationShortcut)
-        hotKeyService = service
+        let service = makeShortcutService(dictationConfiguration: dictationShortcut)
+        shortcutService = service
         do {
             try service.start()
             hotKeyRegistered = true
-            Self.logger.notice("Global dictation shortcut registered")
-            let guidanceService = GlobalHotKeyService(
-                configuration: GlobalHotKeyConfiguration(
-                    keyCode: UInt32(kVK_ANSI_G),
-                    modifiers: UInt32(controlKey | optionKey),
-                    displayName: "Control–Option–G"
-                ),
-                pressed: { [weak self] in self?.guidanceHotKeyPressed() },
-                released: {},
-                cancelled: { [weak self] in self?.guidanceEscapePressed() }
-            )
-            try guidanceService.start()
-            guidanceHotKeyService = guidanceService
+            Self.logger.notice("Global dictation and held Guide shortcuts registered on one event tap")
             statusMessage = hasRecoveryRequiringAttention
                 ? "A saved dictation still needs confirmation or retry."
                 : (dictationReady
@@ -454,10 +441,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public func stop() {
-        hotKeyService?.stop()
-        hotKeyService = nil
-        guidanceHotKeyService?.stop()
-        guidanceHotKeyService = nil
+        shortcutService?.stop()
+        shortcutService = nil
         transcriber.cancel()
         guidanceTranscriber.cancel()
         guidanceSpeaker.stop()
@@ -497,12 +482,12 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public func setDictationShortcut(_ configuration: GlobalHotKeyConfiguration) {
         guard configuration != dictationShortcut else { return }
         let previous = dictationShortcut
-        hotKeyService?.stop()
+        shortcutService?.stop()
 
-        let replacement = makeDictationHotKeyService(configuration: configuration)
+        let replacement = makeShortcutService(dictationConfiguration: configuration)
         do {
             try replacement.start()
-            hotKeyService = replacement
+            shortcutService = replacement
             dictationShortcut = configuration
             if let data = try? JSONEncoder().encode(configuration) {
                 defaults.set(data, forKey: Keys.dictationShortcut)
@@ -511,8 +496,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             statusMessage = "Dictation shortcut changed to \(configuration.displayName)."
             recoveryMessage = "Press once to start, press again to insert, or press Escape to cancel."
         } catch {
-            let fallback = makeDictationHotKeyService(configuration: previous)
-            hotKeyService = fallback
+            let fallback = makeShortcutService(dictationConfiguration: previous)
+            shortcutService = fallback
             hotKeyRegistered = (try? fallback.start()) != nil
             statusMessage = "\(configuration.displayName) is unavailable."
             recoveryMessage = "Quit the other app using it, or record a different shortcut. \(previous.displayName) remains active."
@@ -622,6 +607,20 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         }
     }
 
+    private func guidanceHeldShortcutPressed() {
+        switch guidancePhase {
+        case .idle, .presenting, .failed:
+            startGuidanceVoiceTurn()
+        case .requestingPermission, .listening, .transcribing, .capturing, .reading, .thinking:
+            break
+        }
+    }
+
+    private func guidanceHeldShortcutReleased() {
+        guard guidancePhase == .listening else { return }
+        guideTurnCoordinator.finishListening()
+    }
+
     private func guidanceEscapePressed() {
         if guidancePhase != .idle {
             cancelGuidanceVoice()
@@ -698,7 +697,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guidancePartialTranscript = ""
         do {
             try guideTurnCoordinator.start(target: lockedTarget)
-            statusMessage = "Listening for your guide question. Press Control–Option–G again to ask, or Escape to cancel."
+            statusMessage = "Listening for your guide question. Release Control–Option to ask, or press Escape to cancel."
             recoveryMessage = ""
         } catch {
             presentGuidanceFailure(normalize(error, stage: .recording))
@@ -996,14 +995,34 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         cancelDictation()
     }
 
-    private func makeDictationHotKeyService(
-        configuration: GlobalHotKeyConfiguration
-    ) -> GlobalHotKeyService {
-        GlobalHotKeyService(
-            configuration: configuration,
-            pressed: { [weak self] in self?.hotKeyPressed() },
-            released: { [weak self] in self?.hotKeyReleased() },
-            cancelled: { [weak self] in self?.escapePressed() }
+    private func makeShortcutService(
+        dictationConfiguration: GlobalHotKeyConfiguration
+    ) -> GlobalShortcutService {
+        GlobalShortcutService(
+            bindings: [
+                .init(id: "dictation", gesture: .key(dictationConfiguration)),
+                .init(
+                    id: "guide",
+                    gesture: .modifierChord(
+                        modifiers: UInt32(controlKey | optionKey),
+                        displayName: "Control–Option"
+                    )
+                )
+            ],
+            delivered: { [weak self] delivery in
+                guard let self else { return }
+                switch (delivery.id, delivery.transition) {
+                case ("dictation", .pressed): hotKeyPressed()
+                case ("dictation", .released): hotKeyReleased()
+                case ("guide", .pressed): guidanceHeldShortcutPressed()
+                case ("guide", .released): guidanceHeldShortcutReleased()
+                default: break
+                }
+            },
+            cancelled: { [weak self] in
+                self?.escapePressed()
+                self?.guidanceEscapePressed()
+            }
         )
     }
 

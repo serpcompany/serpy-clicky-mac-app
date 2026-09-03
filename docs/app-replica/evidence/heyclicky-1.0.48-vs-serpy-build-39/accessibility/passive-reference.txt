@@ -1,0 +1,11 @@
+Window: "", App: HeyClicky.
+0 system dialog Secondary Actions: Raise
+    1 unknown HeyClicky companion status
+2 menu bar
+    3 HeyClicky
+    4 Edit
+    5 View
+    6 Window
+    7 Help
+
+Captured from the exact installed 1.0.48 (57) app before implementation.

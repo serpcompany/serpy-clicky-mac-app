@@ -214,7 +214,7 @@ public struct SettingsView: View {
             }
 
             Section("Voice guide") {
-                LabeledContent("Shortcut", value: "Control–Option–G")
+                LabeledContent("Shortcut", value: "Hold Control–Option")
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
                 Text("Press the shortcut, ask about the app on screen out loud, then press it again. SERPy reads the exact window locked at the start of the turn, streams the answer through the cursor companion when supported, and speaks it.")
                     .foregroundStyle(.secondary)

@@ -35,6 +35,7 @@ public final class CompanionPanelController {
     private let responseAnchorPolicy = CompanionResponseAnchorPolicy()
     private let responseInteractionPolicy = CompanionResponseInteractionPolicy()
     private let responseSizingPolicy = CompanionResponseSizingPolicy()
+    private let guideLayoutPolicy = GuideAmbientPanelLayoutPolicy()
     private let pointCueProjector = GuidePointCueProjector()
     private var trackingTimer: Timer?
     private var statusAnchorFrame: CGRect?
@@ -150,31 +151,43 @@ public final class CompanionPanelController {
         let screen = NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main
         guard let visibleFrame = screen?.visibleFrame else { return }
         let hasCaption = !presentation.caption.isEmpty
+        let isGuideVisible = presentation.guideStage != nil
         let size: NSSize
-        if presentation.guideStage != nil, hasCaption {
-            size = measuredGuideStatusSize(availableHeight: visibleFrame.height - 16)
+        if isGuideVisible, hasCaption {
+            size = measuredGuidePanelSizing(visibleFrame: visibleFrame).size
         } else {
             size = hasCaption ? NSSize(width: 250, height: 58) : NSSize(width: 46, height: 46)
         }
 
-        var origin = NSPoint(x: pointer.x + 14, y: pointer.y - size.height - 16)
-        origin.x = min(max(origin.x, visibleFrame.minX + 8), visibleFrame.maxX - size.width - 8)
-        origin.y = min(max(origin.y, visibleFrame.minY + 8), visibleFrame.maxY - size.height - 8)
-
-        let proposedStatusFrame = NSRect(origin: origin, size: size)
-        let newFrame = responseAnchorPolicy.frame(
-            current: statusAnchorFrame,
-            proposed: proposedStatusFrame,
-            responseIsVisible: !presentation.responseText.isEmpty
-        )
-        statusAnchorFrame = presentation.responseText.isEmpty ? nil : newFrame
+        let proposedStatusFrame: CGRect
+        if isGuideVisible {
+            proposedStatusFrame = guideLayoutPolicy.frame(visibleFrame: visibleFrame, contentSize: size)
+        } else {
+            var origin = NSPoint(x: pointer.x + 14, y: pointer.y - size.height - 16)
+            origin.x = min(max(origin.x, visibleFrame.minX + 8), visibleFrame.maxX - size.width - 8)
+            origin.y = min(max(origin.y, visibleFrame.minY + 8), visibleFrame.maxY - size.height - 8)
+            proposedStatusFrame = NSRect(origin: origin, size: size)
+        }
+        let newFrame = isGuideVisible
+            ? proposedStatusFrame
+            : responseAnchorPolicy.frame(
+                current: statusAnchorFrame,
+                proposed: proposedStatusFrame,
+                responseIsVisible: false
+            )
+        statusAnchorFrame = isGuideVisible ? newFrame : nil
+        panel.ignoresMouseEvents = !isGuideVisible
+            || measuredGuidePanelSizing(visibleFrame: visibleFrame).interactionMode == .clickThrough
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             panel.setFrame(newFrame, display: true)
         } else {
             panel.setFrame(newFrame, display: true, animate: false)
         }
 
-        if !presentation.responseText.isEmpty {
+        if isGuideVisible {
+            responseAnchorFrame = nil
+            responsePanel.orderOut(nil)
+        } else if !presentation.responseText.isEmpty {
             let maximumResponseHeight = responseInteractionPolicy.maximumNonOverlappingHeight(
                 visibleFrame: visibleFrame,
                 avoidedFrame: newFrame
@@ -249,8 +262,9 @@ public final class CompanionPanelController {
         return (NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main)?.visibleFrame.width ?? 600
     }
 
-    private func measuredGuideStatusSize(availableHeight: CGFloat) -> CGSize {
-        let textWidth: CGFloat = 276
+    private func measuredGuidePanelSizing(visibleFrame: CGRect) -> CompanionResponseSizing {
+        let panelWidth = min(520, max(300, visibleFrame.width - 16))
+        let textWidth = panelWidth - 48
         let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
         let contextFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         let captionBounds = (presentation.caption as NSString).boundingRect(
@@ -268,9 +282,23 @@ public final class CompanionPanelController {
         } else {
             contextHeight = 0
         }
-        return NSSize(
-            width: 350,
-            height: min(max(62, ceil(captionBounds.height + contextHeight) + 28), availableHeight)
+        let answerHeight: CGFloat
+        if presentation.responseText.isEmpty {
+            answerHeight = 0
+        } else {
+            let answerFont = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+            answerHeight = (presentation.responseText as NSString).boundingRect(
+                with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: answerFont]
+            ).height + 18
+        }
+        let measuredHeight = ceil(captionBounds.height + contextHeight + answerHeight) + 30
+        return responseSizingPolicy.resolve(
+            width: panelWidth,
+            measuredContentHeight: measuredHeight,
+            maximumPanelHeight: min(visibleFrame.height * 0.45, 420),
+            minimumPanelHeight: 58
         )
     }
 }
@@ -327,6 +355,20 @@ private struct CompanionBubbleView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        Group {
+            if presentation.guideStage != nil {
+                guideContent
+            } else {
+                cursorContent
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityDescription)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.mode)
+    }
+
+    private var cursorContent: some View {
         HStack(spacing: 10) {
             ZStack {
                 Circle()
@@ -364,10 +406,55 @@ private struct CompanionBubbleView: View {
                     .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
             }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityDescription)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.mode)
+    }
+
+    private var guideContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(color.gradient)
+                    Image(systemName: symbol)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .accessibilityHidden(true)
+                }
+                .frame(width: 28, height: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(presentation.caption)
+                        .font(.callout.weight(.semibold))
+                        .lineLimit(presentation.guideStage == .liveTranscript ? 3 : 2)
+                    if let contextLabel = presentation.contextLabel, !contextLabel.isEmpty {
+                        Text(contextLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if !presentation.responseText.isEmpty {
+                Divider()
+                ScrollView {
+                    Text(presentation.responseText)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .scrollIndicators(.automatic)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(.white.opacity(0.12), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.28), radius: 14, y: 6)
     }
 
     private var symbol: String {

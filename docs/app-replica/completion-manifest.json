@@ -1,132 +1,291 @@
 {
   "schema_version": 1,
   "claim": "bounded-slice",
-  "scope_statement": "Voice-first guide: hotkey, spoken question, request-scoped screen context, local spoken answer, and spoken follow-up without opening a typing window",
+  "scope_statement": "AI Guide only: reproduce the observable voice-first HeyClicky journey across global held invocation, ambient state presentation, exact request-scoped vision, streamed readable and spoken guidance, follow-up continuity, safe spatial guidance, cancellation, truthful recovery, Settings entry, privacy, and installed distribution while preserving SERPy identity and the explicit product boundaries",
   "inventory_complete": false,
   "primary_workflow_passed": false,
   "installed_artifact_verified": false,
   "independent_verification": {
     "required": true,
     "passed": false,
-    "verifier": "pending owner verification"
+    "verifier": "pending owner and fresh-context verification"
   },
   "rows": [
     {
-      "id": "voice-guide.start",
-      "kind": "behavior",
+      "id": "G01.passive-ambient",
+      "kind": "both",
       "in_scope": true,
-      "status": "unresolved",
-      "exercised": false,
+      "status": "fail",
+      "exercised": true,
       "evidence": {
-        "reference": ["https://www.heyclicky.com/ FAQ: press the hotkey and ask out loud"],
-        "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
-        "comparison": [],
-        "behavior": ["Historical build 26 observation only; the build 30 branch artifact is not installed or owner-verified"]
+        "reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/passive-notch.jpeg", "evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/passive-reference.txt"],
+        "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/candidate/passive-cursor.jpeg", "evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/passive-candidate.txt"],
+        "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"],
+        "behavior": ["Reference is edge-attached; rejected candidate is a 46x46 cursor badge"]
       }
     },
     {
-      "id": "voice-guide.contextual-answer",
-      "kind": "behavior",
+      "id": "G02.held-shortcut",
+      "kind": "both",
       "in_scope": true,
-      "status": "unresolved",
-      "exercised": false,
+      "status": "fail",
+      "exercised": true,
       "evidence": {
-        "reference": ["https://github.com/farzaa/clicky README: transcript plus screenshot enters the guide model"],
-        "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
-        "comparison": [],
-        "behavior": ["Prompt/capture contracts are deterministic; useful contextual answer quality remains an exact-artifact owner gate"]
+        "reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg", "evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/shortcuts-reference.txt"],
+        "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/guide-settings-candidate.txt"],
+        "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"],
+        "behavior": ["Reference holds Control-Option and releases to send; rejected candidate advertises Control-Option-G toggle"]
       }
     },
     {
-      "id": "voice-guide.spoken-output",
+      "id": "G03.global-invocation",
       "kind": "behavior",
       "in_scope": true,
-      "status": "unresolved",
-      "exercised": false,
+      "status": "fail",
+      "exercised": true,
       "evidence": {
-        "reference": ["https://github.com/farzaa/clicky README: model response is played through text-to-speech"],
-        "candidate": ["Packages/GuideModules/Sources/GuideMac/LocalSpeechOutputService.swift"],
+        "reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/accessibility/shortcuts-reference.txt"],
+        "candidate": ["scope.md#controlling-rejected-build-observation"],
         "comparison": [],
-        "behavior": []
+        "behavior": ["Controlled build-39 invocation leaked a control character to TextEdit and SERPy stayed ready; physical-key HIL remains required"]
       }
     },
     {
-      "id": "voice-guide.follow-up",
+      "id": "G04.focus-retention",
       "kind": "behavior",
       "in_scope": true,
       "status": "unresolved",
       "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G05.listening",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G06.live-transcript",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G07.exact-window-lock",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["GuideTurnCoordinatorTests", "ExactWindowTargetPolicyTests"], "comparison": [], "behavior": ["Source tests are not installed proof"]}
+    },
+    {
+      "id": "G08.overlay-exclusion",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G09.thinking",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G10.stream-first-delta",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["GuideTurnCoordinatorTests"], "comparison": [], "behavior": ["Source tests are not installed proof"]}
+    },
+    {
+      "id": "G11.complete-readable-answer",
+      "kind": "both",
+      "in_scope": true,
+      "status": "fail",
+      "exercised": true,
       "evidence": {
-        "reference": ["https://www.heyclicky.com/ FAQ: talk is the conversation"],
-        "candidate": ["evidence/serpy-build-26-voice-guide-report.md"],
-        "comparison": [],
-        "behavior": ["Historical build 26 observation only; fresh target lock and follow-up on build 30 remain unobserved"]
+        "reference": [],
+        "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/candidate/guide-settings.jpeg"],
+        "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"],
+        "behavior": ["Owner rejected build-39 observable Guide UI"]
       }
     },
     {
-      "id": "voice-guide.forced-companion-visibility",
-      "kind": "behavior",
+      "id": "G12.long-answer-recovery",
+      "kind": "both",
       "in_scope": true,
       "status": "unresolved",
       "exercised": false,
-      "evidence": {
-        "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: ambient voice turn P0"],
-        "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
-        "comparison": [],
-        "behavior": ["Historical build 28 observation only; coordinator-integrated build 30 preference-off lifecycle remains unobserved"]
-      }
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
     },
     {
-      "id": "voice-guide.readable-response-layout",
+      "id": "G13.ordered-speech",
       "kind": "behavior",
       "in_scope": true,
       "status": "unresolved",
       "exercised": false,
-      "evidence": {
-        "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: adaptive response bubble P0"],
-        "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
-        "comparison": [],
-        "behavior": ["Edge geometry and stationary anchoring are unit-tested for the 55-word demo criterion; longer answers are preserved without silent truncation; exact installed readability remains unobserved"]
-      }
+      "evidence": {"reference": [], "candidate": ["GuideTurnCoordinatorTests", "LocalSpeechOutputServiceTests"], "comparison": [], "behavior": ["Installed audibility remains owner HIL"]}
     },
     {
-      "id": "voice-guide.ambient-state-sequence",
+      "id": "G14.spoken-follow-up",
       "kind": "behavior",
       "in_scope": true,
       "status": "unresolved",
       "exercised": false,
-      "evidence": {
-        "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: continuous ambient interaction P0"],
-        "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
-        "comparison": [],
-        "behavior": ["Coordinator ordering and state mapping are unit-tested; exact installed timing and accessibility behavior remain unobserved"]
-      }
+      "evidence": {"reference": [], "candidate": ["GuideTurnCoordinatorTests"], "comparison": [], "behavior": ["Installed two-turn voice run absent"]}
     },
     {
-      "id": "voice-guide.exact-window-target",
-      "kind": "behavior",
+      "id": "G15.validated-point",
+      "kind": "both",
       "in_scope": true,
       "status": "unresolved",
       "exercised": false,
-      "evidence": {
-        "reference": ["Issue #6 independent verification amendment: lock PID plus exact window ID and immutable metadata"],
-        "candidate": ["GuideTurnCoordinatorTests", "ExactWindowTargetPolicyTests"],
-        "comparison": [],
-        "behavior": ["Same-PID selection and missing-target failure are unit-tested; installed multi-window behavior is unobserved"]
-      }
+      "evidence": {"reference": [], "candidate": ["GuidePointCueProjectorTests", "OpenAIMultimodalAdapterTests"], "comparison": [], "behavior": ["Installed cue absent"]}
     },
     {
-      "id": "voice-guide.full-turn-cancellation",
+      "id": "G16.progressive-walkthrough",
+      "kind": "both",
+      "in_scope": true,
+      "status": "fail",
+      "exercised": true,
+      "evidence": {"reference": ["Issue #6 target journey"], "candidate": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "comparison": [], "behavior": ["No production path/outline/label renderer or walkthrough state"]}
+    },
+    {
+      "id": "G17.cancel-listening",
       "kind": "behavior",
       "in_scope": true,
       "status": "unresolved",
       "exercised": false,
-      "evidence": {
-        "reference": ["Issue #6 independent verification amendment: deterministic Escape cancellation for owned active work"],
-        "candidate": ["GuideTurnCoordinatorTests"],
-        "comparison": [],
-        "behavior": ["Listening, capture, thinking, and speaking cancellation are unit-tested; every installed phase remains red until exercised"]
-      }
+      "evidence": {"reference": [], "candidate": ["GuideTurnCoordinatorTests"], "comparison": [], "behavior": ["Installed phase cancellation absent"]}
+    },
+    {
+      "id": "G18.cancel-later-phases",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["GuideTurnCoordinatorTests"], "comparison": [], "behavior": ["Installed capture/thinking/speaking cancellation absent"]}
+    },
+    {
+      "id": "G19.microphone-recovery",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "fail",
+      "exercised": true,
+      "evidence": {"reference": ["Issue #6 installed comparison"], "candidate": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "comparison": [], "behavior": ["Candidate has no input-device failover"]}
+    },
+    {
+      "id": "G20.output-recovery",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "fail",
+      "exercised": true,
+      "evidence": {"reference": ["Issue #6 installed comparison"], "candidate": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "comparison": [], "behavior": ["Candidate has no muted-output preflight or Bluetooth pre-roll"]}
+    },
+    {
+      "id": "G21.provider-authorization",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["MultimodalTalkContractTests", "TalkVerificationExpiryTests"], "comparison": [], "behavior": ["Installed recovery absent"]}
+    },
+    {
+      "id": "G22.provider-stream-failure",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["OpenAIMultimodalAdapterTests"], "comparison": [], "behavior": ["No live provider failure was invoked"]}
+    },
+    {
+      "id": "G23.transient-companion",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["CompanionVisibilityPolicyTests"], "comparison": [], "behavior": ["Owner rejected build-39 journey"]}
+    },
+    {
+      "id": "G24.menu-obstruction",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/passive-notch.jpeg"], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G25.edge-geometry",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["CompanionResponseLayoutTests"], "comparison": [], "behavior": ["Paired installed corners absent"]}
+    },
+    {
+      "id": "G26.multidisplay-geometry",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": ["GuidePointCueProjectorTests"], "comparison": [], "behavior": ["Multi-display HIL absent"]}
+    },
+    {
+      "id": "G27.spaces-fullscreen",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G28.accessibility-motion",
+      "kind": "both",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": []}
+    },
+    {
+      "id": "G29.settings-entry-recovery",
+      "kind": "both",
+      "in_scope": true,
+      "status": "fail",
+      "exercised": true,
+      "evidence": {"reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg"], "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/candidate/guide-settings.jpeg"], "comparison": ["heyclicky-1.0.48-guide-parity-ledger.md#frozen-observations"], "behavior": ["Build 38 open/reopen worked; owner rejected build-39 Guide UX"]}
+    },
+    {
+      "id": "G30.ephemeral-privacy",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {"reference": [], "candidate": [], "comparison": [], "behavior": ["Final filesystem/log/relaunch audit absent"]}
+    },
+    {
+      "id": "G31.installed-distribution",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "fail",
+      "exercised": true,
+      "evidence": {"reference": ["scope.md#frozen-observation-environment"], "candidate": ["scope.md#frozen-observation-environment"], "comparison": [], "behavior": ["Build 39 is strict-signed but Gatekeeper rejects it as unnotarized"]}
+    },
+    {
+      "id": "G32.identity-boundary",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "pass",
+      "exercised": true,
+      "evidence": {"reference": ["scope.md#frozen-observation-environment"], "candidate": ["scope.md#frozen-observation-environment"], "comparison": [], "behavior": ["Distinct names, bundle identifiers, signatures, and assets verified"]}
     }
   ]
 }

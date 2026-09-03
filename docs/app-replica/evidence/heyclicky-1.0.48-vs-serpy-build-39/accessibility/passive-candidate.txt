@@ -1,0 +1,11 @@
+Window: "", App: SERPy.
+0 system dialog Secondary Actions: Raise
+    1 unknown SERPy is ready
+2 menu bar
+    3 SERPy
+    4 Edit
+    5 View
+    6 Window
+    7 Help
+
+Captured from the exact installed rejected build 0.1.0 (39).
