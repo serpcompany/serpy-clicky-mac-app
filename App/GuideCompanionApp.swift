@@ -43,7 +43,8 @@ struct GuideCompanionApp: App {
         Settings {
             SettingsView(model: model)
         }
-        .defaultSize(width: 620, height: 520)
+        .defaultSize(width: 720, height: 700)
+        .windowResizability(.contentMinSize)
     }
 }
 

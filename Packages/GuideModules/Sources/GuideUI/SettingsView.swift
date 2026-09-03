@@ -2,316 +2,574 @@ import AppKit
 import GuideCore
 import SwiftUI
 
+enum SERPySettingsRoute: String, CaseIterable, Hashable {
+    case setup
+    case guidance
+    case companion
+    case history
+    case privacy
+
+    var title: String {
+        switch self {
+        case .setup: "Dictation & permissions"
+        case .guidance: "Voice guide"
+        case .companion: "Cursor companion"
+        case .history: "Local recovery"
+        case .privacy: "Privacy"
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .setup: "Shortcut, microphone, speech, and insertion"
+        case .guidance: "Screen-aware Talk provider and voice controls"
+        case .companion: "Buddy visibility and ambient behavior"
+        case .history: "Recover transcripts and optional local audio"
+        case .privacy: "What stays local and what can leave this Mac"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .setup: "waveform.and.mic"
+        case .guidance: "sparkles"
+        case .companion: "location.north.circle.fill"
+        case .history: "clock.arrow.circlepath"
+        case .privacy: "hand.raised.fill"
+        }
+    }
+}
+
 public struct SettingsView: View {
     @Bindable private var model: GuideAppModel
-    @State private var selectedTab = SettingsTab.setup
-
-    private enum SettingsTab: Hashable {
-        case setup
-        case companion
-        case guidance
-        case history
-        case privacy
-    }
+    @State private var selectedRoute: SERPySettingsRoute?
 
     public init(model: GuideAppModel) {
         self.model = model
     }
 
     public var body: some View {
-        TabView(selection: $selectedTab) {
-            setupForm
-                .tabItem { Label("Setup", systemImage: "checklist") }
-                .tag(SettingsTab.setup)
-            companionForm
-                .tabItem { Label("Companion", systemImage: "location.north.circle") }
-                .tag(SettingsTab.companion)
-            guidanceForm
-                .tabItem { Label("Guidance", systemImage: "sparkles.rectangle.stack") }
-                .tag(SettingsTab.guidance)
-            historyForm
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-                .tag(SettingsTab.history)
-            privacyForm
-                .tabItem { Label("Privacy", systemImage: "hand.raised") }
-                .tag(SettingsTab.privacy)
-        }
-        .padding()
-        .frame(minWidth: 640, minHeight: 560)
-        .task {
-            model.refreshPermissions()
-        }
-        .onAppear {
-            settingsWindowLifecycle.didAppear()
-        }
-        .onDisappear {
-            settingsWindowLifecycle.didDisappear()
-        }
-    }
-
-    private var settingsWindowLifecycle: SettingsWindowVisibilityLifecycle {
-        SettingsWindowVisibilityLifecycle(
-            enterRegularMode: {
-                NSApplication.shared.setActivationPolicy(.regular)
-            },
-            activateApplication: {
-                NSApplication.shared.activate(ignoringOtherApps: true)
-            },
-            restoreMenuBarMode: {
-                NSApplication.shared.setActivationPolicy(.accessory)
+        ZStack {
+            SERPyVisual.ColorToken.canvas.ignoresSafeArea()
+            VStack(spacing: 0) {
+                topRail
+                Divider().overlay(SERPyVisual.ColorToken.border)
+                if let selectedRoute {
+                    detailPage(selectedRoute)
+                } else {
+                    homePage
+                }
             }
-        )
+        }
+        .foregroundStyle(SERPyVisual.ColorToken.primaryText)
+        .tint(SERPyVisual.ColorToken.accent)
+        .frame(minWidth: 680, idealWidth: 720, minHeight: 620, idealHeight: 700)
+        .preferredColorScheme(.dark)
+        .task { model.refreshPermissions() }
+        .onAppear { settingsWindowLifecycle.didAppear() }
+        .onDisappear { settingsWindowLifecycle.didDisappear() }
     }
 
-    private var setupForm: some View {
-        Form {
-            Section("Dictation") {
-                LabeledContent("Start / stop shortcut") {
+    private var topRail: some View {
+        HStack(spacing: SERPyVisual.Space.small) {
+            railButton("Home", symbol: "house.fill", identifier: "settings-home") {
+                selectedRoute = nil
+            }
+            railButton("Guide", symbol: "sparkles", identifier: "settings-guide") {
+                selectedRoute = .guidance
+            }
+            Spacer()
+            providerBadge
+            Button {
+                selectedRoute = .setup
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(SERPyHoverButtonStyle())
+            .accessibilityLabel("Setup")
+        }
+        .padding(.horizontal, SERPyVisual.Space.large)
+        .padding(.vertical, SERPyVisual.Space.small)
+        .background(SERPyVisual.ColorToken.canvas.opacity(0.98))
+    }
+
+    private func railButton(
+        _ title: String,
+        symbol: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.callout.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+        }
+        .buttonStyle(SERPyHoverButtonStyle())
+        .accessibilityIdentifier(identifier)
+    }
+
+    private var providerBadge: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(model.talkProviderSelection == .openAI && !model.openAITalkReady
+                    ? SERPyVisual.ColorToken.warning
+                    : SERPyVisual.ColorToken.success)
+                .frame(width: 7, height: 7)
+            Text(model.talkProviderSelection == .openAI ? "OpenAI Talk" : "On-device")
+                .font(.caption.weight(.medium))
+        }
+        .foregroundStyle(SERPyVisual.ColorToken.secondaryText)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(SERPyVisual.ColorToken.raised, in: Capsule())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var homePage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: SERPyVisual.Space.section) {
+                heroCard
+                settingsGroup("VOICE & INPUT", routes: [.setup, .guidance])
+                settingsGroup("COMPANION", routes: [.companion])
+                settingsGroup("DATA & PRIVACY", routes: [.history, .privacy])
+                Text("SERPy 0.1.0 · Private internal build")
+                    .font(.caption2)
+                    .foregroundStyle(SERPyVisual.ColorToken.tertiaryText)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.bottom, 8)
+            }
+            .padding(SERPyVisual.Space.large)
+        }
+        .scrollIndicators(.automatic)
+        .accessibilityIdentifier("settings-home-page")
+    }
+
+    private var heroCard: some View {
+        SERPyCard {
+            HStack(alignment: .center, spacing: SERPyVisual.Space.large) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.black)
+                    SERPyArrowMark().padding(15)
+                }
+                .frame(width: 68, height: 68)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("SERPy")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text("Private voice-first computer guide")
+                        .font(.callout)
+                        .foregroundStyle(SERPyVisual.ColorToken.secondaryText)
+                    Label(
+                        model.dictationReady ? "Ready to listen" : "Setup needs attention",
+                        systemImage: model.dictationReady ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(model.dictationReady
+                        ? SERPyVisual.ColorToken.success
+                        : SERPyVisual.ColorToken.warning)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    shortcutLabel("DICTATE", value: model.shortcutDescription)
+                    shortcutLabel("TALK", value: "⌃⌥G")
+                }
+            }
+            .padding(SERPyVisual.Space.large)
+        }
+    }
+
+    private func shortcutLabel(_ title: String, value: String) -> some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(SERPyVisual.ColorToken.tertiaryText)
+            Text(value)
+                .font(.system(.title3, design: .rounded, weight: .semibold))
+        }
+    }
+
+    private func settingsGroup(_ title: String, routes: [SERPySettingsRoute]) -> some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.small) {
+            SERPySectionTitle(title: title)
+            SERPyCard {
+                ForEach(Array(routes.enumerated()), id: \.element) { index, route in
+                    settingsNavigationRow(route)
+                    if index < routes.count - 1 {
+                        Divider().overlay(SERPyVisual.ColorToken.border).padding(.leading, 58)
+                    }
+                }
+            }
+        }
+    }
+
+    private func settingsNavigationRow(_ route: SERPySettingsRoute) -> some View {
+        Button {
+            selectedRoute = route
+        } label: {
+            HStack(spacing: 13) {
+                Image(systemName: route.symbol)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(SERPyVisual.ColorToken.accent)
+                    .frame(width: 32, height: 32)
+                    .background(SERPyVisual.ColorToken.accentSoft, in: RoundedRectangle(cornerRadius: 9))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(route.title)
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(SERPyVisual.ColorToken.primaryText)
+                    Text(route.summary)
+                        .font(.caption)
+                        .foregroundStyle(SERPyVisual.ColorToken.secondaryText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(SERPyVisual.ColorToken.tertiaryText)
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+        }
+        .buttonStyle(SERPyHoverButtonStyle())
+        .accessibilityIdentifier("settings-route-\(route.rawValue)")
+    }
+
+    @ViewBuilder
+    private func detailPage(_ route: SERPySettingsRoute) -> some View {
+        VStack(spacing: 0) {
+            detailHeader(route)
+            ScrollView {
+                Group {
+                    switch route {
+                    case .setup: setupContent
+                    case .guidance: guidanceContent
+                    case .companion: companionContent
+                    case .history: historyContent
+                    case .privacy: privacyContent
+                    }
+                }
+                .padding(SERPyVisual.Space.large)
+            }
+            .scrollIndicators(.automatic)
+        }
+        .accessibilityIdentifier("settings-detail-\(route.rawValue)")
+    }
+
+    private func detailHeader(_ route: SERPySettingsRoute) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                selectedRoute = nil
+            } label: {
+                Image(systemName: "chevron.left").frame(width: 30, height: 30)
+            }
+            .buttonStyle(SERPyHoverButtonStyle())
+            .accessibilityLabel("Back to Settings Home")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(route.title).font(.title2.weight(.bold))
+                Text(route.summary)
+                    .font(.caption)
+                    .foregroundStyle(SERPyVisual.ColorToken.secondaryText)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, SERPyVisual.Space.large)
+        .padding(.vertical, SERPyVisual.Space.regular)
+        .background(SERPyVisual.ColorToken.canvas)
+    }
+
+    private var setupContent: some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.section) {
+            cardSection("DICTATION") {
+                labeledRow("Start / stop shortcut") {
                     ShortcutRecorderView(configuration: model.dictationShortcut) {
                         model.setDictationShortcut($0)
                     }
                     .frame(width: 150, height: 26)
                 }
-                Text("Click the shortcut to record a new one. Press it once to start listening, press it again to insert, or press Escape to cancel.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                LabeledContent("Speech engine", value: "Apple on-device Speech")
-                LabeledContent("Readiness", value: model.dictationReady ? "Ready" : "Setup needed")
-                Text("Plain dictation never calls an assistant or paid API.")
-                    .foregroundStyle(.secondary)
+                divider
+                labeledRow("Speech engine") { Text("Apple on-device Speech") }
+                divider
+                labeledRow("Readiness") {
+                    statusText(model.dictationReady ? "Ready" : "Setup needed", ready: model.dictationReady)
+                }
+                Text("Press once to start, again to insert, or Escape to cancel. Dictation never calls an assistant or paid API.")
+                    .detailNote()
+                    .padding(14)
             }
-
-            Section("Permissions") {
+            cardSection("PERMISSIONS") {
                 permissionRow("Microphone", state: model.permissions.microphone, permission: .microphone)
+                divider
                 permissionRow("Speech Recognition", state: model.permissions.speechRecognition, permission: .speechRecognition)
+                divider
                 permissionRow("Accessibility", state: model.permissions.accessibility, permission: .accessibility)
+                divider
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-
+                divider
                 HStack {
                     Button("Request Microphone") { Task { await model.requestMicrophonePermission() } }
-                    Button("Request Speech Recognition") { Task { await model.requestSpeechPermission() } }
+                    Button("Request Speech") { Task { await model.requestSpeechPermission() } }
                     Button("Enable Accessibility") { model.requestAccessibility() }
+                    Spacer()
                     Button("Refresh") { model.refreshPermissions() }
                 }
-                Text("macOS prompts only once. If a request was denied, use Open Settings on its row.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .padding(14)
             }
-
-            Section("Dictation diagnostics") {
-                LabeledContent("Shortcut registration", value: model.hotKeyRegistered ? "Registered" : "Unavailable")
-                LabeledContent("Attempts", value: "\(model.dictationAttemptCount)")
-                LabeledContent("Last activation", value: model.lastActivationMessage)
-                LabeledContent("Last stage", value: model.lastDictationStage)
-                LabeledContent("Last failure", value: model.lastFailureMessage)
-                if model.phase == .recording {
-                    Button("Stop & Insert Manual Test") {
-                        model.finishManualDictationTest()
+            cardSection("DIAGNOSTICS") {
+                diagnosticRow("Shortcut", model.hotKeyRegistered ? "Registered" : "Unavailable")
+                divider
+                diagnosticRow("Last activation", model.lastActivationMessage)
+                divider
+                diagnosticRow("Last stage", model.lastDictationStage)
+                divider
+                diagnosticRow("Last failure", model.lastFailureMessage)
+                divider
+                HStack {
+                    if model.phase == .recording {
+                        Button("Stop & Insert") { model.finishManualDictationTest() }
+                            .buttonStyle(.borderedProminent)
+                    } else if !model.phase.isActive {
+                        Button("Manual dictation test") { model.beginManualDictationTest() }
+                        Button("Test text insertion") { model.beginInsertionTest() }
                     }
-                    .buttonStyle(.borderedProminent)
-                } else if !model.phase.isActive {
-                    Button("Start Manual Dictation Test") {
-                        model.beginManualDictationTest()
-                    }
-                    Text("After clicking, select the destination text field within 4 seconds. Speak, then return here and click Stop & Insert.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button("Test Text Insertion Only") {
-                        model.beginInsertionTest()
-                    }
-                    Text("Inserts a fixed harmless phrase after 4 seconds. This tests Accessibility without using the microphone.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Spacer()
                 }
-                Text(model.statusMessage)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                .padding(14)
                 if !model.recoveryMessage.isEmpty {
                     Text(model.recoveryMessage)
-                        .foregroundStyle(.orange)
+                        .detailNote(color: SERPyVisual.ColorToken.warning)
+                        .padding([.horizontal, .bottom], 14)
                         .textSelection(.enabled)
                 }
             }
-
             if model.hasRecoverableTranscript {
-                Section("Last dictation recovery") {
+                cardSection("LAST DICTATION") {
                     Text(model.recoverableTranscript)
-                        .lineLimit(4)
+                        .lineLimit(5)
                         .textSelection(.enabled)
+                        .padding(14)
+                    divider
                     HStack {
                         Button("Retry in 4 Seconds") { model.retryLastTranscript() }
                             .disabled(model.phase.isActive)
                         Button("Copy") { model.copyLastTranscript() }
+                        Spacer()
                         Button("Clear", role: .destructive) { model.clearLastTranscript() }
                     }
-                    Text("Saved locally before delivery and retained according to History settings.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .padding(14)
                 }
             }
         }
-        .formStyle(.grouped)
     }
 
-    private var companionForm: some View {
-        Form {
-            Section("Cursor companion") {
-                Toggle("Keep the cursor companion visible", isOn: $model.companionEnabled)
-                Text("The companion is click-through, follows the pointer, and stays below the usable menu-bar area.")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    private var guidanceForm: some View {
-        Form {
-            Section("Talk provider") {
-                Picker("Screen guidance", selection: $model.talkProviderSelection) {
-                    ForEach(TalkProviderSelection.allCases, id: \.self) { provider in
-                        Text(provider.displayName).tag(provider)
+    private var guidanceContent: some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.section) {
+            cardSection("TALK PROVIDER") {
+                VStack(alignment: .leading, spacing: 12) {
+                    Picker("Screen guidance", selection: $model.talkProviderSelection) {
+                        ForEach(TalkProviderSelection.allCases, id: \.self) { provider in
+                            Text(provider.displayName).tag(provider)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if model.talkProviderSelection == .openAI {
+                        Text("Sends the current spoken question, bounded recent Talk context, and pixels from the exact locked window. Normal API charges may apply.")
+                            .detailNote()
+                        Toggle("Allow request-scoped transmission on this Mac", isOn: $model.talkDisclosureAccepted)
+                        SecureField("OpenAI API key", text: $model.talkCredentialDraft)
+                            .textFieldStyle(.roundedBorder)
+                        HStack {
+                            Button("Save to Keychain") { model.saveTalkCredential() }
+                                .disabled(
+                                    model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                        || model.talkCredentialVerification == .verifying
+                                )
+                            Button("Verify Provider") { Task { await model.testSavedTalkCredential() } }
+                                .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
+                            Spacer()
+                            Button("Delete Key", role: .destructive) { model.deleteTalkCredential() }
+                                .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
+                        }
+                        Text(model.talkCredentialStatus)
+                            .detailNote(color: model.openAITalkReady
+                                ? SERPyVisual.ColorToken.success
+                                : SERPyVisual.ColorToken.secondaryText)
+                            .textSelection(.enabled)
+                    } else {
+                        Text("Private and on-device. Screen reasoning is limited to OCR text and the local Apple model.")
+                            .detailNote()
                     }
                 }
-                .pickerStyle(.segmented)
-
-                if model.talkProviderSelection == .openAI {
-                    Text("OpenAI Talk sends only the current spoken question, a bounded recent Talk transcript, and screenshot pixels of the exact window locked when this turn starts. SERPy requests store:false. OpenAI processes the request under your API account and normal API charges may apply.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Toggle(
-                        "I accept this request-scoped transmission on this Mac",
-                        isOn: $model.talkDisclosureAccepted
-                    )
-
-                    SecureField("OpenAI API key", text: $model.talkCredentialDraft)
-                        .textFieldStyle(.roundedBorder)
-                    HStack {
-                        Button("Save to Keychain") { model.saveTalkCredential() }
-                            .disabled(
-                                model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                    || model.talkCredentialVerification == .verifying
-                            )
-                        Button("Verify Provider") { Task { await model.testSavedTalkCredential() } }
-                            .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
-                        Button("Delete Key", role: .destructive) { model.deleteTalkCredential() }
-                            .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
-                    }
-                    Text(model.talkCredentialStatus)
-                        .font(.caption)
-                        .foregroundStyle(model.openAITalkReady ? .green : .secondary)
-                        .textSelection(.enabled)
-                    Text("Verify Provider makes a credential-only OpenAI model lookup. It sends no screenshot, question, or Talk context and creates no model response. Verification expires after 15 minutes. SERPy never silently switches providers.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("On-device Talk sends nothing to OpenAI. Its screen reasoning is limited to OCR text and the local Apple model.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text("Plain dictation is always on-device and does not use this setting.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                .padding(14)
             }
-
-            Section("Voice guide") {
-                LabeledContent("Shortcut", value: "Control–Option–G")
+            cardSection("VOICE GUIDE") {
+                labeledRow("Shortcut") {
+                    Text("⌃⌥G").font(.system(.body, design: .rounded, weight: .semibold))
+                }
+                divider
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-                Text("Press the shortcut, ask about the app on screen out loud, then press it again. SERPy reads the exact window locked at the start of the turn, streams the answer through the cursor companion when supported, and speaks it.")
-                    .foregroundStyle(.secondary)
-                Button(model.guidancePhase == .listening ? "Finish Voice Question" : "Start Voice Question") {
-                    model.toggleGuidanceVoice()
-                }
-                .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
-                if model.guidancePhase == .listening {
-                    Button("Cancel Voice Question", role: .cancel) {
-                        model.cancelGuidanceVoice()
+                divider
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Ask about the app on screen out loud. SERPy locks that exact window, streams its answer beside the cursor, and speaks it.")
+                        .detailNote()
+                    HStack {
+                        Button(model.guidancePhase == .listening ? "Finish Voice Question" : "Start Voice Question") {
+                            model.toggleGuidanceVoice()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(model.guidancePhase.isActive && model.guidancePhase != .listening)
+                        if model.guidancePhase == .listening {
+                            Button("Cancel", role: .cancel) { model.cancelGuidanceVoice() }
+                        }
+                        if !model.guidanceMessages.isEmpty {
+                            Button("View Transcript") { model.openGuidanceTranscript() }
+                        }
                     }
                 }
-                if !model.guidanceMessages.isEmpty {
-                    Button("View Conversation Transcript") { model.openGuidanceTranscript() }
-                }
+                .padding(14)
             }
         }
-        .formStyle(.grouped)
     }
 
-    private var privacyForm: some View {
-        Form {
-            Section("Privacy") {
-                Text("Dictation always uses on-device system models without an API key. On-device Talk also remains local. OpenAI Talk is a separate opt-in: when selected, disclosed, and credentialed, one request sends the current question, bounded recent Talk text, and the exact locked-window screenshot. Guide screenshots, questions, and answers are not written to disk by SERPy.")
-                    .foregroundStyle(.secondary)
+    private var companionContent: some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.section) {
+            cardSection("CURSOR COMPANION") {
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.black)
+                        SERPyArrowMark().padding(10)
+                    }
+                    .frame(width: 48, height: 48)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Keep SERPy beside the pointer").font(.headline)
+                        Text("Talk always shows the companion temporarily, even when this is off.")
+                            .detailNote()
+                    }
+                    Spacer()
+                    Toggle("", isOn: $model.companionEnabled).labelsHidden()
+                }
+                .padding(14)
             }
-            Section("Storage location") {
+        }
+    }
+
+    private var privacyContent: some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.section) {
+            cardSection("PRIVACY MODEL") {
+                privacyRow("Dictation", "Always on-device; no API key or assistant dependency.", symbol: "lock.fill")
+                divider
+                privacyRow("On-device Talk", "Uses local OCR and Apple models; sends nothing to OpenAI.", symbol: "cpu")
+                divider
+                privacyRow("OpenAI Talk", "Opt-in only; exact-window pixels and bounded Talk context are sent for one request.", symbol: "network")
+                divider
+                privacyRow("Guide history", "Questions, screenshots, and guide answers are not written to disk by SERPy.", symbol: "internaldrive")
+            }
+            cardSection("LOCAL STORAGE") {
                 Text("~/Library/Application Support/SERPy/History")
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
-                Text("History files are excluded from backup and written with owner-only permissions.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .padding(14)
+                divider
+                Text("History files use owner-only permissions and are excluded from backup.")
+                    .detailNote()
+                    .padding(14)
             }
         }
-        .formStyle(.grouped)
     }
 
-    private var historyForm: some View {
-        Form {
-            Section("Local recovery") {
-                Toggle("Save transcript history locally", isOn: $model.historyEnabled)
-                Text("Off by default. When enabled, up to 25 transcripts are kept for 30 days. Without it, only the newest Last Dictation is kept: 10 minutes after confirmed delivery or 24 hours when delivery is unconfirmed or failed.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
+    private var historyContent: some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.section) {
+            cardSection("LOCAL RECOVERY") {
+                Toggle("Save transcript history locally", isOn: $model.historyEnabled).padding(14)
+                divider
                 Toggle("Save dictation audio with history", isOn: $model.saveAudioHistory)
                     .disabled(!model.historyEnabled)
-                Text("Off by default. When enabled, audio is local, follows the same retention limit, and is deleted with its transcript.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Text(model.historyStatusMessage)
-                    .foregroundStyle(.secondary)
+                    .padding(14)
+                divider
+                Text(model.historyStatusMessage).detailNote().padding(14)
             }
-
-            Section(model.historyEnabled ? "Saved dictations" : "Last Dictation recovery") {
+            cardSection(model.historyEnabled ? "SAVED DICTATIONS" : "LAST DICTATION") {
                 if model.transcriptHistory.isEmpty {
-                    Text("No saved dictations yet.")
-                        .foregroundStyle(.secondary)
+                    ContentUnavailableView(
+                        "No saved dictations",
+                        systemImage: "waveform.badge.magnifyingglass",
+                        description: Text("Finished dictations will appear here according to your recovery settings.")
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
                 } else {
-                    ForEach(model.transcriptHistory) { entry in
-                        VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(model.transcriptHistory.enumerated()), id: \.element.id) { index, entry in
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text(entry.createdAt, style: .date)
                                 Text(entry.createdAt, style: .time)
                                 Spacer()
-                                Text(entry.deliveryState.rawValue.capitalized)
-                                    .foregroundStyle(entry.deliveryState == .confirmed ? .green : .orange)
+                                statusText(entry.deliveryState.rawValue.capitalized, ready: entry.deliveryState == .confirmed)
                             }
                             .font(.caption)
-                            Text(entry.text)
-                                .lineLimit(3)
-                                .textSelection(.enabled)
+                            Text(entry.text).lineLimit(4).textSelection(.enabled)
                             HStack {
                                 Button("Copy") { model.copyHistoryEntry(entry) }
-                                Button("Retry in 4 Seconds") { model.retryHistoryEntry(entry) }
-                                    .disabled(model.phase.isActive)
+                                Button("Retry") { model.retryHistoryEntry(entry) }.disabled(model.phase.isActive)
                                 Spacer()
-                                Button("Delete", role: .destructive) {
-                                    model.deleteHistoryEntry(id: entry.id)
-                                }
+                                Button("Delete", role: .destructive) { model.deleteHistoryEntry(id: entry.id) }
                             }
                         }
-                        .padding(.vertical, 4)
+                        .padding(14)
+                        if index < model.transcriptHistory.count - 1 { divider }
                     }
                 }
             }
-
-            Section {
-                Button("Clear Transcript and Audio History", role: .destructive) {
-                    model.clearTranscriptHistory()
-                }
-                .disabled(model.transcriptHistory.isEmpty)
+            Button("Clear Transcript and Audio History", role: .destructive) {
+                model.clearTranscriptHistory()
             }
+            .disabled(model.transcriptHistory.isEmpty)
         }
-        .formStyle(.grouped)
+    }
+
+    private func cardSection<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: SERPyVisual.Space.small) {
+            SERPySectionTitle(title: title)
+            SERPyCard { content() }
+        }
+    }
+
+    private func labeledRow<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack {
+            Text(title).font(.callout.weight(.medium))
+            Spacer()
+            content().foregroundStyle(SERPyVisual.ColorToken.secondaryText)
+        }
+        .padding(14)
+    }
+
+    private func diagnosticRow(_ title: String, _ value: String) -> some View {
+        labeledRow(title) { Text(value).lineLimit(1).textSelection(.enabled) }
+    }
+
+    private func privacyRow(_ title: String, _ detail: String, symbol: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: symbol)
+                .foregroundStyle(SERPyVisual.ColorToken.accent)
+                .frame(width: 28, height: 28)
+                .background(SERPyVisual.ColorToken.accentSoft, in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.callout.weight(.semibold))
+                Text(detail).detailNote()
+            }
+            Spacer()
+        }
+        .padding(14)
     }
 
     @ViewBuilder
@@ -320,16 +578,45 @@ public struct SettingsView: View {
         state: PermissionState,
         permission: GuidePermission
     ) -> some View {
-        HStack {
-            Label(title, systemImage: state.isGranted ? "checkmark.circle.fill" : "exclamationmark.circle")
-                .foregroundStyle(state.isGranted ? .green : .orange)
+        HStack(spacing: 12) {
+            Image(systemName: state.isGranted ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                .foregroundStyle(state.isGranted
+                    ? SERPyVisual.ColorToken.success
+                    : SERPyVisual.ColorToken.warning)
+            Text(title).font(.callout.weight(.medium))
             Spacer()
             Text(state.displayName)
-                .foregroundStyle(.secondary)
-            Button("Open Settings") {
-                model.openSettings(for: permission)
-            }
+                .font(.caption)
+                .foregroundStyle(SERPyVisual.ColorToken.secondaryText)
+            Button("Open Settings") { model.openSettings(for: permission) }
         }
+        .padding(14)
         .accessibilityElement(children: .contain)
+    }
+
+    private func statusText(_ text: String, ready: Bool) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(ready ? SERPyVisual.ColorToken.success : SERPyVisual.ColorToken.warning)
+    }
+
+    private var divider: some View {
+        Divider().overlay(SERPyVisual.ColorToken.border)
+    }
+
+    private var settingsWindowLifecycle: SettingsWindowVisibilityLifecycle {
+        SettingsWindowVisibilityLifecycle(
+            enterRegularMode: { NSApplication.shared.setActivationPolicy(.regular) },
+            activateApplication: { NSApplication.shared.activate(ignoringOtherApps: true) },
+            restoreMenuBarMode: { NSApplication.shared.setActivationPolicy(.accessory) }
+        )
+    }
+}
+
+private extension Text {
+    func detailNote(color: Color = SERPyVisual.ColorToken.secondaryText) -> some View {
+        font(.caption)
+            .foregroundStyle(color)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

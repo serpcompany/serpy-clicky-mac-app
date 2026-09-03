@@ -281,9 +281,9 @@ private struct GuidePointCueView: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color.accentColor.opacity(0.18))
+                .fill(SERPyVisual.ColorToken.accent.opacity(0.18))
             Circle()
-                .stroke(Color.accentColor, lineWidth: 4)
+                .stroke(SERPyVisual.ColorToken.accent, lineWidth: 4)
             Circle()
                 .fill(Color.white)
                 .frame(width: 10, height: 10)
@@ -303,14 +303,21 @@ private struct CompanionResponseView: View {
         ScrollView {
             Text(presentation.responseText)
                 .font(.callout.weight(.medium))
-                .foregroundStyle(.primary)
+                .foregroundStyle(SERPyVisual.ColorToken.primaryText)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(18)
         }
         .scrollIndicators(.automatic)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
+        .background(
+            SERPyVisual.ColorToken.surface.opacity(0.97),
+            in: RoundedRectangle(cornerRadius: SERPyVisual.Radius.card, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: SERPyVisual.Radius.card, style: .continuous)
+                .stroke(SERPyVisual.ColorToken.border, lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.34), radius: 14, y: 6)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("SERPy answer")
         .accessibilityValue(presentation.responseText)
@@ -329,26 +336,27 @@ private struct CompanionBubbleView: View {
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
-                Circle()
-                    .fill(color.gradient)
-                Image(systemName: symbol)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .accessibilityHidden(true)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.black)
+                companionIndicator
             }
             .frame(width: 42, height: 42)
-            .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(color.opacity(0.6), lineWidth: 1)
+            }
+            .shadow(color: color.opacity(0.28), radius: 9, y: 3)
 
             if !presentation.caption.isEmpty {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(presentation.caption)
                         .font(.callout.weight(.medium))
                         .lineLimit(presentation.guideStage == .liveTranscript ? 3 : (presentation.guideStage == nil ? 2 : nil))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(SERPyVisual.ColorToken.primaryText)
                     if let contextLabel = presentation.contextLabel, !contextLabel.isEmpty {
                         Text(contextLabel)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(SERPyVisual.ColorToken.secondaryText)
                             .lineLimit(1)
                     }
                 }
@@ -360,14 +368,46 @@ private struct CompanionBubbleView: View {
         .background {
             if !presentation.caption.isEmpty {
                 Capsule()
-                    .fill(.regularMaterial)
-                    .shadow(color: .black.opacity(0.16), radius: 10, y: 4)
+                    .fill(SERPyVisual.ColorToken.surface.opacity(0.96))
+                    .overlay {
+                        Capsule().stroke(SERPyVisual.ColorToken.border, lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityDescription)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.mode)
+    }
+
+    @ViewBuilder
+    private var companionIndicator: some View {
+        if presentation.guideStage == .listening || presentation.guideStage == .liveTranscript || presentation.mode == .recording {
+            SERPyWaveformIndicator(color: color)
+                .frame(width: 24, height: 20)
+                .accessibilityHidden(true)
+        } else if presentation.guideStage == .capturing || presentation.guideStage == .thinking || presentation.mode == .working {
+            ProgressView()
+                .controlSize(.small)
+                .tint(color)
+                .accessibilityHidden(true)
+        } else if presentation.guideStage == .speaking {
+            Image(systemName: "speaker.wave.2.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(color)
+                .symbolEffect(.variableColor.iterative, isActive: !reduceMotion)
+                .accessibilityHidden(true)
+        } else if presentation.guideStage == .error || presentation.guideStage == .cancelled || presentation.mode == .error {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(color)
+                .accessibilityHidden(true)
+        } else {
+            SERPyArrowMark(color: color)
+                .padding(10)
+                .accessibilityHidden(true)
+        }
     }
 
     private var symbol: String {
@@ -394,20 +434,20 @@ private struct CompanionBubbleView: View {
     private var color: Color {
         if let guideStage = presentation.guideStage {
             return switch guideStage {
-            case .ready, .readyForFollowUp: .blue
-            case .listening, .liveTranscript: .red
+            case .ready, .readyForFollowUp: SERPyVisual.ColorToken.accent
+            case .listening, .liveTranscript: SERPyVisual.ColorToken.accent
             case .capturing: .cyan
-            case .thinking: .orange
-            case .speaking: .purple
-            case .error, .cancelled: .red
+            case .thinking: SERPyVisual.ColorToken.warning
+            case .speaking: SERPyVisual.ColorToken.accent
+            case .error, .cancelled: SERPyVisual.ColorToken.danger
             }
         }
         return switch presentation.mode {
-        case .ready: .blue
-        case .recording: .red
-        case .working: .orange
-        case .success: .green
-        case .error: .red
+        case .ready: SERPyVisual.ColorToken.accent
+        case .recording: SERPyVisual.ColorToken.accent
+        case .working: SERPyVisual.ColorToken.warning
+        case .success: SERPyVisual.ColorToken.success
+        case .error: SERPyVisual.ColorToken.danger
         }
     }
 
@@ -422,5 +462,29 @@ private struct CompanionBubbleView: View {
             .filter { !$0.isEmpty }
             .joined(separator: ". ")
         return description.isEmpty ? "SERPy is ready" : description
+    }
+}
+
+private struct SERPyWaveformIndicator: View {
+    let color: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: reduceMotion ? 0.5 : 1.0 / 24.0)) { context in
+            HStack(alignment: .center, spacing: 2) {
+                ForEach(0..<5, id: \.self) { index in
+                    Capsule()
+                        .fill(color)
+                        .frame(width: 2.5, height: barHeight(index: index, date: context.date))
+                }
+            }
+        }
+    }
+
+    private func barHeight(index: Int, date: Date) -> CGFloat {
+        guard !reduceMotion else { return [7, 12, 17, 12, 7][index] }
+        let phase = date.timeIntervalSinceReferenceDate * 5 + Double(index) * 0.75
+        let profile: [CGFloat] = [0.5, 0.78, 1, 0.78, 0.5]
+        return 5 + ((sin(phase) + 1) * 0.5) * 13 * profile[index]
     }
 }
