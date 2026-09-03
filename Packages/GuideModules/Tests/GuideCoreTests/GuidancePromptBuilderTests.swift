@@ -88,6 +88,26 @@ final class GuidancePromptBuilderTests: XCTestCase {
         XCTAssertTrue(text.hasSuffix("newest useful words"))
         XCTAssertFalse(text.contains("\n"))
     }
+
+    func testEveryGuideBoundaryHasSpecificStageCauseAndRecovery() {
+        let policy = GuideTurnFailurePolicy()
+        let cause = NSError(domain: "Fixture", code: 7, userInfo: [NSLocalizedDescriptionKey: "fixture cause"])
+        let expected: [(GuideTurnBoundary, GuideFailureStage)] = [
+            (.microphoneStart, .recording),
+            (.transcription, .transcription),
+            (.capture, .capture),
+            (.generation, .guidance),
+            (.speaking, .presentation)
+        ]
+
+        for (boundary, stage) in expected {
+            let failure = policy.failure(for: cause, at: boundary)
+            XCTAssertEqual(failure.stage, stage)
+            XCTAssertTrue(failure.message.contains("fixture cause"))
+            XCTAssertFalse(failure.recovery.isEmpty)
+            XCTAssertNotEqual(failure.recovery, "Try again.")
+        }
+    }
 }
 
 private struct GroundingScenario: Decodable {

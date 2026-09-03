@@ -89,9 +89,23 @@ public final class ScreenContextService: GuideTurnContextCapturing, @unchecked S
     public func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
         try Task.checkCancellation()
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+        let availableTargets = content.windows.compactMap { window -> GuideWindowTarget? in
+            guard let processIdentifier = window.owningApplication?.processID else { return nil }
+            return GuideWindowTarget(
+                processIdentifier: processIdentifier,
+                windowIdentifier: window.windowID,
+                applicationName: window.owningApplication?.applicationName ?? "Current app",
+                windowTitle: window.title ?? "Untitled window",
+                frame: window.frame
+            )
+        }
+        let resolvedTarget = try exactTargetPolicy.resolveExactTarget(
+            target,
+            available: availableTargets
+        )
         guard let exactWindow = content.windows.first(where: {
-            $0.owningApplication?.processID == target.processIdentifier &&
-                $0.windowID == target.windowIdentifier
+            $0.owningApplication?.processID == resolvedTarget.processIdentifier &&
+                $0.windowID == resolvedTarget.windowIdentifier
         }) else { throw missingTargetFailure }
 
         let filter = SCContentFilter(desktopIndependentWindow: exactWindow)
@@ -113,11 +127,6 @@ public final class ScreenContextService: GuideTurnContextCapturing, @unchecked S
             windowFrame: target.frame,
             textBlocks: blocks
         )
-    }
-
-    @MainActor
-    public func captureFrontmostContext() async throws -> ScreenContext {
-        try await capture(snapshotTarget())
     }
 
     private static func onScreenWindowTargets(excluding ownPID: pid_t) -> [GuideWindowTarget] {

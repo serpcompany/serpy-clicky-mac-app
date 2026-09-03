@@ -918,19 +918,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public func present(_ turn: GuideTurnPresentation) {
-        guidancePhase = switch turn.stage {
-        case .ready, .cancelled: .idle
-        case .listening, .liveTranscript: .listening
-        case .capturing: .capturing
-        case .thinking: .thinking
-        case .speaking, .readyForFollowUp: .presenting
-        case .error:
-            .failed(turn.failure ?? GuideFailure(
-                stage: .guidance,
-                message: turn.statusText,
-                recovery: "Try again. If the problem continues, open SERPy and check permissions."
-            ))
-        }
+        guidancePhase = turn.guidancePhase
         guidancePartialTranscript = turn.stage == .liveTranscript ? turn.statusText : ""
         guidanceContextLabel = turn.context?.compactLabel ?? "No screen context captured yet"
         guidanceMessages = guideTurnCoordinator.conversation
@@ -950,12 +938,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         applyCompanionVisibility()
         companionController.refresh()
         if turn.stage == .readyForFollowUp {
-            guideResponseDismissalTask?.cancel()
-            guideResponseDismissalTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(8))
-                guard !Task.isCancelled, let self, guidancePhase == .presenting else { return }
-                restoreIdleVisibility()
-            }
+            restoreIdleVisibility(after: .seconds(8))
         }
     }
 
@@ -964,15 +947,20 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         companionController.refresh()
     }
 
-    public func restoreIdleVisibility() {
-        guidancePhase = .idle
-        guidancePartialTranscript = ""
-        presentation.guideStage = nil
-        presentation.caption = ""
-        presentation.contextLabel = nil
-        presentation.responseText = ""
-        applyCompanionVisibility()
-        companionController.refresh()
+    public func restoreIdleVisibility(after delay: Duration) {
+        guideResponseDismissalTask?.cancel()
+        guideResponseDismissalTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self else { return }
+            guidancePhase = .idle
+            guidancePartialTranscript = ""
+            presentation.guideStage = nil
+            presentation.caption = ""
+            presentation.contextLabel = nil
+            presentation.responseText = ""
+            applyCompanionVisibility()
+            companionController.refresh()
+        }
     }
 
     private func normalize(_ error: Error, stage: GuideFailureStage) -> GuideFailure {

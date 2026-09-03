@@ -46,8 +46,8 @@ Each cycle tested a public seam and faked only system/provider boundaries.
    `swift test --package-path Packages/GuideModules --filter ScreenContextServiceTests/testVisionRecognitionWorkRunsOffMainActorQueue`
    passed with the perform closure observing `Thread.isMainThread == false`.
 4. Listening cancellation RED: expected `cancelled → ready`, observed
-   `listening → cancelled`. GREEN: focused cancellation test passed after
-   explicit ready restoration.
+   `listening → cancelled`. GREEN: focused cancellation test passed after a
+   bounded 1.2-second cancelled presentation followed by preference restoration.
 5. Capture cancellation RED: expected coordinator phase `capturing`, observed
    `transcribing`. GREEN: focused test passed after presenting capture as the
    truthful owned phase.
@@ -62,16 +62,16 @@ Each cycle tested a public seam and faked only system/provider boundaries.
 
 ## Mechanical verification
 
-- `swift test --package-path Packages/GuideModules`: PASS, 45 XCTest and 26
+- `swift test --package-path Packages/GuideModules`: PASS, 48 XCTest and 26
   Swift Testing tests.
 - `xcodegen generate`: PASS.
 - `./scripts/build-release.sh`: PASS.
 - `codesign --verify --deep --strict --verbose=4`: PASS.
 - Version: `0.1.0 (30)`.
 - Artifact:
-  `/Users/devin/dev/repos/serpy-clicky-mac-app/.release-derived/Build/Products/Release/SERPy.app`
+  `$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 - Executable SHA-256:
-  `2a7172249d5d43b0a7dcac9aabbdfb51efb207c5d05726927bfb26e14a3b5492`
+  `1f8af2388b1225b9539d8dbdc20b25491b5a9679e3cbfe24f3235c85ea889199`
 - Signing identity: Developer ID Application, team `847HR8U8D9`, secure
   timestamp present.
 - Effective entitlement: audio input only; `get-task-allow` absent.
@@ -80,12 +80,14 @@ Each cycle tested a public seam and faked only system/provider boundaries.
 - `git diff --check`: PASS.
 - Source audit found no new guide persistence or network/provider code.
 
-An independent read-only review found two P1 blockers: early cancellation
-ownership release and lost stage-specific recovery text. Both were corrected
-and regression-tested before the final build. It also identified exact-window
-adapter injection as a remaining P2 test gap; the real adapter uses the exact
-PID/window-ID match, while broader provider injection and installed proof stay
-red.
+Independent read-only standards/spec reviews identified early cancellation
+ownership release, lost stage-specific recovery, unbounded error visibility,
+immediate cancellation overwrite, destructive answer truncation, a missing
+model-provider seam, duplicate exact-window matching, and absolute user paths.
+All were corrected and regression-tested before the final build. Production
+ScreenCaptureKit selection now routes through the tested exact-window policy;
+OS-owned capture behavior and installed identity proof remain red because an
+`SCWindow` cannot be truthfully synthesized as proof of the system adapter.
 
 ## Deliberately unresolved
 

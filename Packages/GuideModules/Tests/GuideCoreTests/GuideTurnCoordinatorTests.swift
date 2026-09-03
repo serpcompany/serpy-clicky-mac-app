@@ -75,8 +75,8 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertTrue(events.values.contains("transcription:cancel"))
         XCTAssertTrue(events.values.contains("speech:stop"))
         XCTAssertTrue(events.values.contains("response:dismiss"))
-        XCTAssertEqual(overlay.presentations.suffix(2).map(\.stage), [.cancelled, .ready])
-        XCTAssertEqual(events.values.filter { $0 == "visibility:restore" }.count, 1)
+        XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
+        XCTAssertEqual(overlay.scheduledRestoreDelays, [.milliseconds(1_200)])
         XCTAssertTrue(coordinator.conversation.isEmpty)
     }
 
@@ -103,7 +103,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
 
         XCTAssertFalse(events.values.contains("generation"))
         XCTAssertTrue(coordinator.conversation.isEmpty)
-        XCTAssertEqual(overlay.presentations.last?.stage, .ready)
+        XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
     }
 
     func testCancellationRetainsTaskOwnershipUntilStructuredWorkTerminates() async throws {
@@ -152,6 +152,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         await coordinator.waitUntilIdle()
 
         XCTAssertEqual(overlay.presentations.last?.failure, failure)
+        XCTAssertEqual(overlay.scheduledRestoreDelays, [.seconds(4)])
     }
 
     func testCancellingWhileThinkingDiscardsTheUnfinishedTurn() async throws {
@@ -176,7 +177,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
 
         XCTAssertFalse(events.values.contains("speech"))
         XCTAssertTrue(coordinator.conversation.isEmpty)
-        XCTAssertEqual(overlay.presentations.last?.stage, .ready)
+        XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
     }
 
     func testCancellingWhileSpeakingStopsAudioAndDismissesTheReadableAnswer() async throws {
@@ -203,7 +204,31 @@ final class GuideTurnCoordinatorTests: XCTestCase {
 
         XCTAssertTrue(events.values.contains("speech:stop"))
         XCTAssertTrue(events.values.contains("response:dismiss"))
-        XCTAssertEqual(overlay.presentations.last?.stage, .ready)
+        XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
+    }
+
+    func testCompleteAnswerRemainsInConversationWhileAmbientPresentationIsBounded() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let complete = (1...70).map { "word\($0)" }.joined(separator: " ")
+        let speech = FakeSpeech(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "Explain this", events: events),
+            generation: FakeGeneration(answer: complete, events: events),
+            speech: speech,
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(coordinator.conversation.last?.content, complete)
+        XCTAssertEqual(overlay.presentations.last?.responseText.split(whereSeparator: \.isWhitespace).count, 55)
+        XCTAssertEqual(speech.spokenTexts.last?.split(whereSeparator: \.isWhitespace).count, 55)
     }
 
     func testFollowUpLocksFreshWindowContextAndReceivesPriorConversation() async throws {
@@ -521,6 +546,7 @@ private final class SequenceGeneration: GuideTurnGenerating {
 @MainActor
 private final class FakeSpeech: GuideTurnSpeaking {
     let events: EventRecorder
+    var spokenTexts: [String] = []
 
     init(events: EventRecorder) {
         self.events = events
@@ -528,6 +554,7 @@ private final class FakeSpeech: GuideTurnSpeaking {
 
     func speak(_ text: String) async throws {
         events.values.append("speech")
+        spokenTexts.append(text)
     }
 
     func stop() {
@@ -558,6 +585,7 @@ private final class BlockingSpeech: GuideTurnSpeaking {
 private final class FakeOverlay: GuideTurnOverlayPresenting {
     let events: EventRecorder
     var presentations: [GuideTurnPresentation] = []
+    var scheduledRestoreDelays: [Duration] = []
 
     init(events: EventRecorder) {
         self.events = events
@@ -572,7 +600,8 @@ private final class FakeOverlay: GuideTurnOverlayPresenting {
         events.values.append("response:dismiss")
     }
 
-    func restoreIdleVisibility() {
-        events.values.append("visibility:restore")
+    func restoreIdleVisibility(after delay: Duration) {
+        events.values.append("visibility:restore-scheduled")
+        scheduledRestoreDelays.append(delay)
     }
 }

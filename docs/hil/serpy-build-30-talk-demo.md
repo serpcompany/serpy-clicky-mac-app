@@ -2,10 +2,10 @@
 
 This guide is for the exact branch artifact at:
 
-`/Users/devin/dev/repos/serpy-clicky-mac-app/.release-derived/Build/Products/Release/SERPy.app`
+`$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 
 Expected version is `0.1.0 (30)`. The executable SHA-256 recorded when built is
-`2a7172249d5d43b0a7dcac9aabbdfb51efb207c5d05726927bfb26e14a3b5492`.
+`1f8af2388b1225b9539d8dbdc20b25491b5a9679e3cbfe24f3235c85ea889199`.
 Do not mark any row passed if the installed executable does not hash-match.
 
 ## Safety and evidence rules
