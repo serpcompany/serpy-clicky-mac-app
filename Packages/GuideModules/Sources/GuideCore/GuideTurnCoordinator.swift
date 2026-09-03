@@ -271,7 +271,6 @@ public final class GuideTurnCoordinator {
                     recovery: "Ask the question another way and try again."
                 )
             }
-            let ambientAnswer = GuidanceAnswerBudget().bounded(completeAnswer)
             conversation.append(.init(role: .user, content: question))
             conversation.append(.init(role: .guide, content: completeAnswer, contextLabel: target.identity.compactLabel))
             phase = .presenting
@@ -279,9 +278,9 @@ public final class GuideTurnCoordinator {
                 stage: .speaking,
                 statusText: "Speaking…",
                 context: target.identity,
-                responseText: ambientAnswer
+                responseText: completeAnswer
             ))
-            do { try await speech.speak(ambientAnswer) }
+            do { try await speech.speak(completeAnswer) }
             catch is CancellationError { throw CancellationError() }
             catch { throw failurePolicy.failure(for: error, at: .speaking) }
             try Task.checkCancellation()
@@ -289,7 +288,7 @@ public final class GuideTurnCoordinator {
                 stage: .readyForFollowUp,
                 statusText: "Ready for a follow-up",
                 context: target.identity,
-                responseText: ambientAnswer
+                responseText: completeAnswer
             ))
         } catch is CancellationError {
             // cancel() owns visible cancellation and cleanup.

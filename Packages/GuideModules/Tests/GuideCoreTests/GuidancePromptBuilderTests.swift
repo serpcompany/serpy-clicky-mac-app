@@ -54,15 +54,6 @@ final class GuidancePromptBuilderTests: XCTestCase {
         )
     }
 
-    func testSpokenAnswerBudgetKeepsTheDisplayedAnswerAtFiftyFiveWords() {
-        let source = (1...70).map { "word\($0)" }.joined(separator: " ")
-
-        let bounded = GuidanceAnswerBudget(maxWords: 55).bounded(source)
-
-        XCTAssertEqual(bounded.split(whereSeparator: \.isWhitespace).count, 55)
-        XCTAssertTrue(bounded.hasSuffix("…"))
-    }
-
     func testReadableResponseRemainsStationaryUntilDismissed() {
         let policy = CompanionResponseAnchorPolicy()
         let current = CGRect(x: 100, y: 120, width: 380, height: 140)

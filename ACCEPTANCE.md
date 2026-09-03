@@ -96,7 +96,7 @@ question still needs to be retried before this regression is installed-observed.
 Issue #6 build 30 replaces the split legacy capture/answer tasks with one owned
 guide-turn coordinator, exact-window targeting, cancellable system-boundary
 adapters, off-main Vision OCR, controlled grounding fixtures, and stationary
-bounded answer presentation. These are source and test results only. The branch
+non-lossy answer presentation. These are source and test results only. The branch
 artifact is not installed, hash-matched, or owner-observed; its ambient journey,
 audible output, focus retention, follow-up, and every cancellation phase remain
 red until the HIL is completed against that exact artifact.

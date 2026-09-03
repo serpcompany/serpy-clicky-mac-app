@@ -10,6 +10,34 @@ public enum LocalGuidanceAvailability: Equatable, Sendable {
     case unavailable(String)
 }
 
+public struct FoundationGuidanceAvailabilityPolicy: Sendable {
+    public init() {}
+
+    public func availability(supportsFoundationModels: Bool, modelIsReady: Bool) -> LocalGuidanceAvailability {
+        guard supportsFoundationModels else {
+            return .unavailable("Local screen guidance requires macOS 26 or later.")
+        }
+        guard modelIsReady else {
+            return .unavailable("Apple Intelligence's on-device model is not ready on this Mac.")
+        }
+        return .available
+    }
+
+    public func unavailableFailure(supportsFoundationModels: Bool) -> GuideFailure {
+        supportsFoundationModels
+            ? GuideFailure(
+                stage: .guidance,
+                message: "Apple Intelligence's on-device model is not ready on this Mac.",
+                recovery: "Enable Apple Intelligence and wait for its local model to finish downloading, then try again."
+            )
+            : GuideFailure(
+                stage: .guidance,
+                message: "Local screen guidance requires macOS 26 or later.",
+                recovery: "Update to macOS 26 or later to use local screen guidance. Dictation still works on this Mac."
+            )
+    }
+}
+
 @MainActor
 public protocol LocalGuidanceModelSession: AnyObject {
     func respond(to prompt: String) async throws -> String
@@ -23,15 +51,25 @@ public protocol LocalGuidanceModelProvider: AnyObject {
 
 @MainActor
 public final class FoundationGuidanceModelProvider: LocalGuidanceModelProvider {
+    private let policy = FoundationGuidanceAvailabilityPolicy()
     public init() {}
 
     public var availability: LocalGuidanceAvailability {
         #if canImport(FoundationModels)
-        if #available(macOS 26.0, *), case .available = SystemLanguageModel.default.availability {
-            return .available
+        if #available(macOS 26.0, *) {
+            let modelIsReady: Bool
+            if case .available = SystemLanguageModel.default.availability {
+                modelIsReady = true
+            } else {
+                modelIsReady = false
+            }
+            return policy.availability(
+                supportsFoundationModels: true,
+                modelIsReady: modelIsReady
+            )
         }
         #endif
-        return .unavailable("Apple Intelligence's on-device model is not ready on this Mac.")
+        return policy.availability(supportsFoundationModels: false, modelIsReady: false)
     }
 
     public func makeSession(instructions: String) throws -> any LocalGuidanceModelSession {
@@ -40,11 +78,10 @@ public final class FoundationGuidanceModelProvider: LocalGuidanceModelProvider {
             return FoundationGuidanceModelSession(instructions: instructions)
         }
         #endif
-        throw GuideFailure(
-            stage: .guidance,
-            message: "On-device screen guidance is unavailable.",
-            recovery: "Enable Apple Intelligence and wait for its local model to finish downloading, then try again."
-        )
+        if #available(macOS 26.0, *) {
+            throw policy.unavailableFailure(supportsFoundationModels: true)
+        }
+        throw policy.unavailableFailure(supportsFoundationModels: false)
     }
 }
 

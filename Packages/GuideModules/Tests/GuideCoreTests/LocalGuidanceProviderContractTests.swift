@@ -4,6 +4,23 @@ import XCTest
 
 @MainActor
 final class LocalGuidanceProviderContractTests: XCTestCase {
+    func testAvailabilityPolicyDistinguishesOperatingSystemFromModelReadiness() {
+        let policy = FoundationGuidanceAvailabilityPolicy()
+
+        XCTAssertEqual(
+            policy.availability(supportsFoundationModels: false, modelIsReady: false),
+            .unavailable("Local screen guidance requires macOS 26 or later.")
+        )
+        XCTAssertEqual(
+            policy.availability(supportsFoundationModels: true, modelIsReady: false),
+            .unavailable("Apple Intelligence's on-device model is not ready on this Mac.")
+        )
+        XCTAssertEqual(
+            policy.unavailableFailure(supportsFoundationModels: false).recovery,
+            "Update to macOS 26 or later to use local screen guidance. Dictation still works on this Mac."
+        )
+    }
+
     func testProviderSessionReceivesGroundedPromptAndOneContradictionRetry() async throws {
         let session = FakeGuidanceSession(responses: [
             "I can't see the application.",

@@ -269,22 +269,6 @@ public struct GuidancePromptBuilder: Sendable {
     }
 }
 
-public struct GuidanceAnswerBudget: Sendable {
-    public let maxWords: Int
-
-    public init(maxWords: Int = 55) {
-        self.maxWords = max(1, maxWords)
-    }
-
-    public func bounded(_ answer: String) -> String {
-        let words = answer.split(whereSeparator: \Character.isWhitespace)
-        guard words.count > maxWords else {
-            return answer.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return words.prefix(maxWords).joined(separator: " ") + "…"
-    }
-}
-
 public struct GuidanceAnswerGroundingPolicy: Sendable {
     public init() {}
 

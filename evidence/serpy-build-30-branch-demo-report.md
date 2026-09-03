@@ -24,8 +24,9 @@ journey.** This report does not claim full HeyClicky parity.
 - ChatGPT and unique-phrase OCR fixtures cover prompt construction and false
   visibility contradiction recovery without using Foundation Models output as
   a deterministic oracle.
-- Answers are bounded to 55 words, shown in a non-overlapping edge-safe bubble,
-  and remain stationary while readable.
+- The model is instructed to answer within 55 words. Complete unexpected longer
+  answers still reach conversation, ambient presentation, and TTS unchanged;
+  the bubble remains stationary and edge-safe while readable.
 - No upstream source or asset was imported. No cloud provider, account, agent,
   new permission, or persistence path was added.
 
@@ -41,10 +42,11 @@ Each cycle tested a public seam and faked only system/provider boundaries.
    `ExactWindowTargetPolicy` did not exist. GREEN:
    `swift test --package-path Packages/GuideModules --filter ExactWindowTargetPolicyTests`
    passed both same-PID and disappearance cases.
-3. Off-main OCR RED: focused adapter test failed because
-   `VisionScreenTextRecognizer` did not exist. GREEN:
-   `swift test --package-path Packages/GuideModules --filter ScreenContextServiceTests/testVisionRecognitionWorkRunsOffMainActorQueue`
-   passed with the perform closure observing `Thread.isMainThread == false`.
+3. Capture/OCR RED: public raster, catalog/capture, and recognizer seams did not
+   exist. GREEN: the production ScreenCaptureKit provider now forms exact-ID
+   capture requests through the tested resolver, service contracts cover exact
+   descriptor/no-sibling behavior, and real Vision OCR reads a deterministic
+   generated `ORCHID RIVER 731` image.
 4. Listening cancellation RED: expected `cancelled → ready`, observed
    `listening → cancelled`. GREEN: focused cancellation test passed after a
    bounded 1.2-second cancelled presentation followed by preference restoration.
@@ -62,7 +64,7 @@ Each cycle tested a public seam and faked only system/provider boundaries.
 
 ## Mechanical verification
 
-- `swift test --package-path Packages/GuideModules`: PASS, 48 XCTest and 26
+- `swift test --package-path Packages/GuideModules`: PASS, 50 XCTest and 26
   Swift Testing tests.
 - `xcodegen generate`: PASS.
 - `./scripts/build-release.sh`: PASS.
@@ -71,7 +73,7 @@ Each cycle tested a public seam and faked only system/provider boundaries.
 - Artifact:
   `$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 - Executable SHA-256:
-  `1f8af2388b1225b9539d8dbdc20b25491b5a9679e3cbfe24f3235c85ea889199`
+  `09c79bd895c4ebeb2c92297d86f2b01e623184ab8b602f510c75a3142a3cabf8`
 - Signing identity: Developer ID Application, team `847HR8U8D9`, secure
   timestamp present.
 - Effective entitlement: audio input only; `get-task-allow` absent.
@@ -88,6 +90,8 @@ All were corrected and regression-tested before the final build. Production
 ScreenCaptureKit selection now routes through the tested exact-window policy;
 OS-owned capture behavior and installed identity proof remain red because an
 `SCWindow` cannot be truthfully synthesized as proof of the system adapter.
+Foundation Models availability now distinguishes pre-macOS-26 incompatibility
+from an unavailable Apple Intelligence model through a deterministic policy.
 
 ## Deliberately unresolved
 

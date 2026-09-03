@@ -207,7 +207,7 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
     }
 
-    func testCompleteAnswerRemainsInConversationWhileAmbientPresentationIsBounded() async throws {
+    func testCompleteAnswerReachesConversationAmbientPresentationAndSpeechWithoutTruncation() async throws {
         let events = EventRecorder()
         let target = fixtureTarget
         let complete = (1...70).map { "word\($0)" }.joined(separator: " ")
@@ -227,8 +227,8 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         await coordinator.waitUntilIdle()
 
         XCTAssertEqual(coordinator.conversation.last?.content, complete)
-        XCTAssertEqual(overlay.presentations.last?.responseText.split(whereSeparator: \.isWhitespace).count, 55)
-        XCTAssertEqual(speech.spokenTexts.last?.split(whereSeparator: \.isWhitespace).count, 55)
+        XCTAssertEqual(overlay.presentations.last?.responseText, complete)
+        XCTAssertEqual(speech.spokenTexts.last, complete)
     }
 
     func testFollowUpLocksFreshWindowContextAndReceivesPriorConversation() async throws {

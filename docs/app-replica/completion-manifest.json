@@ -86,7 +86,7 @@
         "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: adaptive response bubble P0"],
         "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
         "comparison": [],
-        "behavior": ["Edge geometry, stationary anchoring, and 55-word budgeting are unit-tested; exact installed readability remains unobserved"]
+        "behavior": ["Edge geometry and stationary anchoring are unit-tested for the 55-word demo criterion; longer answers are preserved without silent truncation; exact installed readability remains unobserved"]
       }
     },
     {
