@@ -61,6 +61,10 @@ public struct GlobalShortcutConfigurationSet: Equatable, Sendable {
         self.dictation = dictation
         self.guide = guide
     }
+
+    public var hasGestureConflict: Bool {
+        dictation.modifiers == guide.modifiers
+    }
 }
 
 public enum GlobalHotKeyTransition: Equatable, Sendable {

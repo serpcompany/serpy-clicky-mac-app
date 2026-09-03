@@ -495,6 +495,14 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public func setDictationShortcut(_ configuration: GlobalHotKeyConfiguration) {
         guard configuration != dictationShortcut else { return }
+        guard !GlobalShortcutConfigurationSet(
+            dictation: configuration,
+            guide: guideShortcut
+        ).hasGestureConflict else {
+            statusMessage = "That dictation shortcut conflicts with the held Guide shortcut."
+            recoveryMessage = "Choose a dictation shortcut with different modifiers, or change the Guide chord first."
+            return
+        }
         let previous = dictationShortcut
         shortcutService?.stop()
 
@@ -534,6 +542,14 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public func setGuideShortcut(_ configuration: GlobalModifierChordConfiguration) {
         guard configuration != guideShortcut else { return }
+        guard !GlobalShortcutConfigurationSet(
+            dictation: dictationShortcut,
+            guide: configuration
+        ).hasGestureConflict else {
+            statusMessage = "That Guide chord conflicts with the dictation shortcut."
+            recoveryMessage = "Choose a different Guide chord, or change the dictation shortcut first."
+            return
+        }
         let previous = guideShortcut
         shortcutService?.stop()
         let replacement = makeShortcutService(

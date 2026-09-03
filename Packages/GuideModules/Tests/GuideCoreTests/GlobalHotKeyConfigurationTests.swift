@@ -36,4 +36,22 @@ struct GlobalHotKeyConfigurationTests {
         #expect(GlobalModifierChordConfiguration.guideChoices.contains(original))
         #expect(original.displayName == "Control–Option")
     }
+
+    @Test("Guide chord cannot shadow the modifiers of a keyed dictation shortcut")
+    func overlappingGuideAndDictationAreRejected() {
+        let configuration = GlobalShortcutConfigurationSet(
+            dictation: .init(
+                keyCode: 5,
+                modifiers: [.control, .option],
+                displayName: "⌃⌥G"
+            ),
+            guide: .guideDefault
+        )
+
+        #expect(configuration.hasGestureConflict)
+        #expect(!GlobalShortcutConfigurationSet(
+            dictation: .dictation,
+            guide: .guideDefault
+        ).hasGestureConflict)
+    }
 }
