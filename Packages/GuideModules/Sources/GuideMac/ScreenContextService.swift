@@ -39,55 +39,135 @@ public final class VisionScreenTextRecognizer: ScreenTextRecognizing, @unchecked
     }
 }
 
-public actor ScreenCaptureKitWindowProvider: ScreenWindowCaptureProviding {
+public struct ScreenCaptureKitWindowSnapshot: Equatable, Sendable {
+    public let processIdentifier: Int32
+    public let windowIdentifier: UInt32
+    public let applicationName: String
+    public let windowTitle: String
+    public let frame: CGRect
+
+    public init(processIdentifier: Int32, windowIdentifier: UInt32, applicationName: String, windowTitle: String, frame: CGRect) {
+        self.processIdentifier = processIdentifier
+        self.windowIdentifier = windowIdentifier
+        self.applicationName = applicationName
+        self.windowTitle = windowTitle
+        self.frame = frame
+    }
+}
+
+public struct ScreenCaptureKitCaptureRequest: Equatable, Sendable {
+    public let processIdentifier: Int32
+    public let windowIdentifier: UInt32
+    public let pixelWidth: Int
+    public let pixelHeight: Int
+    public let showsCursor: Bool
+
+    public init(processIdentifier: Int32, windowIdentifier: UInt32, pixelWidth: Int, pixelHeight: Int, showsCursor: Bool) {
+        self.processIdentifier = processIdentifier
+        self.windowIdentifier = windowIdentifier
+        self.pixelWidth = pixelWidth
+        self.pixelHeight = pixelHeight
+        self.showsCursor = showsCursor
+    }
+}
+
+public protocol ScreenCaptureKitFacading: Sendable {
+    func windowSnapshots() async throws -> [ScreenCaptureKitWindowSnapshot]
+    func capturePNG(_ request: ScreenCaptureKitCaptureRequest) async throws -> Data
+}
+
+public struct ScreenCaptureKitPNGEncoder: Sendable {
+    public init() {}
+
+    public func encode(_ image: CGImage) throws -> Data {
+        guard let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
+            throw GuideFailure(stage: .capture, message: "The captured window image could not be encoded.", recovery: "Bring that exact window forward and try again.")
+        }
+        return data
+    }
+}
+
+public actor SystemScreenCaptureKitFacade: ScreenCaptureKitFacading {
     private var windowsByID: [UInt32: SCWindow] = [:]
+    private let encoder = ScreenCaptureKitPNGEncoder()
 
     public init() {}
 
-    public func availableWindows() async throws -> [GuideWindowTarget] {
+    public func windowSnapshots() async throws -> [ScreenCaptureKitWindowSnapshot] {
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         windowsByID = Dictionary(uniqueKeysWithValues: content.windows.map { ($0.windowID, $0) })
-        return content.windows.compactMap(Self.descriptor)
+        return content.windows.compactMap { window in
+            guard let pid = window.owningApplication?.processID else { return nil }
+            return ScreenCaptureKitWindowSnapshot(
+                processIdentifier: pid,
+                windowIdentifier: window.windowID,
+                applicationName: window.owningApplication?.applicationName ?? "Current app",
+                windowTitle: window.title ?? "Untitled window",
+                frame: window.frame
+            )
+        }
     }
 
-    public func captureWindow(_ target: GuideWindowTarget) async throws -> ScreenRaster {
-        guard let window = windowsByID[target.windowIdentifier],
-              window.owningApplication?.processID == target.processIdentifier
-        else {
-            throw GuideFailure(
-                stage: .capture,
-                message: "The window selected when the guide started is no longer available.",
-                recovery: "Bring that exact window forward and start the voice guide again."
-            )
+    public func capturePNG(_ request: ScreenCaptureKitCaptureRequest) async throws -> Data {
+        guard let window = windowsByID[request.windowIdentifier],
+              window.owningApplication?.processID == request.processIdentifier else {
+            throw GuideFailure(stage: .capture, message: "The exact ScreenCaptureKit window is no longer available.", recovery: "Bring that exact window forward and start again.")
         }
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let configuration = SCStreamConfiguration()
-        configuration.width = max(1, Int(target.frame.width * 2))
-        configuration.height = max(1, Int(target.frame.height * 2))
-        configuration.showsCursor = false
+        configuration.width = request.pixelWidth
+        configuration.height = request.pixelHeight
+        configuration.showsCursor = request.showsCursor
         let image = try await SCScreenshotManager.captureImage(
             contentFilter: filter,
             configuration: configuration
         )
-        guard let data = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
-            throw GuideFailure(
-                stage: .capture,
-                message: "The selected window image could not be prepared for local reading.",
-                recovery: "Bring that exact window forward and try again."
-            )
-        }
-        return ScreenRaster(encodedImage: data)
+        return try encoder.encode(image)
+    }
+}
+
+public actor ScreenCaptureKitWindowProvider: ScreenWindowCaptureProviding {
+    private let facade: any ScreenCaptureKitFacading
+    private var snapshotsByID: [UInt32: ScreenCaptureKitWindowSnapshot] = [:]
+
+    public init(facade: any ScreenCaptureKitFacading = SystemScreenCaptureKitFacade()) {
+        self.facade = facade
     }
 
-    private static func descriptor(_ window: SCWindow) -> GuideWindowTarget? {
-        guard let processIdentifier = window.owningApplication?.processID else { return nil }
-        return GuideWindowTarget(
-            processIdentifier: processIdentifier,
-            windowIdentifier: window.windowID,
-            applicationName: window.owningApplication?.applicationName ?? "Current app",
-            windowTitle: window.title ?? "Untitled window",
-            frame: window.frame
+    public func availableWindows() async throws -> [GuideWindowTarget] {
+        let snapshots = try await facade.windowSnapshots()
+        snapshotsByID = Dictionary(uniqueKeysWithValues: snapshots.map { ($0.windowIdentifier, $0) })
+        return snapshots.map { GuideWindowTarget(
+            processIdentifier: $0.processIdentifier,
+            windowIdentifier: $0.windowIdentifier,
+            applicationName: $0.applicationName,
+            windowTitle: $0.windowTitle,
+            frame: $0.frame
+        ) }
+    }
+
+    public func captureWindow(_ target: GuideWindowTarget) async throws -> ScreenRaster {
+        guard let snapshot = snapshotsByID[target.windowIdentifier], snapshot.processIdentifier == target.processIdentifier else {
+            throw GuideFailure(stage: .capture, message: "The window selected when the guide started is no longer available.", recovery: "Bring that exact window forward and start the voice guide again.")
+        }
+        let request = ScreenCaptureKitCaptureRequest(
+            processIdentifier: target.processIdentifier,
+            windowIdentifier: target.windowIdentifier,
+            pixelWidth: max(1, Int(target.frame.width * 2)),
+            pixelHeight: max(1, Int(target.frame.height * 2)),
+            showsCursor: false
         )
+        do {
+            let png = try await facade.capturePNG(request)
+            guard !png.isEmpty, NSBitmapImageRep(data: png) != nil else {
+                throw GuideFailure(stage: .capture, message: "The selected window did not produce a readable PNG.", recovery: "Bring that exact window forward and try again.")
+            }
+            return ScreenRaster(encodedImage: png)
+        } catch let failure as GuideFailure {
+            throw failure
+        } catch {
+            throw GuideFailure(stage: .capture, message: "ScreenCaptureKit could not capture the selected window. \(error.localizedDescription)", recovery: "Verify Screen Recording permission, bring that exact window forward, and try again.")
+        }
     }
 }
 

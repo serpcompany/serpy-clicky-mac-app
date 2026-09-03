@@ -58,13 +58,19 @@ Each cycle tested a public seam and faked only system/provider boundaries.
 7. Grounding fixtures RED: focused tests failed because
    `GuidancePromptBuilder` did not exist. GREEN: ChatGPT plus `ORCHID RIVER 731`
    fixtures and contradiction recovery passed.
-8. Answer/anchor RED: focused tests failed because the answer budget and
-   stationary anchor policies did not exist. GREEN: both passed and were wired
-   into coordinator/UI presentation.
+8. Answer/anchor RED: the initial implementation destructively truncated model
+   output before overlay and TTS. GREEN: a greater-than-55-word regression proves
+   the complete answer reaches conversation, ambient presentation, and speech
+   unchanged; the independent stationary/edge-safe layout policy still covers
+   the exact 55-word demo criterion.
+9. Concrete capture-provider contract RED: only consumer fakes covered catalog
+   behavior. GREEN: an injectable GuideMac ScreenCaptureKit facade now verifies
+   snapshot translation, exact PID/window enforcement, 2x request geometry,
+   cursor exclusion, PNG raster delivery, and actionable failure mapping.
 
 ## Mechanical verification
 
-- `swift test --package-path Packages/GuideModules`: PASS, 50 XCTest and 26
+- `swift test --package-path Packages/GuideModules`: PASS, 53 XCTest and 26
   Swift Testing tests.
 - `xcodegen generate`: PASS.
 - `./scripts/build-release.sh`: PASS.
@@ -73,7 +79,7 @@ Each cycle tested a public seam and faked only system/provider boundaries.
 - Artifact:
   `$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 - Executable SHA-256:
-  `09c79bd895c4ebeb2c92297d86f2b01e623184ab8b602f510c75a3142a3cabf8`
+  `361dfe88af104c0f8f8c6c3b8ee49025581a4ffa111c6e99cbfb89970c6aeedc`
 - Signing identity: Developer ID Application, team `847HR8U8D9`, secure
   timestamp present.
 - Effective entitlement: audio input only; `get-task-allow` absent.

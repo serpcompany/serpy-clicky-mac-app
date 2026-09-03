@@ -5,7 +5,7 @@ This guide is for the exact branch artifact at:
 `$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 
 Expected version is `0.1.0 (30)`. The executable SHA-256 recorded when built is
-`09c79bd895c4ebeb2c92297d86f2b01e623184ab8b602f510c75a3142a3cabf8`.
+`361dfe88af104c0f8f8c6c3b8ee49025581a4ffa111c6e99cbfb89970c6aeedc`.
 Do not mark any row passed if the installed executable does not hash-match.
 
 ## Safety and evidence rules
