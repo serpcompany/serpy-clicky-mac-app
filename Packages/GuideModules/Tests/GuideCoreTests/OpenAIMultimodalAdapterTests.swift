@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import GuideCore
 @testable import GuideMac
+import Security
 import XCTest
 
 final class OpenAIMultimodalAdapterTests: XCTestCase {
@@ -39,6 +40,38 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertEqual(urlRequest.value(forHTTPHeaderField: "Authorization"), "Bearer test-key-never-sent")
     }
 
+    func testCredentialPreflightContainsNoScreenshotQuestionOrRequestBody() throws {
+        let request = try OpenAITalkCredentialVerificationRequestBuilder().makeRequest(
+            apiKey: "test-key-never-sent",
+            endpoint: URL(string: "https://example.invalid/v1/models/gpt-5.6-terra")!
+        )
+
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertNil(request.httpBody)
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer test-key-never-sent")
+    }
+
+    func testCredentialVerifierDistinguishesValidAndProviderRejectedWithoutModelRequest() async throws {
+        let configuration = OpenAITalkSessionFactory.configuration()
+        configuration.protocolClasses = [CredentialFixtureURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let store = MemoryTalkCredentialStore(value: "tester-key-value-long-enough")
+        let valid = OpenAITalkCredentialVerifier(
+            session: session,
+            endpoint: URL(string: "https://credential-fixture.invalid/valid")!
+        )
+        let invalid = OpenAITalkCredentialVerifier(
+            session: session,
+            endpoint: URL(string: "https://credential-fixture.invalid/invalid")!
+        )
+
+        let credential = try XCTUnwrap(store.credential())
+        let validResult = try await valid.verifyCredential(credential)
+        let invalidResult = try await invalid.verifyCredential(credential)
+        XCTAssertTrue(validResult)
+        XCTAssertFalse(invalidResult)
+    }
+
     func testSSEDecoderOrdersDeltasProducesEachSentenceOnceAndPreservesRemainder() throws {
         var decoder = OpenAIResponsesSSEDecoder()
         let lines = [
@@ -64,6 +97,26 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         }
     }
 
+    func testSSEDecoderPreservesTextAndIndependentPointFunctionOutputInOneResponse() throws {
+        var decoder = OpenAIResponsesSSEDecoder()
+        let lines = [
+            #"data: {"type":"response.output_text.delta","delta":"Choose Continue."}"#,
+            #"data: {"type":"response.output_item.done","item":{"type":"function_call","name":"point","arguments":"{\"evidence_id\":\"locked-window\",\"x\":0.25,\"y\":0.75,\"confidence\":0.92,\"label\":\"Continue\"}"}}"#,
+            #"data: {"type":"response.completed"}"#
+        ]
+
+        let events = try lines.flatMap { try decoder.consume(line: $0) }
+
+        XCTAssertEqual(events.filterTextDeltas, ["Choose Continue."])
+        XCTAssertTrue(events.contains(.spatialAction(.point(
+            evidenceID: "locked-window",
+            normalizedPoint: CGPoint(x: 0.25, y: 0.75),
+            confidence: 0.92,
+            label: "Continue"
+        ))))
+        XCTAssertEqual(events.last, .completed)
+    }
+
     func testImmediatelyFailingStreamDoesNotLeaveStaleRequestOwnership() async throws {
         let generator = OpenAIMultimodalGuidanceGenerator(
             credentialStore: MemoryTalkCredentialStore(value: nil),
@@ -82,6 +135,43 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertEqual(generator.activeRequestCountForTesting, 0)
     }
 
+    func testCancellingLiveBytesTransportStopsURLProtocolAndYieldsNoLateCompletion() async throws {
+        BlockingSSEURLProtocol.reset()
+        let configuration = OpenAITalkSessionFactory.configuration()
+        configuration.protocolClasses = [BlockingSSEURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        let generator = OpenAIMultimodalGuidanceGenerator(
+            credentialStore: MemoryTalkCredentialStore(value: "tester-key-value-long-enough"),
+            session: session,
+            endpoint: URL(string: "https://stream-fixture.invalid/v1/responses")!
+        )
+        let events = LockedEventBuffer()
+        let request = fixtureRequest()
+        let consumer = Task {
+            do {
+                for try await event in generator.stream(request) {
+                    events.append(event)
+                }
+            } catch is CancellationError {
+                // Expected cancellation path.
+            }
+        }
+        for _ in 0..<2_000 where !BlockingSSEURLProtocol.didStart {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(BlockingSSEURLProtocol.didStart)
+
+        generator.cancel()
+        _ = await consumer.result
+        for _ in 0..<2_000 where !BlockingSSEURLProtocol.didStop {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(BlockingSSEURLProtocol.didStop)
+        XCTAssertFalse(events.values.contains(.completed))
+        XCTAssertEqual(generator.activeRequestCountForTesting, 0)
+    }
+
     func testKeychainCredentialContractUsesIsolatedServiceAndDeletesValue() throws {
         let service = "com.serpcompany.serpy.tests.\(UUID().uuidString)"
         let store = KeychainTalkCredentialStore(service: service, account: "fixture")
@@ -91,6 +181,10 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertEqual(try store.credential(), "sk-fixture-not-real")
         try store.saveCredential("sk-fixture-replaced")
         XCTAssertEqual(try store.credential(), "sk-fixture-replaced")
+        XCTAssertTrue(CFEqual(
+            KeychainTalkItemPolicy().accessibility,
+            kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        ))
         try store.deleteCredential()
         XCTAssertNil(try store.credential())
     }
@@ -104,7 +198,9 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
             cloud: cloud,
             credentialStore: credentialStore,
             selection: .openAI,
-            disclosureAccepted: false
+            disclosureAccepted: true,
+            credentialVerifiedUntil: nil,
+            verifiedCredential: nil
         )
         let fixture = fixtureRequest()
         let context = ScreenContext(
@@ -115,6 +211,20 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
             raster: fixture.raster
         )
 
+        XCTAssertThrowsError(try router.streamAnswer(
+            question: fixture.question,
+            target: fixture.target,
+            context: context,
+            conversation: []
+        ))
+        XCTAssertEqual(cloud.requestCount, 0)
+
+        router.configure(
+            selection: .openAI,
+            disclosureAccepted: false,
+            credentialVerifiedUntil: Date().addingTimeInterval(900),
+            verifiedCredential: "tester-key-value-long-enough"
+        )
         XCTAssertThrowsError(try router.streamAnswer(
             question: fixture.question,
             target: fixture.target,
@@ -133,7 +243,9 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
             cloud: cloud,
             credentialStore: credentialStore,
             selection: .openAI,
-            disclosureAccepted: true
+            disclosureAccepted: true,
+            credentialVerifiedUntil: Date().addingTimeInterval(900),
+            verifiedCredential: "tester-key-value-long-enough"
         )
         let fixture = fixtureRequest()
         let context = ScreenContext(
@@ -158,6 +270,15 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertEqual(cloud.lastRequest?.target, fixture.target)
         XCTAssertEqual(cloud.lastRequest?.raster, fixture.raster)
         XCTAssertEqual(cloud.lastRequest?.evidence, [])
+
+        try credentialStore.saveCredential("different-unverified-key")
+        XCTAssertThrowsError(try router.streamAnswer(
+            question: fixture.question,
+            target: fixture.target,
+            context: context,
+            conversation: []
+        ))
+        XCTAssertEqual(cloud.requestCount, 1)
     }
 
     private func fixtureRequest() -> MultimodalGuideRequest {
@@ -205,6 +326,64 @@ private final class RecordingGuidanceGenerator: GuidanceGenerating, @unchecked S
     }
 
     func cancel() {}
+}
+
+private final class LockedEventBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [GuidanceStreamEvent] = []
+
+    var values: [GuidanceStreamEvent] { lock.withLock { storage } }
+    func append(_ event: GuidanceStreamEvent) { lock.withLock { storage.append(event) } }
+}
+
+private final class CredentialFixtureURLProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let status = request.url?.path.contains("invalid") == true ? 401 : 200
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: status,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data(#"{"id":"gpt-5.6-terra","object":"model"}"#.utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+private final class BlockingSSEURLProtocol: URLProtocol {
+    private static let stateLock = NSLock()
+    nonisolated(unsafe) private static var started = false
+    nonisolated(unsafe) private static var stopped = false
+
+    static var didStart: Bool { stateLock.withLock { started } }
+    static var didStop: Bool { stateLock.withLock { stopped } }
+    static func reset() { stateLock.withLock { started = false; stopped = false } }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        Self.stateLock.withLock { Self.started = true }
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": "text/event-stream"]
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data("data: {\"type\":\"response.output_text.delta\",\"delta\":\"early\"}\n\n".utf8))
+        // Deliberately remains open until URLSession cancellation calls stopLoading.
+    }
+
+    override func stopLoading() {
+        Self.stateLock.withLock { Self.stopped = true }
+    }
 }
 
 private extension NSLock {

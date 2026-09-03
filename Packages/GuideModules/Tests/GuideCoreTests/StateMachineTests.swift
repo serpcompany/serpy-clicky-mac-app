@@ -170,6 +170,40 @@ final class GuidanceValidationTests: XCTestCase {
 }
 
 final class CompanionResponseLayoutPolicyTests: XCTestCase {
+    func testOnlyOverflowingVisibleAnswerBecomesIntentionallyScrollable() {
+        let policy = CompanionResponseInteractionPolicy()
+
+        XCTAssertEqual(
+            policy.mode(measuredContentHeight: 320, maximumPanelHeight: 600),
+            .clickThrough
+        )
+        XCTAssertEqual(
+            policy.mode(measuredContentHeight: 720, maximumPanelHeight: 600),
+            .scrollableVisibleControl
+        )
+    }
+
+    func testOverflowHeightReservesSpaceForGuideStatusWithoutOverlap() {
+        let interaction = CompanionResponseInteractionPolicy()
+        let layout = CompanionResponseLayoutPolicy()
+        let visibleFrame = CGRect(x: 0, y: 0, width: 1_200, height: 800)
+        let statusFrame = CGRect(x: 425, y: 350, width: 350, height: 100)
+        let maximumHeight = interaction.maximumNonOverlappingHeight(
+            visibleFrame: visibleFrame,
+            avoidedFrame: statusFrame
+        )
+        let responseFrame = layout.frame(
+            pointer: CGPoint(x: statusFrame.midX, y: statusFrame.midY),
+            visibleFrame: visibleFrame,
+            contentSize: CGSize(width: 600, height: maximumHeight),
+            avoiding: statusFrame
+        )
+
+        XCTAssertEqual(maximumHeight, 328, accuracy: 0.001)
+        XCTAssertFalse(responseFrame.intersects(statusFrame))
+        XCTAssertTrue(visibleFrame.insetBy(dx: 8, dy: 8).contains(responseFrame))
+    }
+
     func testResponseBubbleStaysFullyVisibleAtScreenEdges() {
         let policy = CompanionResponseLayoutPolicy()
         let visibleFrame = CGRect(x: 0, y: 40, width: 800, height: 520)

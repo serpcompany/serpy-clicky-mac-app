@@ -63,6 +63,8 @@ API key, or metered provider.
   needs the permission.
 - **Visible state is truthful.** A control cannot appear enabled while a hidden
   prerequisite prevents it from working.
+- **Saved is not verified.** Optional OpenAI Talk requires a recent,
+  content-free provider verification before any request may send screen pixels.
 - **Failure is actionable.** Every failed turn identifies which stage failed
   and provides a recovery action.
 - **The guide advises; it does not operate.** Autonomous agents are outside the

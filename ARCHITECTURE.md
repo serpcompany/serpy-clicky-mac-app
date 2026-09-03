@@ -216,6 +216,9 @@ transcript.
   guidance reports its exact limitation.
 - Cloud failure never silently selects local guidance, and local failure never
   silently sends data to a provider.
+- A saved OpenAI credential is not sufficient authorization. A content-free
+  model-metadata preflight must succeed, and that verification expires after
+  15 minutes. Unverified, expired, and rejected credentials block capture/send.
 
 ## Storage and Privacy
 

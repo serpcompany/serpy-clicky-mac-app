@@ -6,11 +6,16 @@ import XCTest
 final class MultimodalTalkContractTests: XCTestCase {
     func testCloudTalkRequiresSelectionConsentAndCredential() {
         let policy = TalkAuthorizationPolicy()
+        let now = Date(timeIntervalSince1970: 1_000)
+        let validUntil = now.addingTimeInterval(900)
 
-        XCTAssertFalse(policy.mayTransmit(.init(selection: .local, disclosureAccepted: true, credentialAvailable: true)))
-        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: false, credentialAvailable: true)))
-        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: false)))
-        XCTAssertTrue(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: true)))
+        XCTAssertFalse(policy.mayTransmit(.init(selection: .local, disclosureAccepted: true, credentialAvailable: true, credentialVerifiedUntil: validUntil, credentialMatchesVerification: true), now: now))
+        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: false, credentialAvailable: true, credentialVerifiedUntil: validUntil, credentialMatchesVerification: true), now: now))
+        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: false, credentialVerifiedUntil: validUntil, credentialMatchesVerification: true), now: now))
+        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: true, credentialVerifiedUntil: nil, credentialMatchesVerification: true), now: now))
+        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: true, credentialVerifiedUntil: now, credentialMatchesVerification: true), now: now))
+        XCTAssertFalse(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: true, credentialVerifiedUntil: validUntil, credentialMatchesVerification: false), now: now))
+        XCTAssertTrue(policy.mayTransmit(.init(selection: .openAI, disclosureAccepted: true, credentialAvailable: true, credentialVerifiedUntil: validUntil, credentialMatchesVerification: true), now: now))
     }
 
     func testRequestPreservesRasterEvidenceAndBoundsConversation() {

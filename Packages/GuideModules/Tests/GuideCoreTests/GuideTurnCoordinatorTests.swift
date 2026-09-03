@@ -80,6 +80,28 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertTrue(coordinator.conversation.isEmpty)
     }
 
+    func testImmediateCancellationBeforeTurnTaskRunsStartsNoSystemBoundaryWork() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "must not be used", events: events),
+            generation: FakeGeneration(answer: "must not appear", events: events),
+            speech: FakeSpeech(events: events),
+            overlay: FakeOverlay(events: events)
+        )
+
+        try coordinator.start()
+        coordinator.cancel()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertFalse(events.values.contains("transcription:start"))
+        XCTAssertFalse(events.values.contains { $0.hasPrefix("capture:") })
+        XCTAssertFalse(events.values.contains("generation"))
+        XCTAssertFalse(events.values.contains("speech"))
+        XCTAssertTrue(coordinator.conversation.isEmpty)
+    }
+
     func testCancellingWhileExactWindowCaptureIsPendingCannotProduceAnAnswer() async throws {
         let events = EventRecorder()
         let target = fixtureTarget
@@ -282,6 +304,31 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(streamedTexts, ["The phrase is", "The phrase is ORCHID RIVER 731. Next step"])
         XCTAssertEqual(speech.spokenTexts, ["The phrase is ORCHID RIVER 731.", "Next step"])
         XCTAssertEqual(coordinator.conversation.last?.content, "The phrase is ORCHID RIVER 731. Next step")
+    }
+
+    func testValidatedSpatialPointIsPresentedWithoutPointerControl() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "Where is the control?", events: events),
+            generation: FakeSpatialStreamingGeneration(events: events),
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(
+            overlay.presentations.last?.pointCue,
+            GuidePointCue(target: target, normalizedPoint: CGPoint(x: 0.25, y: 0.75), label: "Continue")
+        )
+        XCTAssertFalse(events.values.contains("pointer:move"))
+        XCTAssertFalse(events.values.contains("pointer:click"))
     }
 
     func testFollowUpLocksFreshWindowContextAndReceivesPriorConversation() async throws {
@@ -615,6 +662,40 @@ private final class FakeStreamingGeneration: GuideTurnStreamingGenerating {
     func cancelGeneration() {
         events.values.append("generation:cancel")
     }
+}
+
+@MainActor
+private final class FakeSpatialStreamingGeneration: GuideTurnStreamingGenerating {
+    let events: EventRecorder
+    let thinkingStatusText = "Looking at this window with fixture provider…"
+
+    init(events: EventRecorder) { self.events = events }
+
+    func answer(question: String, context: ScreenContext, conversation: [GuidanceMessage]) async throws -> GuidancePlan {
+        GuidancePlan(answer: "unused", confidence: 0)
+    }
+
+    func streamAnswer(
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) throws -> AsyncThrowingStream<GuidanceStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.yield(.textDelta("Select Continue."))
+            continuation.yield(.sentenceReady("Select Continue."))
+            continuation.yield(.spatialAction(.point(
+                evidenceID: "locked-window",
+                normalizedPoint: CGPoint(x: 0.25, y: 0.75),
+                confidence: 0.92,
+                label: "Continue"
+            )))
+            continuation.yield(.completed)
+            continuation.finish()
+        }
+    }
+
+    func cancelGeneration() {}
 }
 
 @MainActor

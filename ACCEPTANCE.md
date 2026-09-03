@@ -71,15 +71,15 @@ Notes and Slack are not yet observed.
 | C11 | Guide conversations and screenshots are not persisted after quit | Filesystem/log audit + relaunch observation | implemented |
 | C12 | Guide answers are captioned by the cursor and spoken locally | Installed audio observation | implemented |
 | C13 | Active guide turns force the companion visible without changing a disabled saved preference | Policy test + installed preference-off lifecycle | installed-observed |
-| C14 | A 55-word guide answer is fully readable in an edge-safe bubble without covering guide status | Layout tests + installed corner observation | unit-tested |
+| C14 | A guide answer is fully readable in an edge-safe bubble without covering guide status; overflow becomes an intentional nonactivating scroll control | Layout/interaction tests + installed corner observation | unit-tested |
 | C15 | Each turn locks PID, exact window ID, app/title, and frame before presentation and never falls back to a sibling window | Policy/adapter tests + installed same-app multi-window observation | unit-tested |
 | C16 | Escape cancels the owned listening, capture, thinking, or speaking work and restores companion visibility idempotently | Coordinator tests + installed phase-by-phase observation | unit-tested |
 | C17 | Listening acknowledgement precedes capture work and Vision OCR never blocks the main actor | Coordinator ordering + adapter contract test + installed latency observation | unit-tested |
-| C18 | Cloud Talk is disabled by default and sends nothing without disclosure, explicit selection, and credential | Deterministic authorization + request-serialization tests | unit-tested |
+| C18 | Cloud Talk is disabled by default and sends nothing without disclosure, explicit selection, credential, and unexpired content-free provider verification | Deterministic authorization, verification, and request-serialization tests | unit-tested |
 | C19 | OpenAI Talk sends only the exact request-scoped raster, question, and bounded recent Talk context with response storage disabled | Request fixture + owner-controlled HIL | unit-tested |
 | C20 | Answer deltas remain ordered, complete text is preserved, and speech receives each complete sentence once | SSE and speech-queue tests + installed observation | unit-tested |
-| C21 | Cloud cancellation terminates the stream, queued speech, and overlays without a delayed answer | URLSession cancellation fixture + installed observation | implemented |
-| C22 | Spatial actions are evidence-bound, exact-window validated, confidence-gated, and never move/click the pointer | Validator tests + controlled one-point HIL | unit-tested |
+| C21 | Cloud cancellation terminates URLSession streaming, queued speech, and overlays without a delayed answer | Blocking URLProtocol + coordinator cancellation fixtures + installed observation | unit-tested |
+| C22 | Spatial points are exact-screenshot-bound, confidence-gated, projected across Quartz/AppKit display coordinates, and rendered in a click-through cue without pointer movement/click | Validator/projector/coordinator tests + controlled one-point HIL | unit-tested |
 
 The owner reported that the guidance journeys after the initial companion
 checks did not work during first use. The C rows above describe implementation
@@ -106,14 +106,15 @@ artifact is not installed, hash-matched, or owner-observed; its ambient journey,
 audible output, focus retention, follow-up, and every cancellation phase remain
 red until the HIL is completed against that exact artifact.
 
-Build 31 adds an explicit, disabled-by-default OpenAI multimodal Talk adapter.
+Build 32 adds an explicit, disabled-by-default OpenAI multimodal Talk adapter.
 Authorization, exact-window raster construction, bounded context, Keychain
-storage, SSE ordering, sentence-queue delivery, coordinator cancellation, and
-spatial data validation are unit-tested without a live provider call. Direct
-URLSession cancellation remains unverified. The signed artifact,
+storage, content-free credential verification, SSE ordering, sentence-queue
+delivery, immediate/coordinator/URLSession cancellation, spatial validation,
+negative-origin projection, and click-through cue presentation are unit-tested
+without a live provider call. The signed artifact,
 provider access, answer quality, cost, disclosure comprehension, installed
 streaming/audio behavior, and filesystem privacy audit remain red until
-`docs/hil/serpy-build-31-openai-talk-demo.md` is completed by the owner.
+`docs/hil/serpy-build-32-openai-talk-demo.md` is completed by the owner.
 
 ## D — Distribution and Privacy
 

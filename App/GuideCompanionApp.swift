@@ -9,6 +9,7 @@ private enum GuideAppComposition {
     static let model: GuideAppModel = {
         let local = LocalGuidanceService()
         let credentialStore = KeychainTalkCredentialStore()
+        let credentialVerifier = OpenAITalkCredentialVerifier()
         let cloud = OpenAIMultimodalGuidanceGenerator(credentialStore: credentialStore)
         let router = TalkGenerationRouter(
             local: local,
@@ -18,6 +19,7 @@ private enum GuideAppComposition {
         return GuideAppModel(
             localGuidanceService: local,
             talkCredentialStore: credentialStore,
+            talkCredentialVerifier: credentialVerifier,
             talkGenerator: router
         )
     }()

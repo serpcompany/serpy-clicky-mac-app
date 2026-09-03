@@ -15,8 +15,13 @@ disabled until the user:
 
 1. reads a disclosure naming OpenAI and the exact data leaving the Mac;
 2. enables cloud Talk;
-3. saves a tester-owned API key in Keychain; and
-4. invokes a Talk turn.
+3. saves a tester-owned API key in Keychain;
+4. verifies provider access through a content-free model-metadata request; and
+5. invokes a Talk turn within the 15-minute verification lifetime.
+
+Saved, unverified, expired, or provider-rejected credentials cannot authorize a
+multimodal request. Verification calls `GET /v1/models/gpt-5.6-terra` and sends
+no screenshot, question, Talk history, or response-generation input.
 
 Each enabled turn sends only the current locked-window image, the spoken
 question, and a bounded recent Talk summary. Local OCR remains on the Mac and
@@ -51,3 +56,4 @@ requires a separate server-issued credential design and owner decision.
 
 - https://developers.openai.com/api/reference/typescript/resources/beta/subresources/responses/methods/create
 - https://developers.openai.com/api/docs/models/gpt-5.6-terra
+- https://developers.openai.com/api/reference/typescript/resources/models/methods/retrieve

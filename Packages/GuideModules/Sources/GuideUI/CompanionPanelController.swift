@@ -1,5 +1,6 @@
 import AppKit
 import GuideCore
+import GuideMac
 import Observation
 import SwiftUI
 
@@ -19,6 +20,7 @@ public final class CompanionPresentation {
     public var responseText = ""
     public var guideStage: GuidanceAmbientStage?
     public var contextLabel: String?
+    public var pointCue: GuidePointCue?
 
     public init() {}
 }
@@ -28,11 +30,15 @@ public final class CompanionPanelController {
     private let presentation: CompanionPresentation
     private let panel: CompanionPanel
     private let responsePanel: CompanionPanel
+    private let pointCuePanel: CompanionPanel
     private let responseLayoutPolicy = CompanionResponseLayoutPolicy()
     private let responseAnchorPolicy = CompanionResponseAnchorPolicy()
+    private let responseInteractionPolicy = CompanionResponseInteractionPolicy()
+    private let pointCueProjector = GuidePointCueProjector()
     private var trackingTimer: Timer?
     private var statusAnchorFrame: CGRect?
     private var responseAnchorFrame: CGRect?
+    private var pointCuePositionIsValid = false
 
     public init(presentation: CompanionPresentation) {
         self.presentation = presentation
@@ -48,6 +54,12 @@ public final class CompanionPanelController {
             backing: .buffered,
             defer: false
         )
+        pointCuePanel = CompanionPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 56, height: 56),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
         configurePanel()
     }
 
@@ -57,6 +69,9 @@ public final class CompanionPanelController {
         if !presentation.responseText.isEmpty {
             responsePanel.orderFrontRegardless()
         }
+        if pointCuePositionIsValid {
+            pointCuePanel.orderFrontRegardless()
+        }
         startTracking()
     }
 
@@ -65,6 +80,7 @@ public final class CompanionPanelController {
         trackingTimer = nil
         panel.orderOut(nil)
         responsePanel.orderOut(nil)
+        pointCuePanel.orderOut(nil)
     }
 
     public func refresh() {
@@ -77,6 +93,11 @@ public final class CompanionPanelController {
         } else {
             responseAnchorFrame = nil
             responsePanel.orderOut(nil)
+        }
+        if pointCuePositionIsValid {
+            pointCuePanel.orderFrontRegardless()
+        } else {
+            pointCuePanel.orderOut(nil)
         }
     }
 
@@ -100,6 +121,16 @@ public final class CompanionPanelController {
         responsePanel.level = .floating
         responsePanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         responsePanel.contentView = NSHostingView(rootView: CompanionResponseView(presentation: presentation))
+
+        pointCuePanel.isOpaque = false
+        pointCuePanel.backgroundColor = .clear
+        pointCuePanel.hasShadow = false
+        pointCuePanel.ignoresMouseEvents = true
+        pointCuePanel.hidesOnDeactivate = false
+        pointCuePanel.isReleasedWhenClosed = false
+        pointCuePanel.level = .floating
+        pointCuePanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        pointCuePanel.contentView = NSHostingView(rootView: GuidePointCueView(presentation: presentation))
     }
 
     private func startTracking() {
@@ -143,9 +174,13 @@ public final class CompanionPanelController {
         }
 
         if !presentation.responseText.isEmpty {
+            let maximumResponseHeight = responseInteractionPolicy.maximumNonOverlappingHeight(
+                visibleFrame: visibleFrame,
+                avoidedFrame: newFrame
+            )
             let responseSize = measuredResponseSize(
                 presentation.responseText,
-                availableHeight: visibleFrame.height - 16
+                availableHeight: maximumResponseHeight
             )
             let proposedFrame = responseLayoutPolicy.frame(
                 pointer: pointer,
@@ -163,6 +198,26 @@ public final class CompanionPanelController {
         } else {
             statusAnchorFrame = nil
             responseAnchorFrame = nil
+            responsePanel.ignoresMouseEvents = true
+        }
+
+
+        if let cue = presentation.pointCue,
+           let point = pointCueProjector.appKitPoint(for: cue) {
+            pointCuePositionIsValid = true
+            let size = NSSize(width: 56, height: 56)
+            pointCuePanel.setFrame(
+                NSRect(
+                    x: point.x - size.width / 2,
+                    y: point.y - size.height / 2,
+                    width: size.width,
+                    height: size.height
+                ),
+                display: true
+            )
+        } else {
+            pointCuePositionIsValid = false
+            pointCuePanel.orderOut(nil)
         }
     }
 
@@ -175,9 +230,14 @@ public final class CompanionPanelController {
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             attributes: [.font: font]
         )
+        let measuredHeight = ceil(bounds.height) + 48
+        responsePanel.ignoresMouseEvents = responseInteractionPolicy.mode(
+            measuredContentHeight: measuredHeight,
+            maximumPanelHeight: availableHeight
+        ) == .clickThrough
         return NSSize(
             width: panelWidth,
-            height: min(max(92, ceil(bounds.height) + 48), availableHeight)
+            height: min(max(92, measuredHeight), availableHeight)
         )
     }
 
@@ -209,6 +269,27 @@ public final class CompanionPanelController {
             width: 350,
             height: min(max(62, ceil(captionBounds.height + contextHeight) + 28), availableHeight)
         )
+    }
+}
+
+private struct GuidePointCueView: View {
+    let presentation: CompanionPresentation
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.accentColor.opacity(0.18))
+            Circle()
+                .stroke(Color.accentColor, lineWidth: 4)
+            Circle()
+                .fill(Color.white)
+                .frame(width: 10, height: 10)
+        }
+        .padding(5)
+        .shadow(color: .black.opacity(0.28), radius: 6, y: 2)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("SERPy points here")
+        .accessibilityValue(presentation.pointCue?.label ?? "Suggested target")
     }
 }
 

@@ -76,19 +76,22 @@ public struct GuideTurnPresentation: Equatable, Sendable {
     public let context: ScreenContextIdentity?
     public let responseText: String
     public let failure: GuideFailure?
+    public let pointCue: GuidePointCue?
 
     public init(
         stage: GuidanceAmbientStage,
         statusText: String,
         context: ScreenContextIdentity? = nil,
         responseText: String = "",
-        failure: GuideFailure? = nil
+        failure: GuideFailure? = nil,
+        pointCue: GuidePointCue? = nil
     ) {
         self.stage = stage
         self.statusText = statusText
         self.context = context
         self.responseText = responseText
         self.failure = failure
+        self.pointCue = pointCue
     }
 
     public var guidancePhase: GuidancePhase {
@@ -149,6 +152,7 @@ public final class GuideTurnCoordinator {
     private struct GeneratedTurn {
         let plan: GuidancePlan
         let speechCompleted: Bool
+        let pointCue: GuidePointCue?
     }
     public private(set) var conversation: [GuidanceMessage] = []
     public private(set) var phase: GuidancePhase = .idle
@@ -239,6 +243,10 @@ public final class GuideTurnCoordinator {
         finishStream: AsyncStream<Void>
     ) async {
         do {
+            try Task.checkCancellation()
+            guard !cancellationRequested, activeTurnID == id else {
+                throw CancellationError()
+            }
             do {
                 try transcription.start { [weak self] text in
                     guard let self, phase == .listening else { return }
@@ -253,6 +261,7 @@ public final class GuideTurnCoordinator {
             } catch {
                 throw failurePolicy.failure(for: error, at: .microphoneStart)
             }
+            try Task.checkCancellation()
             async let capturedContext = capture.capture(target)
             for await _ in finishStream { break }
             try Task.checkCancellation()
@@ -287,7 +296,7 @@ public final class GuideTurnCoordinator {
                         question: question,
                         context: context,
                         conversation: priorConversation
-                    ), speechCompleted: false)
+                    ), speechCompleted: false, pointCue: nil)
                 }
             } catch is CancellationError {
                 throw CancellationError()
@@ -310,7 +319,8 @@ public final class GuideTurnCoordinator {
                 stage: .speaking,
                 statusText: "Speaking…",
                 context: target.identity,
-                responseText: completeAnswer
+                responseText: completeAnswer,
+                pointCue: generated.pointCue
             ))
             if !generated.speechCompleted {
                 do { try await speech.speak(completeAnswer) }
@@ -322,24 +332,27 @@ public final class GuideTurnCoordinator {
                 stage: .readyForFollowUp,
                 statusText: "Ready for a follow-up",
                 context: target.identity,
-                responseText: completeAnswer
+                responseText: completeAnswer,
+                pointCue: generated.pointCue
             ))
         } catch is CancellationError {
             // cancel() owns visible cancellation and cleanup.
         } catch {
-            let failure = error as? GuideFailure ?? GuideFailure(
-                stage: .guidance,
-                message: error.localizedDescription,
-                recovery: "Try again."
-            )
-            phase = .failed(failure)
-            overlay.present(.init(
-                stage: .error,
-                statusText: failure.message,
-                context: target.identity,
-                failure: failure
-            ))
-            overlay.restoreIdleVisibility(after: .seconds(4))
+            if !cancellationRequested, !Task.isCancelled {
+                let failure = error as? GuideFailure ?? GuideFailure(
+                    stage: .guidance,
+                    message: error.localizedDescription,
+                    recovery: "Try again."
+                )
+                phase = .failed(failure)
+                overlay.present(.init(
+                    stage: .error,
+                    statusText: failure.message,
+                    context: target.identity,
+                    failure: failure
+                ))
+                overlay.restoreIdleVisibility(after: .seconds(4))
+            }
         }
         if activeTurnID == id {
             finishContinuation = nil
@@ -363,8 +376,8 @@ public final class GuideTurnCoordinator {
             conversation: conversation
         )
         var answer = ""
-        var point: CGPoint?
         var confidence: Float = 0
+        var pointCue: GuidePointCue?
         var queuedSentence = false
         let evidenceBounds = ["locked-window": CGRect(x: 0, y: 0, width: 1, height: 1)]
         let validator = SpatialActionValidator()
@@ -395,10 +408,11 @@ public final class GuideTurnCoordinator {
                 }
             case let .spatialAction(action):
                 guard let valid = validator.validate(action, evidenceBounds: evidenceBounds) else { continue }
-                if case let .point(_, normalizedPoint, score, _) = valid {
-                    point = CGPoint(
-                        x: target.frame.minX + normalizedPoint.x * target.frame.width,
-                        y: target.frame.minY + normalizedPoint.y * target.frame.height
+                if case let .point(_, normalizedPoint, score, label) = valid {
+                    pointCue = GuidePointCue(
+                        target: target,
+                        normalizedPoint: normalizedPoint,
+                        label: label
                     )
                     confidence = score
                 }
@@ -417,13 +431,10 @@ public final class GuideTurnCoordinator {
         do { try await speechPlayback }
         catch is CancellationError { throw CancellationError() }
         catch { throw failurePolicy.failure(for: error, at: .speaking) }
-        let validatedPlan = GuidancePlanValidator.validate(
-            GuidancePlan(answer: answer, point: point, confidence: confidence),
-            in: target.frame
-        )
         return GeneratedTurn(
-            plan: validatedPlan,
-            speechCompleted: queuedSentence
+            plan: GuidancePlan(answer: answer, confidence: confidence),
+            speechCompleted: queuedSentence,
+            pointCue: pointCue
         )
     }
 

@@ -166,16 +166,20 @@ public struct SettingsView: View {
                         .textFieldStyle(.roundedBorder)
                     HStack {
                         Button("Save to Keychain") { model.saveTalkCredential() }
-                            .disabled(model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        Button("Verify Keychain") { model.testSavedTalkCredential() }
+                            .disabled(
+                                model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    || model.talkCredentialVerification == .verifying
+                            )
+                        Button("Verify Provider") { Task { await model.testSavedTalkCredential() } }
+                            .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
                         Button("Delete Key", role: .destructive) { model.deleteTalkCredential() }
-                            .disabled(!model.talkCredentialAvailable)
+                            .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
                     }
                     Text(model.talkCredentialStatus)
                         .font(.caption)
                         .foregroundStyle(model.openAITalkReady ? .green : .secondary)
                         .textSelection(.enabled)
-                    Text("Verify Keychain does not contact OpenAI. The first Talk request verifies provider access; SERPy never silently switches to the on-device guide.")
+                    Text("Verify Provider makes a credential-only OpenAI model lookup. It sends no screenshot, question, or Talk context and creates no model response. Verification expires after 15 minutes. SERPy never silently switches providers.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {

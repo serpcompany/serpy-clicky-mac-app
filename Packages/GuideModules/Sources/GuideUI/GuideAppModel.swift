@@ -28,6 +28,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public private(set) var historyStatusMessage = "Loading local history…"
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
     public private(set) var talkCredentialAvailable = false
+    public private(set) var talkCredentialVerification: TalkCredentialVerificationState = .missing
     public private(set) var talkCredentialStatus = "No OpenAI key saved."
     public var talkCredentialDraft = ""
     public var talkProviderSelection: TalkProviderSelection {
@@ -78,7 +79,10 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private let guidanceTranscriber: AppleSpeechTranscriber
     @ObservationIgnored private let guidanceSpeaker: LocalSpeechOutputService
     @ObservationIgnored private let talkCredentialStore: any TalkCredentialStoring
+    @ObservationIgnored private let talkCredentialVerifier: any TalkCredentialVerifying
     @ObservationIgnored private let talkGenerator: TalkGenerationRouter
+    @ObservationIgnored private var verifiedTalkCredential: String?
+    @ObservationIgnored private var talkCredentialGeneration = 0
     @ObservationIgnored private let presentation: CompanionPresentation
     @ObservationIgnored private let companionController: CompanionPanelController
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
@@ -117,6 +121,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         defaults: UserDefaults = .standard,
         localGuidanceService: LocalGuidanceService,
         talkCredentialStore: any TalkCredentialStoring,
+        talkCredentialVerifier: any TalkCredentialVerifying,
         talkGenerator: TalkGenerationRouter
     ) {
         self.defaults = defaults
@@ -129,6 +134,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guidanceTranscriber = AppleSpeechTranscriber()
         guidanceSpeaker = LocalSpeechOutputService()
         self.talkCredentialStore = talkCredentialStore
+        self.talkCredentialVerifier = talkCredentialVerifier
         let provider = TalkProviderSelection(
             rawValue: defaults.string(forKey: Keys.talkProvider) ?? ""
         ) ?? .local
@@ -137,7 +143,11 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         talkDisclosureAccepted = disclosureAccepted
         let hasCredential = ((try? talkCredentialStore.credential())?.isEmpty == false)
         talkCredentialAvailable = hasCredential
-        talkCredentialStatus = hasCredential ? "OpenAI key saved in this Mac's Keychain." : "No OpenAI key saved."
+        talkCredentialVerification = hasCredential ? .savedUnverified : .missing
+        talkCredentialStatus = hasCredential
+            ? "OpenAI key saved but not verified. Verify Provider before Talk can send a screenshot."
+            : "No OpenAI key saved."
+        verifiedTalkCredential = nil
         self.talkGenerator = talkGenerator
         talkGenerator.configure(selection: provider, disclosureAccepted: disclosureAccepted)
         let presentation = CompanionPresentation()
@@ -221,7 +231,10 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public var openAITalkReady: Bool {
-        talkProviderSelection == .openAI && talkDisclosureAccepted && talkCredentialAvailable
+        talkProviderSelection == .openAI
+            && talkDisclosureAccepted
+            && talkCredentialAvailable
+            && talkCredentialVerification.isVerified()
     }
 
     public var talkThinkingStatus: String {
@@ -229,52 +242,104 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public func saveTalkCredential() {
+        guard talkCredentialVerification != .verifying else {
+            talkCredentialStatus = "Wait for provider verification to finish before replacing the saved key."
+            return
+        }
         do {
             try talkCredentialStore.saveCredential(talkCredentialDraft)
+            talkCredentialGeneration += 1
+            verifiedTalkCredential = nil
             talkCredentialDraft = ""
-            refreshTalkCredentialState(success: "OpenAI key saved in this Mac's Keychain.")
+            refreshTalkCredentialState(
+                success: "OpenAI key saved but not verified. Verify Provider before Talk can send a screenshot.",
+                savedState: .savedUnverified
+            )
         } catch {
             let failure = normalize(error, stage: .guidance)
             talkCredentialStatus = "\(failure.message) \(failure.recovery)"
         }
     }
 
-    /// Verifies Keychain round-trip only. It intentionally performs no API
-    /// request, sends no screen content, and incurs no provider spend.
-    public func testSavedTalkCredential() {
+    /// Performs a credential-only model-metadata lookup. It intentionally
+    /// sends no screenshot, question, Talk context, or generation request.
+    public func testSavedTalkCredential() async {
         do {
             guard let credential = try talkCredentialStore.credential(), !credential.isEmpty else {
                 talkCredentialAvailable = false
+                talkCredentialVerification = .missing
                 talkCredentialStatus = "No OpenAI key is saved."
+                configureTalkGenerator()
+                return
+            }
+            talkCredentialVerification = .verifying
+            talkCredentialStatus = "Verifying provider access without sending screen content…"
+            configureTalkGenerator()
+            let generation = talkCredentialGeneration
+            let isValid = try await talkCredentialVerifier.verifyCredential(credential)
+            guard generation == talkCredentialGeneration,
+                  try talkCredentialStore.credential() == credential else {
+                verifiedTalkCredential = nil
+                talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
+                talkCredentialStatus = "The saved key changed during verification. Verify Provider again."
+                configureTalkGenerator()
                 return
             }
             talkCredentialAvailable = true
-            talkCredentialStatus = credential.count >= 20
-                ? "Saved key is readable. The next OpenAI Talk turn will test provider access."
-                : "The saved value looks too short to be an API key. Delete it and save the correct key."
+            if isValid {
+                let expiry = Date().addingTimeInterval(15 * 60)
+                verifiedTalkCredential = credential
+                talkCredentialVerification = .verified(until: expiry)
+                talkCredentialStatus = "Provider verified for 15 minutes. OpenAI Talk may now send an explicitly disclosed turn."
+            } else {
+                verifiedTalkCredential = nil
+                talkCredentialVerification = .verifiedInvalid
+                talkCredentialStatus = "OpenAI rejected the saved key. Delete it and save a valid tester-owned key."
+            }
+        } catch is CancellationError {
+            verifiedTalkCredential = nil
+            talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
+            talkCredentialStatus = "Provider verification was cancelled. No screen content was sent."
         } catch {
-            talkCredentialAvailable = false
-            talkCredentialStatus = normalize(error, stage: .guidance).message
+            verifiedTalkCredential = nil
+            talkCredentialVerification = talkCredentialAvailable ? .savedUnverified : .missing
+            let failure = normalize(error, stage: .guidance)
+            talkCredentialStatus = "\(failure.message) \(failure.recovery)"
         }
         configureTalkGenerator()
     }
 
     public func deleteTalkCredential() {
+        guard talkCredentialVerification != .verifying else {
+            talkCredentialStatus = "Wait for provider verification to finish before deleting the saved key."
+            return
+        }
         do {
             try talkCredentialStore.deleteCredential()
+            talkCredentialGeneration += 1
+            verifiedTalkCredential = nil
             talkCredentialDraft = ""
-            refreshTalkCredentialState(success: "OpenAI key deleted from Keychain.")
+            refreshTalkCredentialState(
+                success: "OpenAI key deleted from Keychain.",
+                savedState: .missing
+            )
         } catch {
             talkCredentialStatus = normalize(error, stage: .guidance).message
         }
     }
 
-    private func refreshTalkCredentialState(success: String) {
+    private func refreshTalkCredentialState(
+        success: String,
+        savedState: TalkCredentialVerificationState
+    ) {
         do {
             talkCredentialAvailable = try talkCredentialStore.credential()?.isEmpty == false
+            talkCredentialVerification = talkCredentialAvailable ? savedState : .missing
             talkCredentialStatus = success
         } catch {
             talkCredentialAvailable = false
+            verifiedTalkCredential = nil
+            talkCredentialVerification = .missing
             let failure = normalize(error, stage: .guidance)
             talkCredentialStatus = "\(failure.message) \(failure.recovery)"
         }
@@ -282,9 +347,17 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func configureTalkGenerator() {
+        let verifiedUntil: Date?
+        if case let .verified(until) = talkCredentialVerification {
+            verifiedUntil = until
+        } else {
+            verifiedUntil = nil
+        }
         talkGenerator.configure(
             selection: talkProviderSelection,
-            disclosureAccepted: talkDisclosureAccepted
+            disclosureAccepted: talkDisclosureAccepted,
+            credentialVerifiedUntil: verifiedUntil,
+            verifiedCredential: verifiedTalkCredential
         )
     }
 
@@ -476,6 +549,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.guideStage = nil
         presentation.contextLabel = nil
         presentation.responseText = ""
+        presentation.pointCue = nil
         applyCompanionVisibility()
     }
 
@@ -525,7 +599,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                 GuideFailure(
                     stage: .guidance,
                     message: "OpenAI Talk is selected but not ready.",
-                    recovery: "Open SERPy Settings, accept the disclosure, and save a tester-owned OpenAI API key."
+                    recovery: "Open SERPy Settings, accept the disclosure, save a tester-owned OpenAI API key, and choose Verify Provider."
                 )
             )
             return
@@ -1048,6 +1122,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.caption = turn.statusText
         presentation.contextLabel = turn.context?.compactLabel
         presentation.responseText = turn.responseText
+        presentation.pointCue = turn.pointCue
         statusMessage = turn.statusText
         recoveryMessage = turn.failure?.recovery ?? ""
         applyCompanionVisibility()
@@ -1059,6 +1134,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public func dismissResponse() {
         presentation.responseText = ""
+        presentation.pointCue = nil
         companionController.refresh()
     }
 
@@ -1073,6 +1149,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             presentation.caption = ""
             presentation.contextLabel = nil
             presentation.responseText = ""
+            presentation.pointCue = nil
             applyCompanionVisibility()
             companionController.refresh()
         }

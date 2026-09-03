@@ -1,12 +1,12 @@
-# SERPy build 31 opt-in OpenAI Talk HIL
+# SERPy build 32 opt-in OpenAI Talk HIL
 
 This guide is for the exact signed branch artifact at:
 
 `$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 
-Expected version is `0.1.0 (31)`. Its Developer ID-signed arm64 executable
+Expected version is `0.1.0 (32)`. Its Developer ID-signed arm64 executable
 SHA-256 is
-`94115f3d211af04c2d53ded75f247f4d6320d2cda008d326e345c8b4cda67865`.
+`e02f75651ebc119f6515ac0118f5f956664c8950ae497694e7fb1f0b7929eb94`.
 Do not mark an installed row passed unless that hash matches.
 
 ## Safety and cost boundary
@@ -26,9 +26,11 @@ Do not mark an installed row passed unless that hash matches.
 3. Select **OpenAI multimodal** and read the complete disclosure.
 4. Accept the request-scoped transmission disclosure.
 5. Paste the tester-owned API key, save it to Keychain, then click **Verify
-   Keychain**. This button must state that it does not contact OpenAI.
-6. Quit and relaunch SERPy. Confirm the selection and disclosure remain, the
-   key field is blank, and the saved-key status remains available.
+Provider**. This makes only a credential-authenticated model-metadata lookup;
+it sends no screenshot, question, Talk context, or model-generation request.
+6. Confirm the verified state has a 15-minute lifetime. Quit and relaunch SERPy:
+   the selection and disclosure remain and the key field is blank, but the
+   saved key returns to **unverified** and cannot authorize Talk until verified.
 
 ## Primary multimodal journey
 
@@ -42,9 +44,19 @@ Do not mark an installed row passed unless that hash matches.
    bubble, and speak complete sentences once in order.
 6. Confirm the answer is grounded in the screenshot and never claims SERPy
    clicked, typed, moved the pointer, or controlled the app.
-7. Ask a dependent spoken follow-up after changing the visible phrase to
+7. If the provider returns a high-confidence point, confirm the separate ring
+   appears over the suggested target without moving the real pointer, taking
+   focus, or intercepting the click.
+8. Ask a dependent spoken follow-up after changing the visible phrase to
    `COBALT HARBOR 924`. Confirm the fresh screenshot and bounded in-memory
    conversation both affect the answer.
+
+## Long-answer interaction
+
+Ask for an answer long enough to exceed the available bubble height. Confirm
+only the visibly overflowing answer surface becomes scrollable, the window
+remains nonactivating and below the menu-bar safe area, and ordinary
+non-overflow answers and the cursor/point cue remain click-through.
 
 ## No-send and no-fallback matrix
 
@@ -54,9 +66,12 @@ other provider:
 
 1. OpenAI selected, disclosure off.
 2. OpenAI selected, no Keychain credential.
-3. OpenAI selected, invalid credential.
-4. OpenAI selected, network unavailable.
-5. On-device selected while the Apple local model is unavailable.
+3. OpenAI selected, saved but unverified credential.
+4. OpenAI selected, provider-rejected credential. Rejection must happen in the
+   content-free verification request, before Talk can capture or send pixels.
+5. OpenAI selected after verification expires.
+6. OpenAI selected, network unavailable.
+7. On-device selected while the Apple local model is unavailable.
 
 ## Cancellation and privacy
 
@@ -70,7 +85,7 @@ other provider:
 ## Rows that remain red
 
 This build does not establish HeyClicky parity. Model quality, live latency,
-installed streaming/audio behavior, spatial cue rendering, arbitrary visual
+installed streaming/audio behavior, spatial cue observation, arbitrary visual
 understanding, multi-display/Spaces/full-screen behavior, VoiceOver, Reduce
 Motion, provider retention behavior, and the full audio-device failure matrix
 remain red until separately observed and accepted.

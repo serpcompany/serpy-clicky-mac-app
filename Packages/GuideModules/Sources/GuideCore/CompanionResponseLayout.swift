@@ -1,5 +1,35 @@
 import CoreGraphics
 
+public enum CompanionResponseInteractionMode: Equatable, Sendable {
+    case clickThrough
+    case scrollableVisibleControl
+}
+
+public struct CompanionResponseInteractionPolicy: Sendable {
+    public init() {}
+
+    public func mode(
+        measuredContentHeight: CGFloat,
+        maximumPanelHeight: CGFloat
+    ) -> CompanionResponseInteractionMode {
+        measuredContentHeight > maximumPanelHeight
+            ? .scrollableVisibleControl
+            : .clickThrough
+    }
+
+    public func maximumNonOverlappingHeight(
+        visibleFrame: CGRect,
+        avoidedFrame: CGRect,
+        margin: CGFloat = 8,
+        gap: CGFloat = 14
+    ) -> CGFloat {
+        let safeFrame = visibleFrame.insetBy(dx: margin, dy: margin)
+        let below = avoidedFrame.minY - gap - safeFrame.minY
+        let above = safeFrame.maxY - avoidedFrame.maxY - gap
+        return max(0, below, above)
+    }
+}
+
 public struct CompanionResponseAnchorPolicy: Sendable {
     public init() {}
 

@@ -17,21 +17,33 @@ public struct TalkAuthorization: Equatable, Sendable {
     public let selection: TalkProviderSelection
     public let disclosureAccepted: Bool
     public let credentialAvailable: Bool
+    public let credentialVerifiedUntil: Date?
+    public let credentialMatchesVerification: Bool
 
-    public init(selection: TalkProviderSelection, disclosureAccepted: Bool, credentialAvailable: Bool) {
+    public init(
+        selection: TalkProviderSelection,
+        disclosureAccepted: Bool,
+        credentialAvailable: Bool,
+        credentialVerifiedUntil: Date?,
+        credentialMatchesVerification: Bool
+    ) {
         self.selection = selection
         self.disclosureAccepted = disclosureAccepted
         self.credentialAvailable = credentialAvailable
+        self.credentialVerifiedUntil = credentialVerifiedUntil
+        self.credentialMatchesVerification = credentialMatchesVerification
     }
 }
 
 public struct TalkAuthorizationPolicy: Sendable {
     public init() {}
 
-    public func mayTransmit(_ authorization: TalkAuthorization) -> Bool {
+    public func mayTransmit(_ authorization: TalkAuthorization, now: Date = Date()) -> Bool {
         authorization.selection == .openAI
             && authorization.disclosureAccepted
             && authorization.credentialAvailable
+            && authorization.credentialMatchesVerification
+            && (authorization.credentialVerifiedUntil.map { $0 > now } ?? false)
     }
 }
 
@@ -39,6 +51,25 @@ public protocol TalkCredentialStoring: Sendable {
     func credential() throws -> String?
     func saveCredential(_ credential: String) throws
     func deleteCredential() throws
+}
+
+public protocol TalkCredentialVerifying: Sendable {
+    /// Returns false only when the provider rejects the credential. Transport
+    /// and service failures throw and remain unverified.
+    func verifyCredential(_ credential: String) async throws -> Bool
+}
+
+public enum TalkCredentialVerificationState: Equatable, Sendable {
+    case missing
+    case savedUnverified
+    case verifying
+    case verified(until: Date)
+    case verifiedInvalid
+
+    public func isVerified(at date: Date = Date()) -> Bool {
+        guard case let .verified(until) = self else { return false }
+        return until > date
+    }
 }
 
 public struct GuideRaster: Equatable, Sendable {
@@ -117,6 +148,18 @@ public enum GuidanceSpatialAction: Equatable, Sendable {
     case highlight(evidenceID: String, normalizedRect: CGRect, confidence: Float, label: String?)
     case path(evidenceID: String, normalizedPoints: [CGPoint], confidence: Float, label: String?)
     case label(evidenceID: String, normalizedPoint: CGPoint, confidence: Float, text: String)
+}
+
+public struct GuidePointCue: Equatable, Sendable {
+    public let target: GuideWindowTarget
+    public let normalizedPoint: CGPoint
+    public let label: String?
+
+    public init(target: GuideWindowTarget, normalizedPoint: CGPoint, label: String?) {
+        self.target = target
+        self.normalizedPoint = normalizedPoint
+        self.label = label
+    }
 }
 
 public struct SpatialActionValidator: Sendable {
@@ -201,28 +244,41 @@ public final class TalkGenerationRouter: GuideTurnStreamingGenerating {
 
     public private(set) var selection: TalkProviderSelection
     public private(set) var disclosureAccepted: Bool
+    public private(set) var credentialVerifiedUntil: Date?
+    private var verifiedCredential: String?
 
     public init(
         local: any GuideTurnGenerating,
         cloud: any GuidanceGenerating,
         credentialStore: any TalkCredentialStoring,
         selection: TalkProviderSelection = .local,
-        disclosureAccepted: Bool = false
+        disclosureAccepted: Bool = false,
+        credentialVerifiedUntil: Date? = nil,
+        verifiedCredential: String? = nil
     ) {
         self.local = local
         self.cloud = cloud
         self.credentialStore = credentialStore
         self.selection = selection
         self.disclosureAccepted = disclosureAccepted
+        self.credentialVerifiedUntil = credentialVerifiedUntil
+        self.verifiedCredential = verifiedCredential
     }
 
     public var thinkingStatusText: String {
         selection == .openAI ? "Looking at this window with OpenAI…" : "Thinking locally…"
     }
 
-    public func configure(selection: TalkProviderSelection, disclosureAccepted: Bool) {
+    public func configure(
+        selection: TalkProviderSelection,
+        disclosureAccepted: Bool,
+        credentialVerifiedUntil: Date? = nil,
+        verifiedCredential: String? = nil
+    ) {
         self.selection = selection
         self.disclosureAccepted = disclosureAccepted
+        self.credentialVerifiedUntil = credentialVerifiedUntil
+        self.verifiedCredential = verifiedCredential
     }
 
     public func answer(
@@ -267,16 +323,19 @@ public final class TalkGenerationRouter: GuideTurnStreamingGenerating {
             }
         }
 
-        let credentialAvailable = (try? credentialStore.credential())?.isEmpty == false
+        let currentCredential = try? credentialStore.credential()
+        let credentialAvailable = currentCredential?.isEmpty == false
         guard authorizationPolicy.mayTransmit(.init(
             selection: selection,
             disclosureAccepted: disclosureAccepted,
-            credentialAvailable: credentialAvailable
+            credentialAvailable: credentialAvailable,
+            credentialVerifiedUntil: credentialVerifiedUntil,
+            credentialMatchesVerification: currentCredential != nil && currentCredential == verifiedCredential
         )) else {
             throw GuideFailure(
                 stage: .guidance,
                 message: "OpenAI Talk is not ready to send this question.",
-                recovery: "In SERPy Settings, select OpenAI, accept the per-device disclosure, and save a tester-owned key."
+                recovery: "In SERPy Settings, select OpenAI, accept the disclosure, save a tester-owned key, and choose Verify Provider."
             )
         }
         guard let raster = context.raster else {

@@ -2,9 +2,21 @@ import Foundation
 import GuideCore
 import Security
 
+struct KeychainTalkItemPolicy: Sendable {
+    var accessibility: CFString { kSecAttrAccessibleWhenUnlockedThisDeviceOnly }
+
+    func updateAttributes(valueData: Data) -> CFDictionary {
+        [
+            kSecValueData as String: valueData,
+            kSecAttrAccessible as String: accessibility
+        ] as CFDictionary
+    }
+}
+
 public struct KeychainTalkCredentialStore: TalkCredentialStoring, Sendable {
     private let service: String
     private let account: String
+    private let itemPolicy = KeychainTalkItemPolicy()
 
     public init(
         service: String = "com.serpcompany.guidecompanion.internal.openai",
@@ -36,14 +48,14 @@ public struct KeychainTalkCredentialStore: TalkCredentialStoring, Sendable {
         let valueData = Data(trimmed.utf8)
         let updateStatus = SecItemUpdate(
             baseQuery as CFDictionary,
-            [kSecValueData as String: valueData] as CFDictionary
+            itemPolicy.updateAttributes(valueData: valueData)
         )
         if updateStatus == errSecSuccess { return }
         guard updateStatus == errSecItemNotFound else { throw keychainFailure(updateStatus) }
 
         var insert = baseQuery
         insert[kSecValueData as String] = valueData
-        insert[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        insert[kSecAttrAccessible as String] = itemPolicy.accessibility
         let addStatus = SecItemAdd(insert as CFDictionary, nil)
         guard addStatus == errSecSuccess else { throw keychainFailure(addStatus) }
     }
