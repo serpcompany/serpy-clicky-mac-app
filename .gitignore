@@ -4,6 +4,7 @@
 .build-derived/
 .release-derived/
 .xcode-test-derived/
+.issue7-test-derived/
 DerivedData/
 build/
 dist/
