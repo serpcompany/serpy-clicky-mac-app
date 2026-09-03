@@ -3,11 +3,12 @@ import GuideCore
 import SwiftUI
 
 public struct MenuPanelView: View {
-    @Environment(\.openSettings) private var openSettings
     @Bindable private var model: GuideAppModel
+    private let openSettings: @MainActor () -> Void
 
-    public init(model: GuideAppModel) {
+    public init(model: GuideAppModel, openSettings: @escaping @MainActor () -> Void) {
         self.model = model
+        self.openSettings = openSettings
     }
 
     public var body: some View {

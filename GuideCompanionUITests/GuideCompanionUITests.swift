@@ -1,12 +1,13 @@
 import XCTest
 
 final class GuideCompanionUITests: XCTestCase {
-    func testApplicationLaunchesAndRemainsAvailableWithoutAWindow() {
+    func testApplicationLaunchesForegroundWithNormalSettingsSurface() {
         let application = XCUIApplication()
         application.launchArguments = ["--ui-testing"]
         application.launch()
 
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
+        XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
     }
 
     func testVoiceConversationTranscriptHasNoTypingComposer() {

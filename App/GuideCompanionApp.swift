@@ -25,6 +25,7 @@ private enum GuideAppComposition {
             shortcutMonitorFactory: makeShortcutMonitor
         )
     }()
+    static let settingsWindow = GuideSettingsWindowController(model: model)
 
     private static func makeShortcutMonitor(
         configuration: GlobalShortcutConfigurationSet,
@@ -58,17 +59,23 @@ struct GuideCompanionApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuPanelView(model: model)
+            MenuPanelView(
+                model: model,
+                openSettings: { GuideAppComposition.settingsWindow.present() }
+            )
         } label: {
             Label("SERPy", systemImage: model.menuBarSymbol)
                 .accessibilityLabel("SERPy, \(model.shortStatus)")
         }
         .menuBarExtraStyle(.menu)
-
-        Settings {
-            SettingsView(model: model)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    GuideAppComposition.settingsWindow.present()
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
         }
-        .defaultSize(width: 620, height: 520)
     }
 }
 
@@ -76,6 +83,7 @@ struct GuideCompanionApp: App {
 final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyPresence(for: .running(settingsVisible: NSApp.windows.contains(where: \.isVisible)))
+        GuideAppComposition.settingsWindow.present()
         Task {
             await GuideAppComposition.model.start()
             if CommandLine.arguments.contains("--ui-testing"),
@@ -92,8 +100,7 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         applyPresence(for: .running(settingsVisible: flag))
-        sender.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        sender.activate(ignoringOtherApps: true)
+        GuideAppComposition.settingsWindow.present()
         return true
     }
 
