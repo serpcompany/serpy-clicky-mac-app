@@ -71,10 +71,15 @@ public struct CompanionResponseAnchorPolicy: Sendable {
     public func frame(
         current: CGRect?,
         proposed: CGRect,
-        responseIsVisible: Bool
+        responseIsVisible: Bool,
+        visibleFrame: CGRect? = nil,
+        avoiding avoidedFrame: CGRect? = nil
     ) -> CGRect {
         if responseIsVisible, let current {
-            return CGRect(origin: current.origin, size: proposed.size)
+            let anchored = CGRect(origin: current.origin, size: proposed.size)
+            let staysVisible = visibleFrame.map { $0.insetBy(dx: 8, dy: 8).contains(anchored) } ?? true
+            let avoidsStatus = avoidedFrame.map { !anchored.intersects($0) } ?? true
+            if staysVisible, avoidsStatus { return anchored }
         }
         return proposed
     }

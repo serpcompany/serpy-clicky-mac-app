@@ -187,7 +187,7 @@ public struct OpenAIResponsesRequestBuilder: Sendable {
 public struct OpenAIResponsesSSEDecoder: Sendable {
     private var chunker = SentenceChunker()
     private var structuredOutput = ""
-    private var emittedAnswer = ""
+    private var emittedAnswerBytes = Data()
 
     public init() {}
 
@@ -202,11 +202,12 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
             guard let delta = object["delta"] as? String else { return [] }
             structuredOutput += delta
             guard let partial = Self.partialAnswer(in: structuredOutput),
-                  partial.hasPrefix(emittedAnswer)
+                  Data(partial.utf8).starts(with: emittedAnswerBytes)
             else { return [] }
-            let answerDelta = String(partial.dropFirst(emittedAnswer.count))
+            let partialBytes = Data(partial.utf8)
+            let answerDelta = String(decoding: partialBytes.dropFirst(emittedAnswerBytes.count), as: UTF8.self)
             guard !answerDelta.isEmpty else { return [] }
-            emittedAnswer = partial
+            emittedAnswerBytes = partialBytes
             return [.textDelta(answerDelta)]
                 + chunker.append(answerDelta).map(GuidanceStreamEvent.sentenceReady)
         case "response.completed":
@@ -214,7 +215,7 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
                   let output = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let answer = output["answer"] as? String,
                   !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  answer.hasPrefix(emittedAnswer)
+                  Data(answer.utf8).starts(with: emittedAnswerBytes)
             else {
                 throw GuideFailure(
                     stage: .guidance,
@@ -223,9 +224,10 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
                 )
             }
             var events: [GuidanceStreamEvent] = []
-            let remainderDelta = String(answer.dropFirst(emittedAnswer.count))
+            let answerBytes = Data(answer.utf8)
+            let remainderDelta = String(decoding: answerBytes.dropFirst(emittedAnswerBytes.count), as: UTF8.self)
             if !remainderDelta.isEmpty {
-                emittedAnswer = answer
+                emittedAnswerBytes = answerBytes
                 events.append(.textDelta(remainderDelta))
                 events += chunker.append(remainderDelta).map(GuidanceStreamEvent.sentenceReady)
             }

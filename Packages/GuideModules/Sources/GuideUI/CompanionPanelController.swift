@@ -194,7 +194,9 @@ public final class CompanionPanelController {
             let responseFrame = responseAnchorPolicy.frame(
                 current: responseAnchorFrame,
                 proposed: proposedFrame,
-                responseIsVisible: responsePanel.isVisible
+                responseIsVisible: responsePanel.isVisible,
+                visibleFrame: visibleFrame,
+                avoiding: newFrame
             )
             responseAnchorFrame = responseFrame
             responsePanel.setFrame(responseFrame, display: true)

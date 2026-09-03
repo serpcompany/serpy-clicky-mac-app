@@ -208,6 +208,46 @@ final class CompanionResponseLayoutPolicyTests: XCTestCase {
         XCTAssertEqual(overflow.interactionMode, .scrollableVisibleControl)
     }
 
+    func testGrowingAnchorAdjustsOnlyWhenNeededToStayOnscreenAndAvoidStatus() {
+        let layout = CompanionResponseLayoutPolicy()
+        let anchor = CompanionResponseAnchorPolicy()
+
+        for visibleFrame in [
+            CGRect(x: 0, y: 0, width: 1_200, height: 800),
+            CGRect(x: -700, y: 40, width: 700, height: 500)
+        ] {
+            let status = CGRect(
+                x: visibleFrame.midX - 175,
+                y: visibleFrame.midY - 50,
+                width: 350,
+                height: 100
+            )
+            let maximumHeight = CompanionResponseInteractionPolicy().maximumNonOverlappingHeight(
+                visibleFrame: visibleFrame,
+                avoidedFrame: status
+            )
+            var current: CGRect?
+            for height in [min(92, maximumHeight), max(92, maximumHeight * 0.65), maximumHeight] {
+                let proposed = layout.frame(
+                    pointer: CGPoint(x: status.midX, y: status.midY),
+                    visibleFrame: visibleFrame,
+                    contentSize: CGSize(width: min(600, visibleFrame.width - 16), height: height),
+                    avoiding: status
+                )
+                let resolved = anchor.frame(
+                    current: current,
+                    proposed: proposed,
+                    responseIsVisible: current != nil,
+                    visibleFrame: visibleFrame,
+                    avoiding: status
+                )
+                XCTAssertTrue(visibleFrame.insetBy(dx: 8, dy: 8).contains(resolved))
+                XCTAssertFalse(resolved.intersects(status))
+                current = resolved
+            }
+        }
+    }
+
     func testOnlyOverflowingVisibleAnswerBecomesIntentionallyScrollable() {
         let policy = CompanionResponseInteractionPolicy()
 

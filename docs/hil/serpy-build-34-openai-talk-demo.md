@@ -1,12 +1,12 @@
-# SERPy build 33 opt-in OpenAI Talk HIL
+# SERPy build 34 opt-in OpenAI Talk HIL
 
 This guide is for the exact signed branch artifact at:
 
 `$REPO_ROOT/.release-derived/Build/Products/Release/SERPy.app`
 
-Expected version is `0.1.0 (33)`. Its Developer ID-signed arm64 executable
+Expected version is `0.1.0 (34)`. Its Developer ID-signed arm64 executable
 SHA-256 is
-`8bfd7c96bb11edd6766750abf082358bc9c9869545b286a3e71d178540f91347`.
+`cb16d6927b55d11eed3402cd33864e1fca996553796b42739f206b6c8a3b283e`.
 Do not mark an installed row passed unless that hash matches.
 
 ## Safety and cost boundary

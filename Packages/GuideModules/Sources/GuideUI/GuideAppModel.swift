@@ -252,8 +252,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         do {
-            cancelTalkVerificationExpiry()
             try talkCredentialStore.saveCredential(talkCredentialDraft)
+            cancelTalkVerificationExpiry()
             talkCredentialGeneration += 1
             verifiedTalkCredential = nil
             talkCredentialDraft = ""
@@ -325,8 +325,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         do {
-            cancelTalkVerificationExpiry()
             try talkCredentialStore.deleteCredential()
+            cancelTalkVerificationExpiry()
             talkCredentialGeneration += 1
             verifiedTalkCredential = nil
             talkCredentialDraft = ""

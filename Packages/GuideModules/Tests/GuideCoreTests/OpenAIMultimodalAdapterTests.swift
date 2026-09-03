@@ -142,6 +142,21 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
         XCTAssertThrowsError(try malformed.consume(line: #"data: {"type":"response.completed"}"#))
     }
 
+    func testSSEDecoderPreservesCombiningMarksAndEmojiZWJAcrossDeltaBoundaries() throws {
+        var decoder = OpenAIResponsesSSEDecoder()
+        let lines = [
+            #"data: {"type":"response.output_text.delta","delta":"{\"answer\":\"Cafe"}"#,
+            #"data: {"type":"response.output_text.delta","delta":"́ 👩"}"#,
+            #"data: {"type":"response.output_text.delta","delta":"‍💻\",\"point\":null}"}"#,
+            #"data: {"type":"response.completed"}"#
+        ]
+
+        let events = try lines.flatMap { try decoder.consume(line: $0) }
+
+        XCTAssertEqual(events.filterTextDeltas.joined(), "Café 👩‍💻")
+        XCTAssertEqual(events.filterSentences, ["Café 👩‍💻"])
+    }
+
     func testImmediatelyFailingStreamDoesNotLeaveStaleRequestOwnership() async throws {
         let generator = OpenAIMultimodalGuidanceGenerator(
             credentialStore: MemoryTalkCredentialStore(value: nil),

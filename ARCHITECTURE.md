@@ -134,7 +134,9 @@ Provider-specific request and SSE types remain in GuideMac.
 
 The OpenAI adapter requests one strict structured output containing a required
 non-empty `answer` and an optional `point`. It incrementally extracts only the
-answer string from JSON SSE deltas; JSON syntax is never shown or spoken.
+answer string from JSON SSE deltas using UTF-8 byte offsets so combining marks
+and emoji ZWJ sequences survive event boundaries; JSON syntax is never shown or
+spoken.
 
 The completed turn still resolves to a structured `GuidancePlan`, not arbitrary
 overlay commands:

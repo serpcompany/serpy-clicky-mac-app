@@ -71,13 +71,13 @@ Notes and Slack are not yet observed.
 | C11 | Guide conversations and screenshots are not persisted after quit | Filesystem/log audit + relaunch observation | implemented |
 | C12 | Guide answers are captioned by the cursor and spoken locally | Installed audio observation | implemented |
 | C13 | Active guide turns force the companion visible without changing a disabled saved preference | Policy test + installed preference-off lifecycle | installed-observed |
-| C14 | A guide answer is fully readable in an edge-safe bubble without covering guide status; overflow becomes an intentional nonactivating scroll control | Layout/interaction tests + installed corner observation | unit-tested |
+| C14 | A streamed answer grows from its first delta while remaining edge/status-safe; overflow becomes an intentional nonactivating scroll control | Small→medium→maximum layout/interaction sequences + installed corner observation | unit-tested |
 | C15 | Each turn locks PID, exact window ID, app/title, and frame before presentation and never falls back to a sibling window | Policy/adapter tests + installed same-app multi-window observation | unit-tested |
 | C16 | Escape cancels the owned listening, capture, thinking, or speaking work and restores companion visibility idempotently | Coordinator tests + installed phase-by-phase observation | unit-tested |
 | C17 | Listening acknowledgement precedes capture work and Vision OCR never blocks the main actor | Coordinator ordering + adapter contract test + installed latency observation | unit-tested |
 | C18 | Cloud Talk is disabled by default and sends nothing without disclosure, explicit selection, credential, and unexpired content-free provider verification | Deterministic authorization, verification, and request-serialization tests | unit-tested |
 | C19 | OpenAI Talk sends only the exact request-scoped raster, question, and bounded recent Talk context with response storage disabled | Request fixture + owner-controlled HIL | unit-tested |
-| C20 | Structured output requires a non-empty answer plus optional point; answer deltas remain ordered, complete text is preserved, and speech receives each complete sentence once | JSON-schema/SSE and speech-queue tests + installed observation | unit-tested |
+| C20 | Structured output requires a non-empty answer plus optional point; Unicode-safe answer deltas remain ordered, complete text is preserved, and speech receives each complete sentence once | JSON-schema/SSE/grapheme-split and speech-queue tests + installed observation | unit-tested |
 | C21 | Cloud cancellation terminates URLSession streaming, queued speech, and overlays without a delayed answer | Blocking URLProtocol + coordinator cancellation fixtures + installed observation | unit-tested |
 | C22 | Spatial points are exact-screenshot-bound, confidence-gated, projected across Quartz/AppKit display coordinates, and rendered in a click-through cue without pointer movement/click | Validator/projector/coordinator tests + controlled one-point HIL | unit-tested |
 
@@ -106,7 +106,7 @@ artifact is not installed, hash-matched, or owner-observed; its ambient journey,
 audible output, focus retention, follow-up, and every cancellation phase remain
 red until the HIL is completed against that exact artifact.
 
-Build 33 adds an explicit, disabled-by-default OpenAI multimodal Talk adapter.
+Build 34 adds an explicit, disabled-by-default OpenAI multimodal Talk adapter.
 Authorization, exact-window raster construction, bounded context, Keychain
 storage, content-free credential verification, SSE ordering, sentence-queue
 delivery, immediate/coordinator/URLSession cancellation, spatial validation,
@@ -114,7 +114,7 @@ negative-origin projection, and click-through cue presentation are unit-tested
 without a live provider call. The signed artifact,
 provider access, answer quality, cost, disclosure comprehension, installed
 streaming/audio behavior, and filesystem privacy audit remain red until
-`docs/hil/serpy-build-33-openai-talk-demo.md` is completed by the owner.
+`docs/hil/serpy-build-34-openai-talk-demo.md` is completed by the owner.
 
 ## D — Distribution and Privacy
 
