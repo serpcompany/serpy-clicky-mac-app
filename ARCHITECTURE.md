@@ -22,8 +22,10 @@ flowchart LR
     G["Guide shortcut or menu"] --> V["Local voice question"]
     V --> T["Transient guide conversation"]
     T --> C["Request-scoped context capture"]
-    C --> X["Accessibility tree and OCR"]
-    X --> A["Local guidance engine"]
+    C --> X["Structured OCR evidence"]
+    X --> A["Selected guidance adapter"]
+    C --> R["Transient raster"]
+    R --> A
     A --> P["Validated guidance plan"]
     P --> O["Cursor and caption overlay"]
 
@@ -125,20 +127,25 @@ The recent conversation is held in memory and supplied with each new request.
 It is not written to transcript history or logs. Each turn captures fresh
 context; prior screen pixels are neither retained nor replayed.
 
-The engine returns a structured `GuidancePlan`, not arbitrary overlay commands:
+The engine streams provider-neutral `GuidanceStreamEvent` values. Text deltas
+build the visible answer, complete sentence chunks may enter the local speech
+queue, and spatial actions must pass independent validation before presentation.
+Provider-specific request and SSE types remain in GuideMac.
+
+The completed turn still resolves to a structured `GuidancePlan`, not arbitrary
+overlay commands:
 
 ```text
 GuidancePlan
   answer: String
-  cues: [PointCue]
+  point: CGPoint?
   confidence: Float
-  sourceWindow: WindowIdentity
-  expiresAt: Date
 ```
 
-Coordinates are accepted only when they fall inside the captured window and can
-be reconciled with an accessibility element, OCR region, or explicit confidence
-threshold. Low-confidence responses provide prose without pointing.
+Coordinates are accepted only when they reference the exact locked-window
+screenshot, fall within its normalized bounds, convert inside its captured
+window frame, and pass the confidence threshold. Low-confidence responses
+provide prose without pointing.
 
 ## Important Protocol Seams
 
@@ -151,6 +158,7 @@ threshold. Low-confidence responses provide prose without pointing.
 - `ScreenContextCapturing`
 - `ScreenContextExtracting`
 - `GuidanceGenerating`
+- `TalkCredentialStoring`
 - `OverlayPresenting`
 - `ModelInstalling`
 
@@ -197,20 +205,27 @@ transcript.
   with the local system voice. A normal, non-floating window is optional
   transcript inspection only.
 - Include recent in-memory turns so follow-up questions retain meaning.
-- Prefer accessibility structure and Vision OCR over sending raw pixels into
-  the reasoning layer.
+- Local guidance uses Vision OCR. When the user explicitly selects OpenAI Talk
+  and accepts its disclosure, only the exact locked-window raster, question,
+  and bounded recent Talk summary are sent once through the Responses API with
+  `store: false`. OCR text and target metadata are not duplicated into the
+  provider request.
 - Use the system content-sharing picker where it improves user control.
 - Treat Apple Foundation Models as one adapter, not a minimum-OS assumption.
 - On systems without a capable local guidance model, dictation still works and
   guidance reports its exact limitation.
-- No server provider is part of the first-product critical path.
+- Cloud failure never silently selects local guidance, and local failure never
+  silently sends data to a provider.
 
 ## Storage and Privacy
 
 - UserDefaults: small preferences and completed onboarding steps.
 - Application Support: downloaded model manifests, checksums, redacted logs,
   and the bounded local transcript recovery store.
-- Keychain: reserved for future secrets; core product requires none.
+- Keychain: stores the tester-supplied OpenAI key for the optional Talk path.
+  It is never displayed, logged, persisted in defaults, or included in
+  diagnostics. A future distributed product must use a server-issued token or
+  backend rather than shipping a shared secret in the client.
 - By default, persist only the newest Last Dictation: 10 minutes after
   confirmed delivery or 24 hours after unconfirmed/failed delivery. Persist it
   atomically before delivery so a crash cannot erase the user's words.
@@ -247,5 +262,5 @@ its normal non-floating transcript window.
 | Reverse engineer HeyClicky implementation | Reject | Hidden internals and unnecessary clean-room risk |
 | Local HTTP agent bridge | Defer | Adds attack surface without helping core journeys |
 | One giant observable manager | Reject | Recreates the coupling already observed |
-| Cloud-first assistant | Reject | Violates the no-key, offline core contract |
+| Cloud-first assistant | Reject | Local remains default; only an explicit optional Talk adapter is allowed |
 | Many tiny packages | Reject | More build and ownership overhead than this app needs |

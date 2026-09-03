@@ -43,7 +43,7 @@ public final class CompanionPanelController {
             defer: false
         )
         responsePanel = CompanionPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 120),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 120),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -167,7 +167,8 @@ public final class CompanionPanelController {
     }
 
     private func measuredResponseSize(_ text: String, availableHeight: CGFloat) -> CGSize {
-        let textWidth: CGFloat = 340
+        let panelWidth = min(600, max(300, visibleFrameWidthFallback - 16))
+        let textWidth = panelWidth - 40
         let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
         let bounds = (text as NSString).boundingRect(
             with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
@@ -175,9 +176,14 @@ public final class CompanionPanelController {
             attributes: [.font: font]
         )
         return NSSize(
-            width: 380,
+            width: panelWidth,
             height: min(max(92, ceil(bounds.height) + 48), availableHeight)
         )
+    }
+
+    private var visibleFrameWidthFallback: CGFloat {
+        let pointer = NSEvent.mouseLocation
+        return (NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main)?.visibleFrame.width ?? 600
     }
 
     private func measuredGuideStatusSize(availableHeight: CGFloat) -> CGSize {
@@ -210,12 +216,15 @@ private struct CompanionResponseView: View {
     let presentation: CompanionPresentation
 
     var body: some View {
-        Text(presentation.responseText)
-            .font(.callout.weight(.medium))
-            .foregroundStyle(.primary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(18)
+        ScrollView {
+            Text(presentation.responseText)
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(18)
+        }
+        .scrollIndicators(.automatic)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
         .accessibilityElement(children: .ignore)

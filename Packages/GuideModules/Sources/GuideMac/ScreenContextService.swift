@@ -162,7 +162,11 @@ public actor ScreenCaptureKitWindowProvider: ScreenWindowCaptureProviding {
             guard !png.isEmpty, NSBitmapImageRep(data: png) != nil else {
                 throw GuideFailure(stage: .capture, message: "The selected window did not produce a readable PNG.", recovery: "Bring that exact window forward and try again.")
             }
-            return ScreenRaster(encodedImage: png)
+            return ScreenRaster(
+                encodedImage: png,
+                pixelWidth: request.pixelWidth,
+                pixelHeight: request.pixelHeight
+            )
         } catch let failure as GuideFailure {
             throw failure
         } catch {
@@ -223,7 +227,8 @@ public final class ScreenContextService: GuideTurnContextCapturing, @unchecked S
             applicationName: target.applicationName,
             windowTitle: target.windowTitle,
             windowFrame: target.frame,
-            textBlocks: blocks
+            textBlocks: blocks,
+            raster: raster.guideRaster
         )
     }
 

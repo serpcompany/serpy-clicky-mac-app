@@ -158,12 +158,32 @@ public struct ScreenContext: Equatable, Sendable {
     public let windowTitle: String
     public let windowFrame: CGRect
     public let textBlocks: [ScreenTextBlock]
+    public let raster: GuideRaster?
 
-    public init(applicationName: String, windowTitle: String, windowFrame: CGRect, textBlocks: [ScreenTextBlock]) {
+    public init(
+        applicationName: String,
+        windowTitle: String,
+        windowFrame: CGRect,
+        textBlocks: [ScreenTextBlock],
+        raster: GuideRaster? = nil
+    ) {
         self.applicationName = applicationName
         self.windowTitle = windowTitle
         self.windowFrame = windowFrame
         self.textBlocks = textBlocks
+        self.raster = raster
+    }
+
+    public var structuredEvidence: [ScreenEvidence] {
+        textBlocks.enumerated().map { index, block in
+            ScreenEvidence(
+                id: "ocr-\(index + 1)",
+                text: String(block.text.prefix(500)),
+                normalizedBounds: block.normalizedBounds,
+                confidence: block.confidence,
+                source: .ocr
+            )
+        }
     }
 
     public var promptText: String {

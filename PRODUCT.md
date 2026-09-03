@@ -44,9 +44,10 @@ API key, or metered provider.
    presses Escape to cancel.
 5. For each spoken turn, the app captures only the chosen window/display
    context for that request.
-6. A local guidance engine receives the recent conversation plus structured
-   accessibility/OCR context and,
-   only when required, the transient image.
+6. The local engine receives recent conversation, structured OCR context, and
+   the transient image. Local remains the default. The optional OpenAI Talk
+   engine sends only the spoken question, bounded recent Talk text, and exact
+   locked-window image after an explicit disclosure and provider selection.
 7. The app captions the answer beside the cursor and speaks it locally. An
    optional normal window can show the transient conversation transcript.
 8. The user can invoke the guide again and ask a spoken follow-up.
@@ -56,8 +57,8 @@ API key, or metered provider.
 
 - **Dictation is independent.** Missing assistant configuration can never break
   recording, transcription, or insertion.
-- **Local is the default.** Cloud processing is a later explicit opt-in, not a
-  silent fallback.
+- **Local is the default.** OpenAI multimodal Talk is an explicit opt-in and
+  never a silent fallback. Ordinary dictation remains local and independent.
 - **Permissions follow intent.** Ask only when the user invokes a feature that
   needs the permission.
 - **Visible state is truthful.** A control cannot appear enabled while a hidden
@@ -88,6 +89,8 @@ Included:
   opt-in and remains off by default.
 - Persistent cursor companion and short captions.
 - Explicit, request-scoped voice conversation with local spoken guidance.
+- Optional request-scoped OpenAI multimodal Talk, disabled by default, with a
+  Keychain-held tester credential and precise send-time disclosure.
 - Local logs that redact dictated and captured content.
 - Direct-download Developer ID/notarized DMG.
 
@@ -98,7 +101,8 @@ Deferred:
 - Shell/file tools, MCP, connected accounts, email, calendars, or child agents.
 - Accounts, sync, analytics, billing, collaboration, or hosted history.
 - Pets, widgets, galleries, workflow automation, and plugin marketplaces.
-- Cloud AI, BYOK, and paid-provider configuration.
+- Hosted accounts, bundled/shared provider credentials, subscriptions, and
+  automatic provider routing.
 - Intel support, Windows, iOS, and Mac App Store distribution.
 - Automatic updates until the basic installed-product journey is stable.
 

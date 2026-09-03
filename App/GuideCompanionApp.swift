@@ -1,11 +1,32 @@
 import AppKit
+import GuideCore
+import GuideMac
 import GuideUI
 import SwiftUI
+
+@MainActor
+private enum GuideAppComposition {
+    static let model: GuideAppModel = {
+        let local = LocalGuidanceService()
+        let credentialStore = KeychainTalkCredentialStore()
+        let cloud = OpenAIMultimodalGuidanceGenerator(credentialStore: credentialStore)
+        let router = TalkGenerationRouter(
+            local: local,
+            cloud: cloud,
+            credentialStore: credentialStore
+        )
+        return GuideAppModel(
+            localGuidanceService: local,
+            talkCredentialStore: credentialStore,
+            talkGenerator: router
+        )
+    }()
+}
 
 @main
 struct GuideCompanionApp: App {
     @NSApplicationDelegateAdaptor(GuideAppDelegate.self) private var appDelegate
-    @State private var model = GuideAppModel.shared
+    @State private var model = GuideAppComposition.model
 
     var body: some Scene {
         MenuBarExtra {
@@ -27,15 +48,15 @@ struct GuideCompanionApp: App {
 final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task {
-            await GuideAppModel.shared.start()
+            await GuideAppComposition.model.start()
             if CommandLine.arguments.contains("--ui-testing"),
                CommandLine.arguments.contains("--open-guide-transcript") {
-                GuideAppModel.shared.openGuidanceTranscript()
+                GuideAppComposition.model.openGuidanceTranscript()
             }
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        GuideAppModel.shared.stop()
+        GuideAppComposition.model.stop()
     }
 }

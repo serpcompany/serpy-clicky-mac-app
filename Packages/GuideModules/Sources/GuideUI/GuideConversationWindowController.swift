@@ -140,7 +140,7 @@ public struct GuideConversationView: View {
                 : "Heard: \(model.guidancePartialTranscript)"
         case .transcribing: "Finishing your local transcript…"
         case .capturing, .reading: "Reading the selected window…"
-        case .thinking: "Thinking locally…"
+        case .thinking: model.talkThinkingStatus
         default: "Working…"
         }
     }

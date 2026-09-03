@@ -180,6 +180,33 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
     }
 
+    func testCancellingStreamingGenerationCancelsProviderAndCannotRevealLateText() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let generation = BlockingStreamingGeneration(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "What phrase is visible?", events: events),
+            generation: generation,
+            speech: FakeSpeech(events: events),
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await wait(for: "generation:stream-pending", in: events)
+        coordinator.cancel()
+        generation.attemptLateText()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertTrue(events.values.contains("generation:cancel"))
+        XCTAssertFalse(overlay.presentations.contains { $0.responseText.contains("late answer") })
+        XCTAssertTrue(coordinator.conversation.isEmpty)
+        XCTAssertEqual(overlay.presentations.last?.stage, .cancelled)
+    }
+
     func testCancellingWhileSpeakingStopsAudioAndDismissesTheReadableAnswer() async throws {
         let events = EventRecorder()
         let target = fixtureTarget
@@ -229,6 +256,32 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.conversation.last?.content, complete)
         XCTAssertEqual(overlay.presentations.last?.responseText, complete)
         XCTAssertEqual(speech.spokenTexts.last, complete)
+    }
+
+    func testStreamingAnswerAppearsIncrementallyAndSpeaksOnlyCompleteSentences() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let speech = FakeSpeech(events: events)
+        let overlay = FakeOverlay(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "What phrase is visible?", events: events),
+            generation: FakeStreamingGeneration(events: events),
+            speech: speech,
+            overlay: overlay
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        let streamedTexts = overlay.presentations
+            .filter { $0.statusText == "Answering…" }
+            .map(\.responseText)
+        XCTAssertEqual(streamedTexts, ["The phrase is", "The phrase is ORCHID RIVER 731. Next step"])
+        XCTAssertEqual(speech.spokenTexts, ["The phrase is ORCHID RIVER 731.", "Next step"])
+        XCTAssertEqual(coordinator.conversation.last?.content, "The phrase is ORCHID RIVER 731. Next step")
     }
 
     func testFollowUpLocksFreshWindowContextAndReceivesPriorConversation() async throws {
@@ -521,6 +574,83 @@ private final class BlockingGeneration: GuideTurnGenerating {
         events.values.append("generation:pending")
         while !Task.isCancelled { await Task.yield() }
         throw CancellationError()
+    }
+}
+
+@MainActor
+private final class FakeStreamingGeneration: GuideTurnStreamingGenerating {
+    let events: EventRecorder
+    let thinkingStatusText = "Looking at this window with fixture provider…"
+
+    init(events: EventRecorder) {
+        self.events = events
+    }
+
+    func answer(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GuidancePlan {
+        XCTFail("Streaming coordinator must not call the legacy answer seam")
+        return GuidancePlan(answer: "", confidence: 0)
+    }
+
+    func streamAnswer(
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) throws -> AsyncThrowingStream<GuidanceStreamEvent, Error> {
+        events.values.append("generation:stream")
+        return AsyncThrowingStream { continuation in
+            continuation.yield(.textDelta("The phrase is "))
+            continuation.yield(.textDelta("ORCHID RIVER 731. Next step"))
+            continuation.yield(.sentenceReady("The phrase is ORCHID RIVER 731."))
+            continuation.yield(.sentenceReady("Next step"))
+            continuation.yield(.completed)
+            continuation.finish()
+        }
+    }
+
+    func cancelGeneration() {
+        events.values.append("generation:cancel")
+    }
+}
+
+@MainActor
+private final class BlockingStreamingGeneration: GuideTurnStreamingGenerating {
+    let events: EventRecorder
+    let thinkingStatusText = "Looking at this window with fixture provider…"
+    private var continuation: AsyncThrowingStream<GuidanceStreamEvent, Error>.Continuation?
+
+    init(events: EventRecorder) { self.events = events }
+
+    func answer(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GuidancePlan {
+        GuidancePlan(answer: "unused", confidence: 0)
+    }
+
+    func streamAnswer(
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) throws -> AsyncThrowingStream<GuidanceStreamEvent, Error> {
+        events.values.append("generation:stream-pending")
+        return AsyncThrowingStream { continuation in self.continuation = continuation }
+    }
+
+    func cancelGeneration() {
+        events.values.append("generation:cancel")
+        continuation?.finish(throwing: CancellationError())
+        continuation = nil
+    }
+
+    func attemptLateText() {
+        continuation?.yield(.textDelta("late answer"))
     }
 }
 

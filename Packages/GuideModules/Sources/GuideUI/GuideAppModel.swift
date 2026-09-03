@@ -8,8 +8,6 @@ import OSLog
 @MainActor
 @Observable
 public final class GuideAppModel: GuideTurnOverlayPresenting {
-    public static let shared = GuideAppModel()
-
     public private(set) var phase: DictationPhase = .idle
     public private(set) var partialTranscript = ""
     public private(set) var statusMessage = "Starting…"
@@ -29,6 +27,23 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public private(set) var transcriptHistory: [TranscriptHistoryEntry] = []
     public private(set) var historyStatusMessage = "Loading local history…"
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
+    public private(set) var talkCredentialAvailable = false
+    public private(set) var talkCredentialStatus = "No OpenAI key saved."
+    public var talkCredentialDraft = ""
+    public var talkProviderSelection: TalkProviderSelection {
+        didSet {
+            guard oldValue != talkProviderSelection else { return }
+            defaults.set(talkProviderSelection.rawValue, forKey: Keys.talkProvider)
+            configureTalkGenerator()
+        }
+    }
+    public var talkDisclosureAccepted: Bool {
+        didSet {
+            guard oldValue != talkDisclosureAccepted else { return }
+            defaults.set(talkDisclosureAccepted, forKey: Keys.talkDisclosureAccepted)
+            configureTalkGenerator()
+        }
+    }
     public var companionEnabled: Bool {
         didSet {
             guard oldValue != companionEnabled else { return }
@@ -62,6 +77,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private let localGuidanceService: LocalGuidanceService
     @ObservationIgnored private let guidanceTranscriber: AppleSpeechTranscriber
     @ObservationIgnored private let guidanceSpeaker: LocalSpeechOutputService
+    @ObservationIgnored private let talkCredentialStore: any TalkCredentialStoring
+    @ObservationIgnored private let talkGenerator: TalkGenerationRouter
     @ObservationIgnored private let presentation: CompanionPresentation
     @ObservationIgnored private let companionController: CompanionPanelController
     @ObservationIgnored private var hotKeyService: GlobalHotKeyService?
@@ -76,7 +93,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private lazy var guideTurnCoordinator = GuideTurnCoordinator(
         capture: screenContextService,
         transcription: AppleSpeechGuideTurnTranscriber(transcriber: guidanceTranscriber),
-        generation: localGuidanceService,
+        generation: talkGenerator,
         speech: LocalGuideTurnSpeaker(speaker: guidanceSpeaker),
         overlay: self
     )
@@ -92,18 +109,37 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         static let historyEnabled = "GuideCompanion.historyEnabled"
         static let saveAudioHistory = "GuideCompanion.saveAudioHistory"
         static let dictationShortcut = "SERPy.dictationShortcut"
+        static let talkProvider = "SERPy.talkProvider"
+        static let talkDisclosureAccepted = "SERPy.talkDisclosureAccepted"
     }
 
-    private init(defaults: UserDefaults = .standard) {
+    public init(
+        defaults: UserDefaults = .standard,
+        localGuidanceService: LocalGuidanceService,
+        talkCredentialStore: any TalkCredentialStoring,
+        talkGenerator: TalkGenerationRouter
+    ) {
         self.defaults = defaults
         permissionService = PermissionService()
         transcriber = AppleSpeechTranscriber()
         insertionService = TextInsertionService()
         historyStore = TranscriptHistoryStore()
         screenContextService = ScreenContextService()
-        localGuidanceService = LocalGuidanceService()
+        self.localGuidanceService = localGuidanceService
         guidanceTranscriber = AppleSpeechTranscriber()
         guidanceSpeaker = LocalSpeechOutputService()
+        self.talkCredentialStore = talkCredentialStore
+        let provider = TalkProviderSelection(
+            rawValue: defaults.string(forKey: Keys.talkProvider) ?? ""
+        ) ?? .local
+        let disclosureAccepted = defaults.bool(forKey: Keys.talkDisclosureAccepted)
+        talkProviderSelection = provider
+        talkDisclosureAccepted = disclosureAccepted
+        let hasCredential = ((try? talkCredentialStore.credential())?.isEmpty == false)
+        talkCredentialAvailable = hasCredential
+        talkCredentialStatus = hasCredential ? "OpenAI key saved in this Mac's Keychain." : "No OpenAI key saved."
+        self.talkGenerator = talkGenerator
+        talkGenerator.configure(selection: provider, disclosureAccepted: disclosureAccepted)
         let presentation = CompanionPresentation()
         self.presentation = presentation
         companionController = CompanionPanelController(presentation: presentation)
@@ -143,7 +179,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         case .listening: return "listening to question"
         case .transcribing: return "understanding question"
         case .capturing, .reading: return "reading screen"
-        case .thinking: return "thinking locally"
+        case .thinking: return talkProviderSelection == .openAI ? "thinking with OpenAI" : "thinking locally"
         case .requestingPermission: return "guide setup needed"
         case .idle, .presenting, .failed: break
         }
@@ -182,6 +218,74 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public var hasRecoveryRequiringAttention: Bool {
         guard let state = transcriptHistory.first?.deliveryState else { return false }
         return state == .pending || state == .unconfirmed || state == .failed
+    }
+
+    public var openAITalkReady: Bool {
+        talkProviderSelection == .openAI && talkDisclosureAccepted && talkCredentialAvailable
+    }
+
+    public var talkThinkingStatus: String {
+        talkProviderSelection == .openAI ? "Looking at this window with OpenAI…" : "Thinking locally…"
+    }
+
+    public func saveTalkCredential() {
+        do {
+            try talkCredentialStore.saveCredential(talkCredentialDraft)
+            talkCredentialDraft = ""
+            refreshTalkCredentialState(success: "OpenAI key saved in this Mac's Keychain.")
+        } catch {
+            let failure = normalize(error, stage: .guidance)
+            talkCredentialStatus = "\(failure.message) \(failure.recovery)"
+        }
+    }
+
+    /// Verifies Keychain round-trip only. It intentionally performs no API
+    /// request, sends no screen content, and incurs no provider spend.
+    public func testSavedTalkCredential() {
+        do {
+            guard let credential = try talkCredentialStore.credential(), !credential.isEmpty else {
+                talkCredentialAvailable = false
+                talkCredentialStatus = "No OpenAI key is saved."
+                return
+            }
+            talkCredentialAvailable = true
+            talkCredentialStatus = credential.count >= 20
+                ? "Saved key is readable. The next OpenAI Talk turn will test provider access."
+                : "The saved value looks too short to be an API key. Delete it and save the correct key."
+        } catch {
+            talkCredentialAvailable = false
+            talkCredentialStatus = normalize(error, stage: .guidance).message
+        }
+        configureTalkGenerator()
+    }
+
+    public func deleteTalkCredential() {
+        do {
+            try talkCredentialStore.deleteCredential()
+            talkCredentialDraft = ""
+            refreshTalkCredentialState(success: "OpenAI key deleted from Keychain.")
+        } catch {
+            talkCredentialStatus = normalize(error, stage: .guidance).message
+        }
+    }
+
+    private func refreshTalkCredentialState(success: String) {
+        do {
+            talkCredentialAvailable = try talkCredentialStore.credential()?.isEmpty == false
+            talkCredentialStatus = success
+        } catch {
+            talkCredentialAvailable = false
+            let failure = normalize(error, stage: .guidance)
+            talkCredentialStatus = "\(failure.message) \(failure.recovery)"
+        }
+        configureTalkGenerator()
+    }
+
+    private func configureTalkGenerator() {
+        talkGenerator.configure(
+            selection: talkProviderSelection,
+            disclosureAccepted: talkDisclosureAccepted
+        )
     }
 
     public func start() async {
@@ -411,6 +515,17 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                     stage: .recording,
                     message: "Dictation is already active.",
                     recovery: "Finish or cancel dictation, then talk to SERPy."
+                )
+            )
+            return
+        }
+
+        if talkProviderSelection == .openAI, !openAITalkReady {
+            presentGuidanceFailure(
+                GuideFailure(
+                    stage: .guidance,
+                    message: "OpenAI Talk is selected but not ready.",
+                    recovery: "Open SERPy Settings, accept the disclosure, and save a tester-owned OpenAI API key."
                 )
             )
             return
@@ -938,7 +1053,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         applyCompanionVisibility()
         companionController.refresh()
         if turn.stage == .readyForFollowUp {
-            restoreIdleVisibility(after: .seconds(8))
+            restoreIdleVisibility(after: .seconds(20))
         }
     }
 

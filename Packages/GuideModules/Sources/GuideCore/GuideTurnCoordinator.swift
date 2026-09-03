@@ -49,6 +49,21 @@ public protocol GuideTurnGenerating: AnyObject {
     ) async throws -> GuidancePlan
 }
 
+/// Optional richer generation seam used by providers that can reveal an answer
+/// incrementally. The original `answer` contract remains the local-provider
+/// baseline and keeps existing adapters source compatible.
+@MainActor
+public protocol GuideTurnStreamingGenerating: GuideTurnGenerating {
+    var thinkingStatusText: String { get }
+    func streamAnswer(
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) throws -> AsyncThrowingStream<GuidanceStreamEvent, Error>
+    func cancelGeneration()
+}
+
 @MainActor
 public protocol GuideTurnSpeaking: AnyObject {
     func speak(_ text: String) async throws
@@ -122,7 +137,7 @@ public struct GuideTurnFailurePolicy: Sendable {
         case .capture:
             GuideFailure(stage: .capture, message: "The selected window could not be captured. \(cause)", recovery: "Bring that exact window forward and start the voice guide again.")
         case .generation:
-            GuideFailure(stage: .guidance, message: "The local guide could not answer. \(cause)", recovery: "Verify Apple Intelligence is ready, then ask again.")
+            GuideFailure(stage: .guidance, message: "The selected Talk provider could not answer. \(cause)", recovery: "Check the selected provider in SERPy Settings, then ask again. SERPy will not switch providers automatically.")
         case .speaking:
             GuideFailure(stage: .presentation, message: "The answer could not be spoken. \(cause)", recovery: "Read the visible answer, check sound output, and try again.")
         }
@@ -131,6 +146,10 @@ public struct GuideTurnFailurePolicy: Sendable {
 
 @MainActor
 public final class GuideTurnCoordinator {
+    private struct GeneratedTurn {
+        let plan: GuidancePlan
+        let speechCompleted: Bool
+    }
     public private(set) var conversation: [GuidanceMessage] = []
     public private(set) var phase: GuidancePhase = .idle
 
@@ -195,6 +214,7 @@ public final class GuideTurnCoordinator {
         finishContinuation?.finish()
         finishContinuation = nil
         transcription.cancel()
+        (generation as? any GuideTurnStreamingGenerating)?.cancelGeneration()
         speech.stop()
         overlay.dismissResponse()
         phase = .idle
@@ -249,26 +269,38 @@ public final class GuideTurnCoordinator {
             try Task.checkCancellation()
             let priorConversation = conversation
             phase = .thinking
-            overlay.present(.init(stage: .thinking, statusText: "Thinking locally…", context: target.identity))
-            let plan: GuidancePlan
+            let thinkingStatus = (generation as? any GuideTurnStreamingGenerating)?.thinkingStatusText
+                ?? "Thinking locally…"
+            overlay.present(.init(stage: .thinking, statusText: thinkingStatus, context: target.identity))
+            let generated: GeneratedTurn
             do {
-                plan = try await generation.answer(
-                    question: question,
-                    context: context,
-                    conversation: priorConversation
-                )
+                if let streamingGeneration = generation as? any GuideTurnStreamingGenerating {
+                    generated = try await consumeStreamingAnswer(
+                        from: streamingGeneration,
+                        question: question,
+                        target: target,
+                        context: context,
+                        conversation: priorConversation
+                    )
+                } else {
+                    generated = GeneratedTurn(plan: try await generation.answer(
+                        question: question,
+                        context: context,
+                        conversation: priorConversation
+                    ), speechCompleted: false)
+                }
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
                 throw failurePolicy.failure(for: error, at: .generation)
             }
             try Task.checkCancellation()
-            let completeAnswer = GuidanceAnswerSanitizer.sanitize(plan.answer)
+            let completeAnswer = GuidanceAnswerSanitizer.sanitize(generated.plan.answer)
             guard !completeAnswer.isEmpty else {
                 throw GuideFailure(
                     stage: .guidance,
-                    message: "The local guide returned no usable answer.",
-                    recovery: "Ask the question another way and try again."
+                    message: "The selected Talk provider returned no usable answer.",
+                    recovery: "Ask the question another way and try again. SERPy will not switch providers automatically."
                 )
             }
             conversation.append(.init(role: .user, content: question))
@@ -280,9 +312,11 @@ public final class GuideTurnCoordinator {
                 context: target.identity,
                 responseText: completeAnswer
             ))
-            do { try await speech.speak(completeAnswer) }
-            catch is CancellationError { throw CancellationError() }
-            catch { throw failurePolicy.failure(for: error, at: .speaking) }
+            if !generated.speechCompleted {
+                do { try await speech.speak(completeAnswer) }
+                catch is CancellationError { throw CancellationError() }
+                catch { throw failurePolicy.failure(for: error, at: .speaking) }
+            }
             try Task.checkCancellation()
             overlay.present(.init(
                 stage: .readyForFollowUp,
@@ -312,6 +346,91 @@ public final class GuideTurnCoordinator {
             activeTurnID = nil
             activeTurnTask = nil
             cancellationRequested = false
+        }
+    }
+
+    private func consumeStreamingAnswer(
+        from generation: any GuideTurnStreamingGenerating,
+        question: String,
+        target: GuideWindowTarget,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GeneratedTurn {
+        let stream = try generation.streamAnswer(
+            question: question,
+            target: target,
+            context: context,
+            conversation: conversation
+        )
+        var answer = ""
+        var point: CGPoint?
+        var confidence: Float = 0
+        var queuedSentence = false
+        let evidenceBounds = ["locked-window": CGRect(x: 0, y: 0, width: 1, height: 1)]
+        let validator = SpatialActionValidator()
+        let (sentenceStream, sentenceContinuation) = AsyncStream<String>.makeStream()
+        async let speechPlayback: Void = speakSentences(sentenceStream)
+        var completed = false
+        defer { sentenceContinuation.finish() }
+        for try await event in stream {
+            try Task.checkCancellation()
+            switch event {
+            case let .textDelta(delta):
+                answer += delta
+                let visible = GuidanceAnswerSanitizer.sanitize(answer)
+                if !visible.isEmpty {
+                    phase = .presenting
+                    overlay.present(.init(
+                        stage: .speaking,
+                        statusText: "Answering…",
+                        context: target.identity,
+                        responseText: visible
+                    ))
+                }
+            case let .sentenceReady(sentence):
+                let safeSentence = GuidanceAnswerSanitizer.sanitize(sentence)
+                if !safeSentence.isEmpty {
+                    queuedSentence = true
+                    sentenceContinuation.yield(safeSentence)
+                }
+            case let .spatialAction(action):
+                guard let valid = validator.validate(action, evidenceBounds: evidenceBounds) else { continue }
+                if case let .point(_, normalizedPoint, score, _) = valid {
+                    point = CGPoint(
+                        x: target.frame.minX + normalizedPoint.x * target.frame.width,
+                        y: target.frame.minY + normalizedPoint.y * target.frame.height
+                    )
+                    confidence = score
+                }
+            case .completed:
+                completed = true
+            }
+        }
+        guard completed else {
+            throw GuideFailure(
+                stage: .guidance,
+                message: "The selected Talk provider ended before completing its answer.",
+                recovery: "Check the network and try again. SERPy will not silently switch providers."
+            )
+        }
+        sentenceContinuation.finish()
+        do { try await speechPlayback }
+        catch is CancellationError { throw CancellationError() }
+        catch { throw failurePolicy.failure(for: error, at: .speaking) }
+        let validatedPlan = GuidancePlanValidator.validate(
+            GuidancePlan(answer: answer, point: point, confidence: confidence),
+            in: target.frame
+        )
+        return GeneratedTurn(
+            plan: validatedPlan,
+            speechCompleted: queuedSentence
+        )
+    }
+
+    private func speakSentences(_ sentences: AsyncStream<String>) async throws {
+        for await sentence in sentences {
+            try Task.checkCancellation()
+            try await speech.speak(sentence)
         }
     }
 }

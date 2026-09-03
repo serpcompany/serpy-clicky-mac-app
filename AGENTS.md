@@ -15,17 +15,28 @@ signing configuration, packaging, notarization, and installed-app verification.
 It does not authorize a public release, public remote, billing, cloud services,
 or any feature listed under Deferred in `PRODUCT.md`.
 
+On 2026-09-04 the owner separately authorized one narrow exception for Talk:
+an opt-in, request-scoped OpenAI multimodal path may transmit the current Talk
+question, bounded recent Talk context, and the exact locked-window screenshot.
+Ordinary dictation remains local. This exception does not authorize live API
+spend during automated work, hosted accounts, sync, analytics, autonomous
+computer control, or persistence of guide content.
+
 ## Hard Boundaries
 
 - Dictation must not depend on an assistant engine, API key, or network.
 - Do not add autonomous computer use, shell execution, agents, accounts, sync,
-  billing, analytics, pets, widgets, browser control, MCP, or cloud providers.
+  billing, analytics, pets, widgets, browser control, or MCP. The only allowed
+  cloud provider is the explicitly enabled, request-scoped Talk adapter above.
 - Do not copy or decompile HeyClicky code, assets, private protocols, or product
   identity. Use it only as observable behavioral evidence.
 - Do not import OpenClicky code without completing the gate in `PROVENANCE.md`.
 - Do not copy upstream signing identities, Team IDs, bundle IDs, Sparkle keys,
   appcasts, credentials, release hosts, or secrets.
 - Never store audio, screenshots, or transcript content by default.
+- Never send Talk content unless the provider is explicitly selected, the
+  per-device disclosure is accepted, and a credential is available. Never
+  silently fall back between local and cloud guidance.
 - Do not broaden permissions. Camera, Full Disk Access, System Events
   Automation, and persistent screen capture are outside the first product.
 - Do not publish, create a remote, or upload artifacts without approval of the

@@ -145,10 +145,53 @@ public struct SettingsView: View {
 
     private var guidanceForm: some View {
         Form {
-            Section("Local voice guide") {
+            Section("Talk provider") {
+                Picker("Screen guidance", selection: $model.talkProviderSelection) {
+                    ForEach(TalkProviderSelection.allCases, id: \.self) { provider in
+                        Text(provider.displayName).tag(provider)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if model.talkProviderSelection == .openAI {
+                    Text("OpenAI Talk sends only the current spoken question, a bounded recent Talk transcript, and screenshot pixels of the exact window locked when this turn starts. SERPy requests store:false. OpenAI processes the request under your API account and normal API charges may apply.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Toggle(
+                        "I accept this request-scoped transmission on this Mac",
+                        isOn: $model.talkDisclosureAccepted
+                    )
+
+                    SecureField("OpenAI API key", text: $model.talkCredentialDraft)
+                        .textFieldStyle(.roundedBorder)
+                    HStack {
+                        Button("Save to Keychain") { model.saveTalkCredential() }
+                            .disabled(model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button("Verify Keychain") { model.testSavedTalkCredential() }
+                        Button("Delete Key", role: .destructive) { model.deleteTalkCredential() }
+                            .disabled(!model.talkCredentialAvailable)
+                    }
+                    Text(model.talkCredentialStatus)
+                        .font(.caption)
+                        .foregroundStyle(model.openAITalkReady ? .green : .secondary)
+                        .textSelection(.enabled)
+                    Text("Verify Keychain does not contact OpenAI. The first Talk request verifies provider access; SERPy never silently switches to the on-device guide.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("On-device Talk sends nothing to OpenAI. Its screen reasoning is limited to OCR text and the local Apple model.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text("Plain dictation is always on-device and does not use this setting.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Voice guide") {
                 LabeledContent("Shortcut", value: "Control–Option–G")
                 permissionRow("Screen Recording", state: model.permissions.screenRecording, permission: .screenRecording)
-                Text("Press the shortcut, ask about the app on screen out loud, then press it again. SERPy reads one visible window, answers through the cursor companion, and speaks locally.")
+                Text("Press the shortcut, ask about the app on screen out loud, then press it again. SERPy reads the exact window locked at the start of the turn, streams the answer through the cursor companion when supported, and speaks it.")
                     .foregroundStyle(.secondary)
                 Button(model.guidancePhase == .listening ? "Finish Voice Question" : "Start Voice Question") {
                     model.toggleGuidanceVoice()
@@ -170,7 +213,7 @@ public struct SettingsView: View {
     private var privacyForm: some View {
         Form {
             Section("Privacy") {
-                Text("Dictation and guidance use on-device system models without an API key. One short-lived Last Dictation is stored locally before delivery so a failed paste cannot lose your words. Longer transcript history and all audio storage are separate opt-ins. Guide conversations remain in memory only; screenshots and guide conversations are not stored.")
+                Text("Dictation always uses on-device system models without an API key. On-device Talk also remains local. OpenAI Talk is a separate opt-in: when selected, disclosed, and credentialed, one request sends the current question, bounded recent Talk text, and the exact locked-window screenshot. Guide screenshots, questions, and answers are not written to disk by SERPy.")
                     .foregroundStyle(.secondary)
             }
             Section("Storage location") {
