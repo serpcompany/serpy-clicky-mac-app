@@ -12,6 +12,20 @@ public enum CompanionVisibility: Equatable, Sendable {
     case temporarilyHidden(reason: String)
 }
 
+public struct CompanionVisibilityPolicy: Sendable {
+    public init() {}
+
+    public func visibility(
+        persistedEnabled: Bool,
+        guidancePhase: GuidancePhase
+    ) -> CompanionVisibility {
+        if guidancePhase != .idle {
+            return .visible
+        }
+        return persistedEnabled ? .visible : .disabled
+    }
+}
+
 public struct CompanionStateMachine: Equatable, Sendable {
     public private(set) var isEnabled: Bool
     public private(set) var visibility: CompanionVisibility
@@ -44,4 +58,3 @@ public struct CompanionStateMachine: Equatable, Sendable {
         visibility = .visible
     }
 }
-

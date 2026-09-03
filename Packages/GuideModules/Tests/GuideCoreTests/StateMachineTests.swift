@@ -59,6 +59,23 @@ final class StateMachineTests: XCTestCase {
 
         XCTAssertEqual(machine.visibility, .disabled)
     }
+
+    func testActiveVoiceGuideForcesCompanionVisibleWithoutChangingPreference() {
+        let policy = CompanionVisibilityPolicy()
+
+        XCTAssertEqual(
+            policy.visibility(persistedEnabled: false, guidancePhase: .listening),
+            .visible
+        )
+        XCTAssertEqual(
+            policy.visibility(persistedEnabled: false, guidancePhase: .presenting),
+            .visible
+        )
+        XCTAssertEqual(
+            policy.visibility(persistedEnabled: false, guidancePhase: .idle),
+            .disabled
+        )
+    }
 }
 
 final class GuidanceValidationTests: XCTestCase {
@@ -120,6 +137,56 @@ final class GuidanceValidationTests: XCTestCase {
         let plan = GuidancePlan(answer: "Try Settings", point: CGPoint(x: 20, y: 20), confidence: 0.9)
         let validated = GuidancePlanValidator.validate(plan, in: CGRect(x: 0, y: 0, width: 100, height: 100))
         XCTAssertEqual(validated.point, CGPoint(x: 20, y: 20))
+    }
+}
+
+final class CompanionResponseLayoutPolicyTests: XCTestCase {
+    func testResponseBubbleStaysFullyVisibleAtScreenEdges() {
+        let policy = CompanionResponseLayoutPolicy()
+        let visibleFrame = CGRect(x: 0, y: 40, width: 800, height: 520)
+        let contentSize = CGSize(width: 360, height: 190)
+
+        for pointer in [
+            CGPoint(x: 4, y: 44),
+            CGPoint(x: 796, y: 44),
+            CGPoint(x: 4, y: 556),
+            CGPoint(x: 796, y: 556)
+        ] {
+            let frame = policy.frame(
+                pointer: pointer,
+                visibleFrame: visibleFrame,
+                contentSize: contentSize
+            )
+
+            XCTAssertTrue(visibleFrame.insetBy(dx: 8, dy: 8).contains(frame))
+            XCTAssertEqual(frame.size, contentSize)
+        }
+    }
+
+    func testResponseBubbleAvoidsCompanionAtCenterAndEveryScreenEdge() {
+        let policy = CompanionResponseLayoutPolicy()
+        let visibleFrame = CGRect(x: 0, y: 0, width: 1_200, height: 800)
+        let contentSize = CGSize(width: 380, height: 190)
+        let companionFrames = [
+            CGRect(x: 425, y: 350, width: 350, height: 100),
+            CGRect(x: 8, y: 8, width: 350, height: 100),
+            CGRect(x: 842, y: 8, width: 350, height: 100),
+            CGRect(x: 8, y: 692, width: 350, height: 100),
+            CGRect(x: 842, y: 692, width: 350, height: 100)
+        ]
+
+        for companionFrame in companionFrames {
+            let frame = policy.frame(
+                pointer: CGPoint(x: companionFrame.midX, y: companionFrame.midY),
+                visibleFrame: visibleFrame,
+                contentSize: contentSize,
+                avoiding: companionFrame
+            )
+
+            XCTAssertTrue(visibleFrame.insetBy(dx: 8, dy: 8).contains(frame))
+            XCTAssertFalse(frame.intersects(companionFrame))
+            XCTAssertEqual(frame.size, contentSize)
+        }
     }
 }
 
@@ -202,5 +269,68 @@ final class GuidanceVoiceActivationPolicyTests: XCTestCase {
         XCTAssertEqual(policy.escapeAction(for: .listening), .cancel)
         XCTAssertEqual(policy.escapeAction(for: .thinking), .none)
         XCTAssertEqual(policy.escapeAction(for: .idle), .none)
+    }
+}
+
+final class GuidanceAmbientPresentationPolicyTests: XCTestCase {
+    func testVoiceTurnHasTruthfulDistinctAmbientStagesAndCompactContext() {
+        let policy = GuidanceAmbientPresentationPolicy()
+        let context = ScreenContextIdentity(applicationName: "Safari", windowTitle: "Billing")
+
+        XCTAssertEqual(policy.presentation(for: .init(phase: .idle)).stage, .ready)
+        XCTAssertEqual(
+            policy.presentation(for: .init(phase: .listening, context: context)).stage,
+            .listening
+        )
+        XCTAssertEqual(
+            policy.presentation(
+                for: .init(phase: .listening, partialTranscript: "How do I export this?", context: context)
+            ).stage,
+            .liveTranscript
+        )
+        XCTAssertEqual(policy.presentation(for: .init(phase: .capturing, context: context)).stage, .capturing)
+        XCTAssertEqual(policy.presentation(for: .init(phase: .thinking, context: context)).stage, .thinking)
+        XCTAssertEqual(
+            policy.presentation(for: .init(phase: .presenting, context: context, isSpeaking: true)).stage,
+            .speaking
+        )
+        XCTAssertEqual(
+            policy.presentation(for: .init(phase: .presenting, context: context)).stage,
+            .readyForFollowUp
+        )
+        XCTAssertEqual(
+            policy.presentation(
+                for: .init(
+                    phase: .failed(
+                        GuideFailure(stage: .guidance, message: "Could not answer.", recovery: "Try again.")
+                    ),
+                    context: context
+                )
+            ).stage,
+            .error
+        )
+        XCTAssertEqual(
+            policy.presentation(for: .init(phase: .idle, context: context, wasCancelled: true)).stage,
+            .cancelled
+        )
+        XCTAssertEqual(
+            policy.presentation(for: .init(phase: .thinking, context: context)).contextLabel,
+            "Safari — Billing"
+        )
+    }
+}
+
+final class ScreenContextTargetPolicyTests: XCTestCase {
+    func testRememberedInvocationTargetDoesNotChangeAfterAppSwitch() {
+        let policy = ScreenContextTargetPolicy()
+
+        XCTAssertEqual(
+            policy.targetProcessIdentifier(
+                remembered: 101,
+                frontmost: 202,
+                own: 999
+            ),
+            101
+        )
     }
 }

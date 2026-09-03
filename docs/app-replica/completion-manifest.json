@@ -62,6 +62,45 @@
         "comparison": [],
         "behavior": ["Installed build 26 transcribed and answered a real spoken follow-up in the same transient conversation"]
       }
+    },
+    {
+      "id": "voice-guide.forced-companion-visibility",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "pass",
+      "exercised": true,
+      "evidence": {
+        "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: ambient voice turn P0"],
+        "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
+        "comparison": [],
+        "behavior": ["Installed build 28 forced listening and context UI visible while the saved companion preference was off, then returned to hidden without changing that preference"]
+      }
+    },
+    {
+      "id": "voice-guide.readable-response-layout",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {
+        "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: adaptive response bubble P0"],
+        "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
+        "comparison": [],
+        "behavior": ["Edge geometry is unit-tested; exact installed 55-word readability remains unobserved"]
+      }
+    },
+    {
+      "id": "voice-guide.ambient-state-sequence",
+      "kind": "behavior",
+      "in_scope": true,
+      "status": "unresolved",
+      "exercised": false,
+      "evidence": {
+        "reference": ["docs/research/heyclicky-ai-guide-ux-inventory.md: continuous ambient interaction P0"],
+        "candidate": ["evidence/serpy-p0-ambient-guide-tdd-report.md"],
+        "comparison": [],
+        "behavior": ["State mapping is unit-tested; exact installed timing and accessibility behavior remain unobserved"]
+      }
     }
   ]
 }

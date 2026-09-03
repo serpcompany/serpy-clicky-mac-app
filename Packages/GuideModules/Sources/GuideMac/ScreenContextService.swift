@@ -7,6 +7,7 @@ import Vision
 @MainActor
 public final class ScreenContextService {
     private var preferredApplicationPID: pid_t?
+    private let targetPolicy = ScreenContextTargetPolicy()
 
     public init() {}
 
@@ -22,18 +23,22 @@ public final class ScreenContextService {
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         let ownPID = ProcessInfo.processInfo.processIdentifier
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        if let frontPID, frontPID != ownPID {
-            preferredApplicationPID = frontPID
-        }
-        let targetPID = frontPID == ownPID ? preferredApplicationPID : frontPID
+        let targetPID = targetPolicy.targetProcessIdentifier(
+            remembered: preferredApplicationPID,
+            frontmost: frontPID,
+            own: ownPID
+        )
         let candidates = content.windows.filter { window in
             window.isOnScreen && window.owningApplication?.processID != ownPID && window.frame.width > 160 && window.frame.height > 100
         }
-        guard let window = candidates.first(where: { $0.owningApplication?.processID == targetPID }) ?? candidates.first else {
+        let window = targetPID.flatMap { targetPID in
+            candidates.first(where: { $0.owningApplication?.processID == targetPID })
+        }
+        guard let window else {
             throw GuideFailure(
                 stage: .capture,
-                message: "No readable app window is available.",
-                recovery: "Open the app you want help with, then reopen the AI Guide."
+                message: "The app selected when the guide started no longer has a readable window.",
+                recovery: "Bring that app's window forward and start the voice guide again."
             )
         }
         preferredApplicationPID = window.owningApplication?.processID

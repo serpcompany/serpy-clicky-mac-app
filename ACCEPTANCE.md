@@ -47,9 +47,9 @@ Notes and Slack are not yet observed.
 | B1 | Enabling companion shows it immediately | Installed observation | installed-observed |
 | B2 | It survives app switches, idle, settings closure, and failed requests | Lifecycle test + observation | installed-observed |
 | B3 | It survives relaunch when enabled | Installed observation | installed-observed |
-| B4 | Explicit disable hides it and persists | State test + observation | unit-tested |
+| B4 | Explicit disable hides it and persists | State test + observation | installed-observed |
 | B5 | It never blocks menu-bar/status-item clicks | Crowded-menu HIL recording | unimplemented |
-| B6 | It behaves correctly at display edges and on negative-origin displays | Geometry tests + multi-display HIL | unimplemented |
+| B6 | It behaves correctly at display edges and on negative-origin displays | Geometry tests + multi-display HIL | unit-tested |
 | B7 | Settings behaves as a normal non-floating window | App-switch/Spaces recording | installed-observed |
 | B8 | Reduce Motion and accessibility labels are respected | Inspection + HIL | implemented |
 | B9 | Menu-bar content uses a native menu, remains fully visible, and routes detailed setup to Settings | Installed screenshot + accessibility inspection | implemented |
@@ -70,11 +70,20 @@ Notes and Slack are not yet observed.
 | C10 | Guide supports spoken contextual questions and spoken follow-ups without opening a typing window | State tests + installed multi-turn voice observation | installed-observed |
 | C11 | Guide conversations and screenshots are not persisted after quit | Filesystem/log audit + relaunch observation | implemented |
 | C12 | Guide answers are captioned by the cursor and spoken locally | Installed audio observation | implemented |
+| C13 | Active guide turns force the companion visible without changing a disabled saved preference | Policy test + installed preference-off lifecycle | installed-observed |
+| C14 | A 55-word guide answer is fully readable in an edge-safe bubble without covering guide status | Layout tests + installed corner observation | unit-tested |
 
 The owner reported that the guidance journeys after the initial companion
 checks did not work during first use. The C rows above describe implementation
 or earlier bounded evidence only; none should be read as owner acceptance of
 the current build.
+
+The 2026-09-04 ambient-guide P0 build 28 adds deterministic visibility,
+edge-layout, and presentation-policy tests plus a signed Release build. The
+installed preference-off lifecycle is observed. A 55-word answer at display
+edges, target identity across multiple windows, Spaces/full-screen behavior,
+spoken timing, and VoiceOver behavior remain red. See
+`evidence/serpy-p0-ambient-guide-tdd-report.md`.
 
 ## D — Distribution and Privacy
 

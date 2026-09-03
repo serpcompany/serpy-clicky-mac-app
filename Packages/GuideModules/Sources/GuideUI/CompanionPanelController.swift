@@ -16,6 +16,9 @@ public enum CompanionMode: Equatable, Sendable {
 public final class CompanionPresentation {
     public var mode: CompanionMode = .ready
     public var caption = ""
+    public var responseText = ""
+    public var guideStage: GuidanceAmbientStage?
+    public var contextLabel: String?
 
     public init() {}
 }
@@ -24,6 +27,8 @@ public final class CompanionPresentation {
 public final class CompanionPanelController {
     private let presentation: CompanionPresentation
     private let panel: CompanionPanel
+    private let responsePanel: CompanionPanel
+    private let responseLayoutPolicy = CompanionResponseLayoutPolicy()
     private var trackingTimer: Timer?
 
     public init(presentation: CompanionPresentation) {
@@ -34,12 +39,21 @@ public final class CompanionPanelController {
             backing: .buffered,
             defer: false
         )
+        responsePanel = CompanionPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 120),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
         configurePanel()
     }
 
     public func show() {
         updateContentSizeAndPosition()
         panel.orderFrontRegardless()
+        if !presentation.responseText.isEmpty {
+            responsePanel.orderFrontRegardless()
+        }
         startTracking()
     }
 
@@ -47,12 +61,18 @@ public final class CompanionPanelController {
         trackingTimer?.invalidate()
         trackingTimer = nil
         panel.orderOut(nil)
+        responsePanel.orderOut(nil)
     }
 
     public func refresh() {
         updateContentSizeAndPosition()
         if panel.isVisible {
             panel.orderFrontRegardless()
+        }
+        if !presentation.responseText.isEmpty {
+            responsePanel.orderFrontRegardless()
+        } else {
+            responsePanel.orderOut(nil)
         }
     }
 
@@ -66,6 +86,16 @@ public final class CompanionPanelController {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.contentView = NSHostingView(rootView: CompanionBubbleView(presentation: presentation))
+
+        responsePanel.isOpaque = false
+        responsePanel.backgroundColor = .clear
+        responsePanel.hasShadow = false
+        responsePanel.ignoresMouseEvents = true
+        responsePanel.hidesOnDeactivate = false
+        responsePanel.isReleasedWhenClosed = false
+        responsePanel.level = .floating
+        responsePanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        responsePanel.contentView = NSHostingView(rootView: CompanionResponseView(presentation: presentation))
     }
 
     private func startTracking() {
@@ -80,11 +110,16 @@ public final class CompanionPanelController {
     }
 
     private func updateContentSizeAndPosition() {
-        let hasCaption = !presentation.caption.isEmpty
-        let size = hasCaption ? NSSize(width: 250, height: 58) : NSSize(width: 46, height: 46)
         let pointer = NSEvent.mouseLocation
         let screen = NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main
         guard let visibleFrame = screen?.visibleFrame else { return }
+        let hasCaption = !presentation.caption.isEmpty
+        let size: NSSize
+        if presentation.guideStage != nil, hasCaption {
+            size = measuredGuideStatusSize(availableHeight: visibleFrame.height - 16)
+        } else {
+            size = hasCaption ? NSSize(width: 250, height: 58) : NSSize(width: 46, height: 46)
+        }
 
         var origin = NSPoint(x: pointer.x + 14, y: pointer.y - size.height - 16)
         origin.x = min(max(origin.x, visibleFrame.minX + 8), visibleFrame.maxX - size.width - 8)
@@ -96,6 +131,77 @@ public final class CompanionPanelController {
         } else {
             panel.setFrame(newFrame, display: true, animate: false)
         }
+
+        if !presentation.responseText.isEmpty {
+            let responseSize = measuredResponseSize(
+                presentation.responseText,
+                availableHeight: visibleFrame.height - 16
+            )
+            let responseFrame = responseLayoutPolicy.frame(
+                pointer: pointer,
+                visibleFrame: visibleFrame,
+                contentSize: responseSize,
+                avoiding: newFrame
+            )
+            responsePanel.setFrame(responseFrame, display: true)
+        }
+    }
+
+    private func measuredResponseSize(_ text: String, availableHeight: CGFloat) -> CGSize {
+        let textWidth: CGFloat = 340
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+        let bounds = (text as NSString).boundingRect(
+            with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font]
+        )
+        return NSSize(
+            width: 380,
+            height: min(max(92, ceil(bounds.height) + 48), availableHeight)
+        )
+    }
+
+    private func measuredGuideStatusSize(availableHeight: CGFloat) -> CGSize {
+        let textWidth: CGFloat = 276
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .medium)
+        let contextFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        let captionBounds = (presentation.caption as NSString).boundingRect(
+            with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font]
+        )
+        let contextHeight: CGFloat
+        if let contextLabel = presentation.contextLabel, !contextLabel.isEmpty {
+            contextHeight = (contextLabel as NSString).boundingRect(
+                with: NSSize(width: textWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: contextFont]
+            ).height + 4
+        } else {
+            contextHeight = 0
+        }
+        return NSSize(
+            width: 350,
+            height: min(max(62, ceil(captionBounds.height + contextHeight) + 28), availableHeight)
+        )
+    }
+}
+
+private struct CompanionResponseView: View {
+    let presentation: CompanionPresentation
+
+    var body: some View {
+        Text(presentation.responseText)
+            .font(.callout.weight(.medium))
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("SERPy answer")
+        .accessibilityValue(presentation.responseText)
     }
 }
 
@@ -106,6 +212,7 @@ private final class CompanionPanel: NSPanel {
 
 private struct CompanionBubbleView: View {
     let presentation: CompanionPresentation
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 10) {
@@ -121,12 +228,20 @@ private struct CompanionBubbleView: View {
             .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
 
             if !presentation.caption.isEmpty {
-                Text(presentation.caption)
-                    .font(.callout.weight(.medium))
-                    .lineLimit(2)
-                    .foregroundStyle(.primary)
-                    .padding(.trailing, 12)
-                    .transition(.opacity)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(presentation.caption)
+                        .font(.callout.weight(.medium))
+                        .lineLimit(presentation.guideStage == nil ? 2 : nil)
+                        .foregroundStyle(.primary)
+                    if let contextLabel = presentation.contextLabel, !contextLabel.isEmpty {
+                        Text(contextLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.trailing, 12)
+                .transition(.opacity)
             }
         }
         .padding(2)
@@ -139,12 +254,23 @@ private struct CompanionBubbleView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityDescription)
-        .animation(.easeInOut(duration: 0.16), value: presentation.caption)
-        .animation(.easeInOut(duration: 0.16), value: presentation.mode)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.mode)
     }
 
     private var symbol: String {
-        switch presentation.mode {
+        if let guideStage = presentation.guideStage {
+            return switch guideStage {
+            case .ready, .readyForFollowUp: "location.north.fill"
+            case .listening, .liveTranscript: "waveform"
+            case .capturing: "viewfinder"
+            case .thinking: "ellipsis"
+            case .speaking: "speaker.wave.2.fill"
+            case .error: "exclamationmark"
+            case .cancelled: "xmark"
+            }
+        }
+        return switch presentation.mode {
         case .ready: "location.north.fill"
         case .recording: "waveform"
         case .working: "ellipsis"
@@ -154,7 +280,17 @@ private struct CompanionBubbleView: View {
     }
 
     private var color: Color {
-        switch presentation.mode {
+        if let guideStage = presentation.guideStage {
+            return switch guideStage {
+            case .ready, .readyForFollowUp: .blue
+            case .listening, .liveTranscript: .red
+            case .capturing: .cyan
+            case .thinking: .orange
+            case .speaking: .purple
+            case .error, .cancelled: .red
+            }
+        }
+        return switch presentation.mode {
         case .ready: .blue
         case .recording: .red
         case .working: .orange
@@ -164,6 +300,15 @@ private struct CompanionBubbleView: View {
     }
 
     private var accessibilityDescription: String {
-        presentation.caption.isEmpty ? "SERPy is ready" : presentation.caption
+        if presentation.guideStage == .liveTranscript {
+            return ["SERPy is listening", presentation.contextLabel]
+                .compactMap { $0 }
+                .joined(separator: ". ")
+        }
+        let description = [presentation.caption, presentation.contextLabel]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: ". ")
+        return description.isEmpty ? "SERPy is ready" : description
     }
 }
