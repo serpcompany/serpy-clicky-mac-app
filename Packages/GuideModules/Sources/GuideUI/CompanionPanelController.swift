@@ -89,9 +89,13 @@ public final class CompanionPanelController {
 
     public func refresh() {
         updateContentSizeAndPosition()
-        if panel.isVisible {
-            panel.orderFrontRegardless()
+        let hasMeaningfulTransientContent = presentation.guideStage != nil || !presentation.caption.isEmpty
+        guard hasMeaningfulTransientContent else {
+            hide()
+            return
         }
+        panel.orderFrontRegardless()
+        startTracking()
         if presentation.guideStage == nil, !presentation.responseText.isEmpty {
             responsePanel.orderFrontRegardless()
         } else {
@@ -150,16 +154,16 @@ public final class CompanionPanelController {
 
     private func updateContentSizeAndPosition() {
         let pointer = NSEvent.mouseLocation
-        let targetPoint = presentation.guideTarget.flatMap { target in
-            pointCueProjector.appKitPoint(for: GuidePointCue(
-                target: target,
-                normalizedPoint: CGPoint(x: 0.5, y: 0.5),
-                label: "Locked window"
-            ))
+        let screen: NSScreen?
+        if presentation.guideStage != nil, let target = presentation.guideTarget {
+            guard let displayIdentifier = target.displayIdentifier else { return }
+            screen = NSScreen.screens.first { screen in
+                (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
+                    == displayIdentifier
+            }
+        } else {
+            screen = NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main
         }
-        let screen = targetPoint.flatMap { point in NSScreen.screens.first(where: { $0.frame.contains(point) }) }
-            ?? NSScreen.screens.first(where: { $0.frame.contains(pointer) })
-            ?? NSScreen.main
         guard let visibleFrame = screen?.visibleFrame else { return }
         let hasCaption = !presentation.caption.isEmpty
         let isGuideVisible = presentation.guideStage != nil

@@ -10,7 +10,8 @@ final class GuidePointCueProjectorTests: XCTestCase {
             windowIdentifier: 9,
             applicationName: "Fixture",
             windowTitle: "Negative display",
-            frame: CGRect(x: -1800, y: 100, width: 800, height: 600)
+            frame: CGRect(x: -1800, y: 100, width: 800, height: 600),
+            displayIdentifier: 7
         )
         let cue = GuidePointCue(
             target: target,
@@ -18,6 +19,7 @@ final class GuidePointCueProjectorTests: XCTestCase {
             label: "Continue"
         )
         let displays = [GuideDisplayMapping(
+            displayIdentifier: 7,
             quartzFrame: CGRect(x: -1920, y: 0, width: 1920, height: 1080),
             appKitFrame: CGRect(x: -1920, y: 0, width: 1920, height: 1080)
         )]

@@ -30,9 +30,8 @@ public struct GuidePointCueProjector: Sendable {
             x: cue.target.frame.minX + normalized.x * cue.target.frame.width,
             y: cue.target.frame.minY + normalized.y * cue.target.frame.height
         )
-        let lockedDisplays = cue.target.displayIdentifier.map { identifier in
-            displays.filter { $0.displayIdentifier == identifier }
-        } ?? displays
+        guard let displayIdentifier = cue.target.displayIdentifier else { return nil }
+        let lockedDisplays = displays.filter { $0.displayIdentifier == displayIdentifier }
         guard let display = lockedDisplays.first(where: { $0.quartzFrame.contains(quartzPoint) }) else {
             return nil
         }
@@ -48,9 +47,8 @@ public struct GuidePointCueProjector: Sendable {
         displays: [GuideDisplayMapping]
     ) -> CGRect? {
         guard let point = appKitPoint(for: cue, displays: displays) else { return nil }
-        let lockedDisplays = cue.target.displayIdentifier.map { identifier in
-            displays.filter { $0.displayIdentifier == identifier }
-        } ?? displays
+        guard let displayIdentifier = cue.target.displayIdentifier else { return nil }
+        let lockedDisplays = displays.filter { $0.displayIdentifier == displayIdentifier }
         guard let display = lockedDisplays.first(where: { $0.quartzFrame.intersects(cue.target.frame) }) else {
             return nil
         }

@@ -113,14 +113,16 @@ public actor SystemScreenCaptureKitFacade: ScreenCaptureKitFacading {
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
         windowsByID = Dictionary(uniqueKeysWithValues: content.windows.map { ($0.windowID, $0) })
         return content.windows.compactMap { window in
-            guard let pid = window.owningApplication?.processID else { return nil }
+            guard let pid = window.owningApplication?.processID,
+                  let displayIdentifier = lockedDisplayIdentifier(for: window.frame)
+            else { return nil }
             return ScreenCaptureKitWindowSnapshot(
                 processIdentifier: pid,
                 windowIdentifier: window.windowID,
                 applicationName: window.owningApplication?.applicationName ?? "Current app",
                 windowTitle: window.title ?? "Untitled window",
                 frame: window.frame,
-                displayIdentifier: lockedDisplayIdentifier(for: window.frame)
+                displayIdentifier: displayIdentifier
             )
         }
     }
@@ -262,7 +264,8 @@ public final class ScreenContextService: GuideTurnContextCapturing, @unchecked S
                   layer.intValue == 0,
                   pid.int32Value != ownPID,
                   let bounds = info[kCGWindowBounds as String] as? NSDictionary,
-                  let frame = CGRect(dictionaryRepresentation: bounds)
+                  let frame = CGRect(dictionaryRepresentation: bounds),
+                  let displayIdentifier = lockedDisplayIdentifier(for: frame)
             else { return nil }
             return GuideWindowTarget(
                 processIdentifier: pid.int32Value,
@@ -270,7 +273,7 @@ public final class ScreenContextService: GuideTurnContextCapturing, @unchecked S
                 applicationName: info[kCGWindowOwnerName as String] as? String ?? "Current app",
                 windowTitle: info[kCGWindowName as String] as? String ?? "Untitled window",
                 frame: frame,
-                displayIdentifier: lockedDisplayIdentifier(for: frame)
+                displayIdentifier: displayIdentifier
             )
         }
     }

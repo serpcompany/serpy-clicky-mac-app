@@ -381,7 +381,12 @@ public final class GuideTurnCoordinator {
             }
             let activeStep = generated.plan.steps.first
             let visibleResponse = activeStep?.text ?? completeAnswer
-            let activeCue = activeStep.flatMap { pointCue(for: $0, target: target) } ?? generated.pointCue
+            let activeCue: GuidePointCue?
+            if let activeStep {
+                activeCue = pointCue(for: activeStep, target: target)
+            } else {
+                activeCue = generated.pointCue
+            }
             let stepNumber = activeStep == nil ? nil : 1
             let stepCount = activeStep == nil ? nil : generated.plan.steps.count
             let status = stepNumber.map { "Step \($0) of \(stepCount ?? 1)" } ?? "Speaking…"
