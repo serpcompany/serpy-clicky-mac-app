@@ -172,6 +172,59 @@ public protocol AudioChunkRecognizing: AnyObject, Sendable {
     func cancel()
 }
 
+protocol AudioChunkFileOperating: AnyObject, Sendable {
+    func openForReading(_ url: URL) throws -> AVAudioFile
+    func openForWriting(_ url: URL, format: AVAudioFormat) throws -> AVAudioFile
+    func read(
+        _ file: AVAudioFile,
+        into buffer: AVAudioPCMBuffer,
+        frameCount: AVAudioFrameCount
+    ) throws
+    func write(_ buffer: AVAudioPCMBuffer, to file: AVAudioFile) throws
+    func setOwnerOnlyPermissions(_ url: URL) throws
+    func fileExists(_ url: URL) -> Bool
+    func remove(_ url: URL) throws
+}
+
+final class SystemAudioChunkFileOperations: AudioChunkFileOperating, @unchecked Sendable {
+    func openForReading(_ url: URL) throws -> AVAudioFile {
+        try AVAudioFile(forReading: url)
+    }
+
+    func openForWriting(_ url: URL, format: AVAudioFormat) throws -> AVAudioFile {
+        try AVAudioFile(
+            forWriting: url,
+            settings: format.settings,
+            commonFormat: format.commonFormat,
+            interleaved: format.isInterleaved
+        )
+    }
+
+    func read(
+        _ file: AVAudioFile,
+        into buffer: AVAudioPCMBuffer,
+        frameCount: AVAudioFrameCount
+    ) throws {
+        try file.read(into: buffer, frameCount: frameCount)
+    }
+
+    func write(_ buffer: AVAudioPCMBuffer, to file: AVAudioFile) throws {
+        try file.write(from: buffer)
+    }
+
+    func setOwnerOnlyPermissions(_ url: URL) throws {
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    }
+
+    func fileExists(_ url: URL) -> Bool {
+        FileManager.default.fileExists(atPath: url.path)
+    }
+
+    func remove(_ url: URL) throws {
+        try FileManager.default.removeItem(at: url)
+    }
+}
+
 final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendable {
     var onPartial: (@Sendable (String) -> Void)?
     private let recognizer: any AudioChunkRecognizing
@@ -179,18 +232,21 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
     private let maximumChunkDuration: TimeInterval
     private let overlapDuration: TimeInterval
     private let temporaryDirectory: URL
+    private let fileOperations: any AudioChunkFileOperating
     var recoveryInputMode: StreamingRecoveryInputMode { .transcriberReadsCheckpointURL }
 
     init(
         recognizer: any AudioChunkRecognizing = OnDeviceSFSpeechChunkRecognizer(),
         maximumChunkDuration: TimeInterval = 50,
         overlapDuration: TimeInterval = 1,
-        temporaryDirectory: URL = FileManager.default.temporaryDirectory
+        temporaryDirectory: URL = FileManager.default.temporaryDirectory,
+        fileOperations: any AudioChunkFileOperating = SystemAudioChunkFileOperations()
     ) {
         self.recognizer = recognizer
         self.maximumChunkDuration = maximumChunkDuration
         self.overlapDuration = min(max(0, overlapDuration), max(0, maximumChunkDuration - 0.1))
         self.temporaryDirectory = temporaryDirectory
+        self.fileOperations = fileOperations
     }
 
     func begin(locale: Locale) async throws {
@@ -244,59 +300,83 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
     }
 
     private func splitIfNeeded(_ sourceURL: URL) throws -> TemporaryAudioChunks {
-        let source = try AVAudioFile(forReading: sourceURL)
+        let source: AVAudioFile
+        do {
+            source = try fileOperations.openForReading(sourceURL)
+        } catch {
+            throw audioSplitFailure()
+        }
         let framesPerChunk = AVAudioFramePosition(source.processingFormat.sampleRate * maximumChunkDuration)
         let overlapFrames = AVAudioFramePosition(source.processingFormat.sampleRate * overlapDuration)
         guard source.length > framesPerChunk else {
-            return TemporaryAudioChunks(urls: [sourceURL], temporaryURLs: [])
+            return TemporaryAudioChunks(
+                urls: [sourceURL],
+                temporaryURLs: [],
+                fileOperations: fileOperations
+            )
         }
 
         var urls: [URL] = []
-        while source.framePosition < source.length {
-            let url = temporaryDirectory
-                .appending(path: "serpy-speech-chunk-\(UUID().uuidString).caf")
-            let file = try AVAudioFile(
-                forWriting: url,
-                settings: source.processingFormat.settings,
-                commonFormat: source.processingFormat.commonFormat,
-                interleaved: source.processingFormat.isInterleaved
-            )
-            var written: AVAudioFramePosition = 0
-            while written < framesPerChunk, source.framePosition < source.length {
-                let remainingInSource = source.length - source.framePosition
-                let remainingInChunk = framesPerChunk - written
-                let requested = AVAudioFrameCount(min(remainingInSource, remainingInChunk))
-                guard let buffer = AVAudioPCMBuffer(
-                    pcmFormat: source.processingFormat,
-                    frameCapacity: requested
-                ) else {
-                    throw transcriptionFailure(
-                        "A long recording could not be divided safely.",
-                        recovery: "Retry from the retained raw audio checkpoint."
-                    )
+        do {
+            while source.framePosition < source.length {
+                let url = temporaryDirectory
+                    .appending(path: "serpy-speech-chunk-\(UUID().uuidString).caf")
+                // Register ownership before creation because AVAudioFile can leave a
+                // partial file behind even when its initializer throws.
+                urls.append(url)
+                let file = try fileOperations.openForWriting(url, format: source.processingFormat)
+                var written: AVAudioFramePosition = 0
+                while written < framesPerChunk, source.framePosition < source.length {
+                    let remainingInSource = source.length - source.framePosition
+                    let remainingInChunk = framesPerChunk - written
+                    let requested = AVAudioFrameCount(min(remainingInSource, remainingInChunk))
+                    guard let buffer = AVAudioPCMBuffer(
+                        pcmFormat: source.processingFormat,
+                        frameCapacity: requested
+                    ) else {
+                        throw audioSplitFailure()
+                    }
+                    try fileOperations.read(source, into: buffer, frameCount: requested)
+                    guard buffer.frameLength > 0 else { break }
+                    try fileOperations.write(buffer, to: file)
+                    written += AVAudioFramePosition(buffer.frameLength)
                 }
-                try source.read(into: buffer, frameCount: requested)
-                guard buffer.frameLength > 0 else { break }
-                try file.write(from: buffer)
-                written += AVAudioFramePosition(buffer.frameLength)
-            }
-            guard written > 0 else {
-                do { try FileManager.default.removeItem(at: url) } catch {
-                    throw GuideFailure(
-                        stage: .storage,
-                        message: "An empty temporary Dictation chunk could not be deleted.",
-                        recovery: "Remove the temporary file and retry recovery."
-                    )
+                guard written > 0 else {
+                    try fileOperations.remove(url)
+                    urls.removeLast()
+                    break
                 }
-                break
+                try fileOperations.setOwnerOnlyPermissions(url)
+                if source.framePosition < source.length, overlapFrames > 0 {
+                    source.framePosition = max(0, source.framePosition - overlapFrames)
+                }
             }
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
-            urls.append(url)
-            if source.framePosition < source.length, overlapFrames > 0 {
-                source.framePosition = max(0, source.framePosition - overlapFrames)
+        } catch {
+            let splitFailure = (error as? GuideFailure) ?? audioSplitFailure()
+            do {
+                try TemporaryAudioChunks.cleanup(urls, using: fileOperations)
+            } catch let cleanupFailure as GuideFailure {
+                throw GuideFailure(
+                    stage: .storage,
+                    message: "\(splitFailure.message) One or more temporary chunks could not be deleted.",
+                    recovery: "\(splitFailure.recovery) \(cleanupFailure.recovery)"
+                )
             }
+            throw splitFailure
         }
-        return TemporaryAudioChunks(urls: urls, temporaryURLs: urls)
+        return TemporaryAudioChunks(
+            urls: urls,
+            temporaryURLs: urls,
+            fileOperations: fileOperations
+        )
+    }
+
+    private func audioSplitFailure() -> GuideFailure {
+        GuideFailure(
+            stage: .storage,
+            message: "A long recording could not be divided safely.",
+            recovery: "Retry from the retained raw audio checkpoint after checking available disk space."
+        )
     }
 }
 
@@ -357,18 +437,30 @@ private final class OnDeviceSFSpeechChunkRecognizer: AudioChunkRecognizing, @unc
 private struct TemporaryAudioChunks {
     let urls: [URL]
     let temporaryURLs: [URL]
+    let fileOperations: any AudioChunkFileOperating
 
     func cleanup() throws {
-        for url in temporaryURLs where FileManager.default.fileExists(atPath: url.path) {
+        try Self.cleanup(temporaryURLs, using: fileOperations)
+    }
+
+    static func cleanup(
+        _ urls: [URL],
+        using fileOperations: any AudioChunkFileOperating
+    ) throws {
+        var deletionFailed = false
+        for url in urls where fileOperations.fileExists(url) {
             do {
-                try FileManager.default.removeItem(at: url)
+                try fileOperations.remove(url)
             } catch {
-                throw GuideFailure(
-                    stage: .storage,
-                    message: "A temporary Dictation chunk could not be deleted.",
-                    recovery: "Remove the temporary file after closing other processes, then try again."
-                )
+                deletionFailed = true
             }
+        }
+        guard !deletionFailed else {
+            throw GuideFailure(
+                stage: .storage,
+                message: "One or more temporary Dictation chunks could not be deleted.",
+                recovery: "Remove the temporary files after closing other processes, then try again."
+            )
         }
     }
 }

@@ -197,6 +197,60 @@ struct DurableDictationSessionTests {
         #expect(Array(recognizer.containsBoundaryMarker.prefix(2)) == [true, true])
     }
 
+    @Test("mid-split write failure removes every created temporary chunk")
+    func midSplitFailureCleansCreatedChunks() async throws {
+        let fixture = try LongAudioSplitFixture()
+        defer { fixture.cleanup() }
+        let files = InjectedChunkFileOperations(failWriteChunkNumber: 2)
+        let transcriber = ChunkedSFSpeechTranscriber(
+            recognizer: FixtureChunkRecognizer(results: []),
+            maximumChunkDuration: 50,
+            temporaryDirectory: fixture.directory,
+            fileOperations: files
+        )
+        try await transcriber.begin(locale: .init(identifier: "en-US"))
+
+        do {
+            _ = try await transcriber.finish(recoveryAudioURL: fixture.sourceURL)
+            Issue.record("Expected injected split failure")
+        } catch let failure as GuideFailure {
+            #expect(failure.stage == .storage)
+            #expect(failure.message.contains("divided"))
+            #expect(!failure.recovery.isEmpty)
+        }
+
+        #expect(files.createdURLs.count == 2)
+        #expect(Set(files.removalAttempts) == Set(files.createdURLs))
+        #expect(files.createdURLs.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+    }
+
+    @Test("split failure composes a staged cleanup failure and attempts every URL")
+    func midSplitCleanupFailureIsSurfaced() async throws {
+        let fixture = try LongAudioSplitFixture()
+        defer { fixture.cleanup() }
+        let files = InjectedChunkFileOperations(failWriteChunkNumber: 2, failRemovalNumber: 1)
+        let transcriber = ChunkedSFSpeechTranscriber(
+            recognizer: FixtureChunkRecognizer(results: []),
+            maximumChunkDuration: 50,
+            temporaryDirectory: fixture.directory,
+            fileOperations: files
+        )
+        try await transcriber.begin(locale: .init(identifier: "en-US"))
+
+        do {
+            _ = try await transcriber.finish(recoveryAudioURL: fixture.sourceURL)
+            Issue.record("Expected composed cleanup failure")
+        } catch let failure as GuideFailure {
+            #expect(failure.stage == .storage)
+            #expect(failure.message.contains("could not be deleted"))
+            #expect(failure.message.contains("divided"))
+            #expect(!failure.recovery.isEmpty)
+        }
+
+        #expect(files.createdURLs.count == 2)
+        #expect(Set(files.removalAttempts) == Set(files.createdURLs))
+    }
+
     @Test("device restart failure rejects a captured prefix as success")
     func deviceFailureIsStagedAndNotTruncated() async throws {
         let capture = SyntheticAudioCapture()
@@ -301,6 +355,90 @@ struct DurableDictationSessionTests {
             }
             capture.emit(try oneSecondBuffer(marker: marker))
         }
+    }
+}
+
+@MainActor
+private final class LongAudioSplitFixture {
+    let directory: URL
+    let sourceURL: URL
+
+    init() throws {
+        directory = FileManager.default.temporaryDirectory
+            .appending(path: "serpy-split-failure-\(UUID().uuidString)", directoryHint: .isDirectory)
+        sourceURL = directory.appending(path: "source.caf")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let format = try #require(AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 16_000,
+            channels: 1,
+            interleaved: false
+        ))
+        let file = try AVAudioFile(
+            forWriting: sourceURL,
+            settings: format.settings,
+            commonFormat: .pcmFormatFloat32,
+            interleaved: false
+        )
+        for _ in 0..<110 {
+            let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000))
+            buffer.frameLength = 16_000
+            try file.write(from: buffer)
+        }
+    }
+
+    func cleanup() {
+        guard FileManager.default.fileExists(atPath: directory.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: directory)
+        } catch {
+            Issue.record("Could not remove split-failure fixture: \(error)")
+        }
+    }
+}
+
+private final class InjectedChunkFileOperations: AudioChunkFileOperating, @unchecked Sendable {
+    struct WriteFailure: Error {}
+    struct RemovalFailure: Error {}
+
+    private let live = SystemAudioChunkFileOperations()
+    private let failWriteChunkNumber: Int
+    private let failRemovalNumber: Int?
+    private var removalCount = 0
+    private(set) var createdURLs: [URL] = []
+    private(set) var removalAttempts: [URL] = []
+
+    init(failWriteChunkNumber: Int, failRemovalNumber: Int? = nil) {
+        self.failWriteChunkNumber = failWriteChunkNumber
+        self.failRemovalNumber = failRemovalNumber
+    }
+
+    func openForReading(_ url: URL) throws -> AVAudioFile { try live.openForReading(url) }
+
+    func openForWriting(_ url: URL, format: AVAudioFormat) throws -> AVAudioFile {
+        createdURLs.append(url)
+        return try live.openForWriting(url, format: format)
+    }
+
+    func read(_ file: AVAudioFile, into buffer: AVAudioPCMBuffer, frameCount: AVAudioFrameCount) throws {
+        try live.read(file, into: buffer, frameCount: frameCount)
+    }
+
+    func write(_ buffer: AVAudioPCMBuffer, to file: AVAudioFile) throws {
+        if createdURLs.firstIndex(of: file.url) == failWriteChunkNumber - 1 {
+            throw WriteFailure()
+        }
+        try live.write(buffer, to: file)
+    }
+
+    func setOwnerOnlyPermissions(_ url: URL) throws { try live.setOwnerOnlyPermissions(url) }
+    func fileExists(_ url: URL) -> Bool { live.fileExists(url) }
+
+    func remove(_ url: URL) throws {
+        removalCount += 1
+        removalAttempts.append(url)
+        if removalCount == failRemovalNumber { throw RemovalFailure() }
+        try live.remove(url)
     }
 }
 
