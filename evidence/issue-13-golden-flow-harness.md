@@ -47,6 +47,11 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   concrete adapter instances accepted by the deterministic-adapter factory,
   and is guarded by the model's runtime audit precondition. No fixture or
   provider object lives in the shipping GuideUI package.
+- `GuideCompanionCompositionTests` compiles the exact App-owned composition
+  sources into a non-shipping unit-test target, constructs the real test model
+  headlessly, asserts the exact role-to-concrete-type allowlist and production
+  denylist, and proves an injected production Keychain adapter makes the audit
+  fail.
 - Release excludes every UI-test composition source, rejects `--ui-testing`
   before production construction, and the bounded Release build scans the
   executable for fixture symbols. The headless harness self-test also rejects
@@ -63,7 +68,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green; 100 XCTest and 74 Swift Testing cases passed after the App-owned composition move | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green; 100 XCTest, 74 Swift Testing cases, and 2 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 

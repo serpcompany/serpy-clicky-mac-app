@@ -73,3 +73,24 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.uitests
         GENERATE_INFOPLIST_FILE: YES
+  GuideCompanionCompositionTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: App/UITestComposition
+      - path: AppCompositionTests
+    dependencies:
+      - package: GuideModules
+        product: GuideCore
+      - package: GuideModules
+        product: GuideMac
+      - package: GuideModules
+        product: GuideUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.composition-tests
+        GENERATE_INFOPLIST_FILE: YES
+    scheme:
+      testTargets:
+        - GuideCompanionCompositionTests
+      gatherCoverageData: false

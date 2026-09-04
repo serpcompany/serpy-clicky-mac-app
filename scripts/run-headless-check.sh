@@ -147,7 +147,17 @@ run_core_tests() {
   run_bounded swift test \
     --package-path Packages/GuideModules \
     --scratch-path "$run_root/swiftpm" \
-    --disable-automatic-resolution
+    --disable-automatic-resolution || return $?
+  run_bounded xcodebuild test -quiet \
+    -project GuideCompanion.xcodeproj \
+    -scheme GuideCompanionCompositionTests \
+    -destination 'platform=macOS,arch=arm64' \
+    -derivedDataPath "$run_root/composition-derived-data" \
+    -clonedSourcePackagesDirPath "$run_root/composition-source-packages" \
+    -disableAutomaticPackageResolution \
+    ARCHS=arm64 \
+    ONLY_ACTIVE_ARCH=YES \
+    REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
 }
 
 run_app_build() {

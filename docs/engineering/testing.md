@@ -42,8 +42,9 @@ Each future harness invocation must own one unique directory below the operating
 system temporary directory, impose time and disk limits, and remove that
 directory on success, failure, or interruption. Use
 `scripts/run-headless-check.sh core-tests` for the package suite and
-`scripts/run-headless-check.sh app-build` for unsigned production-app and
-golden-UI-bundle compilation. `scripts/test-headless-check.sh` deliberately
+the App-owned composition contract, and `scripts/run-headless-check.sh
+app-build` for unsigned production-app and golden-UI-bundle compilation.
+`scripts/test-headless-check.sh` deliberately
 injects failures, rejects traversal-shaped roots, interrupts a run, and proves
 that TERM-ignoring descendants are killed and the owned directory is removed.
 Each command owns a new process group with a 30-minute wall limit and an 8 GiB

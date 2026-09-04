@@ -56,7 +56,7 @@ public enum GuideUITestComposition {
         )
         let incidentReporter = UITestIncidentReporter(sessionRoot: sessionRoot)
         let shortcutMonitor = UITestShortcutMonitor()
-        let audit = RuntimeCompositionAudit.deterministic([
+        let constructedAdapters: [RuntimeAdapterRole: any DeterministicUITestAdapter] = [
             .dictationSession: session,
             .guideTranscription: transcription,
             .guideSpeech: speaker,
@@ -74,7 +74,27 @@ public enum GuideUITestComposition {
             .preferences: preferences,
             .clipboard: clipboard,
             .globalShortcuts: shortcutMonitor,
-        ])
+        ]
+        let allowlist: [RuntimeAdapterRole: RuntimeAdapterIdentity] = [
+            .dictationSession: RuntimeAdapterIdentity(UITestDictationSession.self),
+            .guideTranscription: RuntimeAdapterIdentity(UITestGuideTranscriber.self),
+            .guideSpeech: RuntimeAdapterIdentity(UITestGuideSpeaker.self),
+            .permissions: RuntimeAdapterIdentity(UITestPermissionService.self),
+            .textInsertion: RuntimeAdapterIdentity(UITestTextInsertionService.self),
+            .screenCapture: RuntimeAdapterIdentity(UITestScreenContextService.self),
+            .guidePlanGenerator: RuntimeAdapterIdentity(UITestGuideGenerator.self),
+            .localGuidanceProvider: RuntimeAdapterIdentity(UITestLocalModelProvider.self),
+            .cloudGuidanceProvider: RuntimeAdapterIdentity(UITestCloudGenerator.self),
+            .credentialStore: RuntimeAdapterIdentity(UITestCredentialStore.self),
+            .credentialVerifier: RuntimeAdapterIdentity(UITestCredentialVerifier.self),
+            .verificationSleeper: RuntimeAdapterIdentity(UITestExpirySleeper.self),
+            .diagnosticReporter: RuntimeAdapterIdentity(UITestIncidentReporter.self),
+            .transcriptStore: RuntimeAdapterIdentity(UITestHistoryStore.self),
+            .preferences: RuntimeAdapterIdentity(UITestPreferences.self),
+            .clipboard: RuntimeAdapterIdentity(UITestClipboardService.self),
+            .globalShortcuts: RuntimeAdapterIdentity(UITestShortcutMonitor.self),
+        ]
+        let audit = RuntimeCompositionAudit.deterministic(constructedAdapters, allowlist: allowlist)
         return GuideAppModel(
             defaults: preferences,
             runtimeMode: .uiTest,

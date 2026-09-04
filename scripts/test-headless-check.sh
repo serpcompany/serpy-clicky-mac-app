@@ -11,6 +11,9 @@ for fixture_source in GuideUITestComposition.swift UITestDictationAdapters.swift
     print -u2 "$fixture_source is not excluded from Release"; exit 1
   }
 done
+rg -q 'GuideCompanionCompositionTests' project.yml || {
+  print -u2 "App composition contract target is missing"; exit 1
+}
 rg -q 'precondition\(mode == \.production, "UI-test composition is unavailable in Release builds"\)' App/GuideCompanionApp.swift || {
   print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
 }

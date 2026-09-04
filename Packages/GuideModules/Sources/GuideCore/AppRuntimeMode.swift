@@ -99,13 +99,16 @@ public struct RuntimeAdapterIdentity: Hashable, @unchecked Sendable {
 public struct RuntimeCompositionAudit: Equatable, Sendable {
     public let adapters: [RuntimeAdapterRole: RuntimeAdapterKind]
     public let identities: [RuntimeAdapterRole: RuntimeAdapterIdentity]
+    public let deterministicAllowlist: [RuntimeAdapterRole: RuntimeAdapterIdentity]
 
     private init(
         adapters: [RuntimeAdapterRole: RuntimeAdapterKind],
-        identities: [RuntimeAdapterRole: RuntimeAdapterIdentity] = [:]
+        identities: [RuntimeAdapterRole: RuntimeAdapterIdentity] = [:],
+        deterministicAllowlist: [RuntimeAdapterRole: RuntimeAdapterIdentity] = [:]
     ) {
         self.adapters = adapters
         self.identities = identities
+        self.deterministicAllowlist = deterministicAllowlist
     }
 
     public static let production = RuntimeCompositionAudit(
@@ -113,11 +116,13 @@ public struct RuntimeCompositionAudit: Equatable, Sendable {
     )
 
     public static func deterministic(
-        _ constructedAdapters: [RuntimeAdapterRole: any DeterministicUITestAdapter]
+        _ constructedAdapters: [RuntimeAdapterRole: any DeterministicUITestAdapter],
+        allowlist: [RuntimeAdapterRole: RuntimeAdapterIdentity]
     ) -> RuntimeCompositionAudit {
         RuntimeCompositionAudit(
             adapters: Dictionary(uniqueKeysWithValues: constructedAdapters.keys.map { ($0, .deterministic) }),
-            identities: constructedAdapters.mapValues { RuntimeAdapterIdentity(type(of: $0)) }
+            identities: constructedAdapters.mapValues { RuntimeAdapterIdentity(type(of: $0)) },
+            deterministicAllowlist: allowlist
         )
     }
 
@@ -129,6 +134,7 @@ public struct RuntimeCompositionAudit: Equatable, Sendable {
             Set(adapters.keys) == Set(RuntimeAdapterRole.allCases)
                 && adapters.values.allSatisfy { $0 == .deterministic }
                 && Set(identities.keys) == Set(RuntimeAdapterRole.allCases)
+                && identities == deterministicAllowlist
         }
     }
 }

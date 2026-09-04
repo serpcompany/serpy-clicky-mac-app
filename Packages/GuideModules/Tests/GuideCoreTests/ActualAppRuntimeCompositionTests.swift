@@ -120,13 +120,19 @@ struct ActualAppRuntimeCompositionTests {
     @Test("GT-COMPOSITION-005 UI dependency audit requires every deterministic external role")
     func validatesCompleteAdapterGraph() {
         let fixture = CompositionFixtureAdapter()
+        let allowlist = Dictionary(
+            uniqueKeysWithValues: RuntimeAdapterRole.allCases.map {
+                ($0, RuntimeAdapterIdentity(CompositionFixtureAdapter.self))
+            }
+        )
         let complete = RuntimeCompositionAudit.deterministic(
-            Dictionary(uniqueKeysWithValues: RuntimeAdapterRole.allCases.map { ($0, fixture) })
+            Dictionary(uniqueKeysWithValues: RuntimeAdapterRole.allCases.map { ($0, fixture) }),
+            allowlist: allowlist
         )
         #expect(complete.isValid(for: .uiTest))
         var missing = Dictionary(uniqueKeysWithValues: RuntimeAdapterRole.allCases.map { ($0, fixture) })
         missing.removeValue(forKey: .credentialStore)
-        #expect(!RuntimeCompositionAudit.deterministic(missing).isValid(for: .uiTest))
+        #expect(!RuntimeCompositionAudit.deterministic(missing, allowlist: allowlist).isValid(for: .uiTest))
     }
 
     private func canonicalTemporaryDirectory() -> URL {
