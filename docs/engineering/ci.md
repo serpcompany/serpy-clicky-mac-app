@@ -8,8 +8,8 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `81bb5de` in run `33921232918` |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `81bb5de` in run `33921232918` |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056b24f46c25e3be43cb086b1c2a065180c3` in run `33930252682` |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056b24f46c25e3be43cb086b1c2a065180c3` in run `33930252682` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Not configured; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
@@ -76,8 +76,11 @@ redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
 
 ## GitHub Actions
 
-`.github/workflows/verification.yml` defines two secret-free, read-only jobs:
+`.github/workflows/verification.yml` defines three secret-free, read-only jobs:
 
+- `evidence-contract`: validates the focused proof schema and its own fixtures;
+  a green contract check means incomplete evidence is labeled red or partial,
+  not that the underlying UI journey passed.
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
   adversarially tests the runner, then runs the complete package suite and
   App-owned composition contract.
@@ -87,8 +90,10 @@ Workflow actions are pinned to reviewed full commit SHAs. The checkout pin is
 official `actions/checkout` v7.0.1, which uses the Node 24 action runtime.
 
 The workflow runs for pull requests, merge queue candidates, and pushes to
-`main`. For PR #14 at `81bb5de`, both jobs passed in
-[GitHub Actions run 33921232918](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33921232918).
+`main`. For PR #14 at exact commit
+`15d7056b24f46c25e3be43cb086b1c2a065180c3`, `core-tests` and `app-build`
+both passed in
+[GitHub Actions run 33930252682](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33930252682).
 Use stable job names when configuring required branch checks.
 
 ## Xcode Cloud account requirements

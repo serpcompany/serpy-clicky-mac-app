@@ -27,11 +27,19 @@
     { "name": "UF09 Done - Walkthrough complete", "pixels": "1040x194" }
   ],
   "cleanup": {
-    "wrapperExitCode": 0,
-    "serpyAndUITestProcessesRemaining": 0,
-    "xctestSessionRootsRemaining": 0,
-    "wrapperRootsRemaining": 0,
-    "status": "passed"
+    "measured": {
+      "wrapperExitCode": 0,
+      "serpyAndUITestProcessesRemaining": 0,
+      "xctestSessionRootsRemaining": 0,
+      "wrapperRootsRemaining": 0
+    },
+    "unverifiedDimensions": [
+      "buildCachesRemaining",
+      "keychainAccessObserved",
+      "launchServicesRegistrationsRemaining",
+      "networkRequestsObserved",
+      "unexpectedSystemPromptsObserved"
+    ]
   },
   "redaction": {
     "hardwareIdentifiersIncluded": false,

@@ -1,6 +1,16 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "issue": 13,
+  "evidenceStatus": "partial",
+  "missingRequirements": [
+    "artifacts.primary",
+    "cleanup.buildCachesRemaining",
+    "cleanup.keychainAccessObserved",
+    "cleanup.launchServicesRegistrationsRemaining",
+    "cleanup.networkRequestsObserved",
+    "cleanup.unexpectedSystemPromptsObserved",
+    "cleanup.xctestSessionRootsRemaining"
+  ],
   "testId": "GT-UF12-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
   "testedCommit": "0a21ed140f9ebc6211f85b9ddf3636031a9ecf36",
@@ -12,7 +22,7 @@
     "osVersion": "26.5.2",
     "osBuildNumber": "25F84"
   },
-  "resultBundle": "evidence/issue-13-real-app-UF12-m3-run3.xcresult",
+  "localUncommittedResultBundle": "evidence/issue-13-real-app-UF12-m3-run3.xcresult",
   "result": {
     "status": "passed",
     "executed": 1,
@@ -20,6 +30,15 @@
     "failed": 0,
     "skipped": 0,
     "durationSeconds": 13.624
+  },
+  "failures": [],
+  "artifacts": {
+    "primary": [],
+    "secondary": [],
+    "unavailable": [
+      "primary .xcresult",
+      "Xcode report screenshot"
+    ]
   },
   "assertions": {
     "visibleMalformedGuidanceCause": true,
@@ -29,10 +48,19 @@
     "ambientSurfaceOnly": true
   },
   "cleanup": {
-    "wrapperExitCode": 0,
-    "serpyAndUITestProcessesRemaining": 0,
-    "wrapperRootsRemaining": 0,
-    "status": "passed"
+    "measured": {
+      "wrapperExitCode": 0,
+      "serpyAndUITestProcessesRemaining": 0,
+      "wrapperRootsRemaining": 0
+    },
+    "unverifiedDimensions": [
+      "buildCachesRemaining",
+      "keychainAccessObserved",
+      "launchServicesRegistrationsRemaining",
+      "networkRequestsObserved",
+      "unexpectedSystemPromptsObserved",
+      "xctestSessionRootsRemaining"
+    ]
   },
   "redaction": {
     "hardwareIdentifiersIncluded": false,

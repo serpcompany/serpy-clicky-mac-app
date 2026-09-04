@@ -1,9 +1,24 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "issue": 13,
+  "evidenceStatus": "red",
+  "missingRequirements": [
+    "artifacts.primary",
+    "cleanup.buildCachesRemaining",
+    "cleanup.keychainAccessObserved",
+    "cleanup.launchServicesRegistrationsRemaining",
+    "cleanup.networkRequestsObserved",
+    "cleanup.unexpectedSystemPromptsObserved",
+    "cleanup.wrapperExitCode",
+    "cleanup.xctestSessionRootsRemaining",
+    "failures",
+    "result.durationSeconds",
+    "testedCommit"
+  ],
   "purpose": "prove the actual-app golden lane reports an injected external-adapter failure as red",
   "testId": "GT-UF08-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+  "testedCommit": null,
   "injection": "SERPY_INJECT_GUIDE_FAILURE=1",
   "testPlan": "GuideCompanionGolden",
   "testPlanConfiguration": "Golden UI",
@@ -13,18 +28,38 @@
     "osVersion": "26.5.2",
     "osBuildNumber": "25F84"
   },
-  "resultBundle": "evidence/issue-13-real-app-UF08-injected-red-m3.xcresult",
+  "localUncommittedResultBundle": "evidence/issue-13-real-app-UF08-injected-red-m3.xcresult",
   "result": {
     "status": "failed-as-injected",
     "executed": 1,
     "passed": 0,
     "failed": 1,
-    "skipped": 0
+    "skipped": 0,
+    "durationSeconds": null
+  },
+  "failures": [],
+  "artifacts": {
+    "primary": [],
+    "secondary": [],
+    "unavailable": [
+      "primary .xcresult",
+      "Xcode report screenshot"
+    ]
   },
   "cleanup": {
-    "serpyAndUITestProcessesRemaining": 0,
-    "wrapperRootsRemaining": 0,
-    "status": "passed"
+    "measured": {
+      "serpyAndUITestProcessesRemaining": 0,
+      "wrapperRootsRemaining": 0
+    },
+    "unverifiedDimensions": [
+      "buildCachesRemaining",
+      "keychainAccessObserved",
+      "launchServicesRegistrationsRemaining",
+      "networkRequestsObserved",
+      "unexpectedSystemPromptsObserved",
+      "wrapperExitCode",
+      "xctestSessionRootsRemaining"
+    ]
   },
   "redaction": {
     "hardwareIdentifiersIncluded": false,
