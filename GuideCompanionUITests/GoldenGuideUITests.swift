@@ -27,12 +27,16 @@ final class GoldenGuideUITests: GoldenUITestCase {
         closeSettingsForAmbientGuide()
         askAmbientGuide()
         expectAmbient(labelContains: "Step 1 of 2", value: "Open the File menu.")
+        attachAmbientScreenshot(named: "UF09 Step 1 - Open the File menu")
         askAmbientGuide()
         expectAmbient(labelContains: "The expected result for Step 1 is not visible yet.", value: "Open the File menu.")
+        attachAmbientScreenshot(named: "UF09 Stale Evidence - Step 1 remains")
         askAmbientGuide()
         expectAmbient(labelContains: "Step 2 of 2", value: "Choose New Window.")
+        attachAmbientScreenshot(named: "UF09 Step 2 - Choose New Window")
         askAmbientGuide()
         expectAmbient(labelContains: "Done", value: "Done. This walkthrough is complete.")
+        attachAmbientScreenshot(named: "UF09 Done - Walkthrough complete")
         assertAmbientSurfaceOnly()
     }
 

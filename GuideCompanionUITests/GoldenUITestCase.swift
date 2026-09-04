@@ -141,6 +141,15 @@ class GoldenUITestCase: XCTestCase {
         XCTAssertFalse(application.windows["SERPy Settings"].exists)
     }
 
+    func attachAmbientScreenshot(named name: String) {
+        let ambient = application.descendants(matching: .any)["guide.ambient"]
+        XCTAssertTrue(ambient.exists)
+        let attachment = XCTAttachment(screenshot: ambient.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func expectAmbientGone(timeout: TimeInterval) {
         let ambient = application.descendants(matching: .any)["guide.ambient"]
         let gone = XCTNSPredicateExpectation(
