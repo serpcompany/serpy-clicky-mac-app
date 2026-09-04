@@ -72,3 +72,33 @@ extension GuideFailure: LocalizedError {
     public var errorDescription: String? { message }
     public var recoverySuggestion: String? { recovery }
 }
+
+public extension GuideFailure {
+    static func malformedGuidance(provider: GuideFailureProvider) -> GuideFailure {
+        switch provider {
+        case .local:
+            GuideFailure(
+                stage: .guidance,
+                code: .guidancePlanMalformed,
+                provider: .local,
+                message: "The local guide returned malformed structured guidance.",
+                recovery: "Try the question again. SERPy did not present incomplete steps."
+            )
+        case .openAI:
+            GuideFailure(
+                stage: .guidance,
+                code: .guidancePlanMalformed,
+                provider: .openAI,
+                message: "OpenAI Talk returned malformed structured guidance.",
+                recovery: "Try the question again. SERPy did not present incomplete steps."
+            )
+        case .none:
+            GuideFailure(
+                stage: .guidance,
+                code: .guidancePlanMalformed,
+                message: "The selected guide returned malformed structured guidance.",
+                recovery: "Try the question again. SERPy did not present incomplete steps."
+            )
+        }
+    }
+}

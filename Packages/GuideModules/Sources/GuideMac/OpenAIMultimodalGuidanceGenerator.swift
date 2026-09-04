@@ -251,13 +251,7 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
                   !answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   Data(answer.utf8).starts(with: emittedAnswerBytes)
             else {
-                throw GuideFailure(
-                    stage: .guidance,
-                    code: .guidancePlanMalformed,
-                    provider: .openAI,
-                    message: "OpenAI Talk returned malformed structured guidance.",
-                    recovery: "Try the question again. SERPy did not present an incomplete answer."
-                )
+                throw GuideFailure.malformedGuidance(provider: .openAI)
             }
             var events: [GuidanceStreamEvent] = []
             let answerBytes = Data(answer.utf8)
@@ -338,13 +332,7 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
     }
 
     private static var malformedPlanFailure: GuideFailure {
-        GuideFailure(
-            stage: .guidance,
-            code: .guidancePlanMalformed,
-            provider: .openAI,
-            message: "OpenAI Talk returned a malformed guidance plan.",
-            recovery: "Try the question again. SERPy did not present incomplete steps."
-        )
+        .malformedGuidance(provider: .openAI)
     }
 
     private static func partialAnswer(in jsonPrefix: String) -> String? {

@@ -54,9 +54,10 @@ public struct SentryHandledEventScrubber {
               let code = GuideFailureCode(rawValue: message),
               code != .unclassified,
               let stageValue = event.tags?["failure_stage"],
-              GuideFailureStage(rawValue: stageValue) != nil,
+              stageValue == GuideFailureStage.guidance.rawValue,
               let providerValue = event.tags?["provider_kind"],
-              GuideFailureProvider(rawValue: providerValue) != nil
+              providerValue == GuideFailureProvider.local.rawValue
+                || providerValue == GuideFailureProvider.openAI.rawValue
         else { return nil }
         event.message = SentryMessage(formatted: code.rawValue)
         event.fingerprint = [code.rawValue]

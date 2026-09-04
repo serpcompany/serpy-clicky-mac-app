@@ -204,12 +204,6 @@ public final class LocalGuidanceService {
     }
 
     private static var malformedPlanFailure: GuideFailure {
-        GuideFailure(
-            stage: .guidance,
-            code: .guidancePlanMalformed,
-            provider: .local,
-            message: "The local guide returned malformed structured guidance.",
-            recovery: "Try the question again. SERPy did not present incomplete steps."
-        )
+        .malformedGuidance(provider: .local)
     }
 }

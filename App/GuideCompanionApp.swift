@@ -139,13 +139,7 @@ private final class MalformedFixtureGeneration: GuideTurnGenerating {
         context: ScreenContext,
         conversation: [GuidanceMessage]
     ) async throws -> GuidancePlan {
-        throw GuideFailure(
-            stage: .guidance,
-            code: .guidancePlanMalformed,
-            provider: .local,
-            message: "The local guide returned malformed structured guidance.",
-            recovery: "Try the question again. SERPy did not present incomplete steps."
-        )
+        throw GuideFailure.malformedGuidance(provider: .local)
     }
 }
 

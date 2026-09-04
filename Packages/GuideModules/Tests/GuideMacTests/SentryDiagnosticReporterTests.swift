@@ -102,5 +102,15 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         unclassified.message = SentryMessage(formatted: secret)
         unclassified.tags = ["serpy_schema": "handled-v1"]
         XCTAssertNil(SentryHandledEventScrubber().scrub(unclassified))
+
+        let wrongClassification = Event(level: .error)
+        wrongClassification.environment = "development"
+        wrongClassification.message = SentryMessage(formatted: "guidance.plan.malformed")
+        wrongClassification.tags = [
+            "serpy_schema": "handled-v1",
+            "failure_stage": "permission",
+            "provider_kind": "none"
+        ]
+        XCTAssertNil(SentryHandledEventScrubber().scrub(wrongClassification))
     }
 }

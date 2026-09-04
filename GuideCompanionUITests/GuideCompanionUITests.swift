@@ -7,6 +7,9 @@ final class GuideCompanionUITests: XCTestCase {
         application.launchArguments = ["--ui-testing"]
         application.launch()
 
+        if !application.wait(for: .runningForeground, timeout: 5) {
+            application.activate()
+        }
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
         XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
     }
@@ -49,6 +52,12 @@ final class GuideCompanionUITests: XCTestCase {
         let visibleScreens = NSScreen.screens.map { $0.visibleFrame }
         XCTAssertTrue(matchingFailures.contains { failure in
             !failure.frame.isEmpty && visibleScreens.contains { $0.intersects(failure.frame) }
+        })
+        let matchingRecoveries = application.staticTexts
+            .matching(identifier: "Try the question again. SERPy did not present incomplete steps.")
+            .allElementsBoundByIndex
+        XCTAssertTrue(matchingRecoveries.contains { recovery in
+            !recovery.frame.isEmpty && visibleScreens.contains { $0.intersects(recovery.frame) }
         })
         if application.launchEnvironment["SENTRY_DSN"] != nil {
             Thread.sleep(forTimeInterval: 2)
