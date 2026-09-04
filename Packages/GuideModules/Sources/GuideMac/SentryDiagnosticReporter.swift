@@ -44,15 +44,41 @@ public struct SentryDiagnosticEventDescriptor: Equatable, Sendable {
     }
 }
 
+public struct SentryHandledEventMetadata: Equatable, Sendable {
+    public let releaseName: String
+    public let dist: String
+    public let sdkName: String
+    public let sdkVersion: String
+
+    public init?(appVersion: String, appBuild: String, sdkVersion: String) {
+        let versionCharacters = CharacterSet(charactersIn: "0123456789.-")
+        guard !appVersion.isEmpty,
+              !appBuild.isEmpty,
+              !sdkVersion.isEmpty,
+              appVersion.unicodeScalars.allSatisfy(versionCharacters.contains),
+              appBuild.allSatisfy(\.isNumber),
+              sdkVersion.unicodeScalars.allSatisfy(versionCharacters.contains)
+        else { return nil }
+        releaseName = "com.serpcompany.guidecompanion.internal@\(appVersion)+\(appBuild)"
+        dist = appBuild
+        sdkName = "sentry.cocoa"
+        self.sdkVersion = sdkVersion
+    }
+}
+
 public struct SentryHandledEventScrubber {
-    public init() {}
+    private let metadata: SentryHandledEventMetadata
+
+    public init(metadata: SentryHandledEventMetadata) {
+        self.metadata = metadata
+    }
 
     public func scrub(_ event: Event) -> Event? {
         guard event.environment == "development",
               event.tags?["serpy_schema"] == "handled-v1",
               let message = event.message?.formatted,
               let code = GuideFailureCode(rawValue: message),
-              code != .unclassified,
+              code == .guidancePlanMalformed,
               let stageValue = event.tags?["failure_stage"],
               stageValue == GuideFailureStage.guidance.rawValue,
               let providerValue = event.tags?["provider_kind"],
@@ -71,22 +97,12 @@ public struct SentryHandledEventScrubber {
         event.startTimestamp = nil
         event.logger = nil
         event.serverName = nil
-        if event.releaseName?.hasPrefix("com.serpcompany.guidecompanion.internal@") != true {
-            event.releaseName = nil
-        }
-        if event.dist?.allSatisfy(\.isNumber) != true {
-            event.dist = nil
-        }
+        event.releaseName = metadata.releaseName
+        event.dist = metadata.dist
         event.type = nil
         event.platform = "cocoa"
         event.level = .error
-        if let sdk = event.sdk,
-           let name = sdk["name"] as? String,
-           let version = sdk["version"] as? String {
-            event.sdk = ["name": name, "version": version]
-        } else {
-            event.sdk = nil
-        }
+        event.sdk = ["name": metadata.sdkName, "version": metadata.sdkVersion]
         event.context = nil
         event.extra = nil
         event.modules = nil
@@ -116,6 +132,8 @@ public final class SentryDiagnosticReporter: DiagnosticIncidentReporting {
 
 @MainActor
 public enum SentryDiagnosticBootstrap {
+    private static let pinnedSDKVersion = "9.27.0"
+
     @discardableResult
     public static func startIfConfigured(
         dsn: String?,
@@ -125,6 +143,15 @@ public enum SentryDiagnosticBootstrap {
         guard let dsn, !dsn.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return false
         }
+        let bundleInfo = Bundle.main.infoDictionary ?? [:]
+        guard let appVersion = bundleInfo["CFBundleShortVersionString"] as? String,
+              let appBuild = bundleInfo["CFBundleVersion"] as? String,
+              let metadata = SentryHandledEventMetadata(
+                appVersion: appVersion,
+                appBuild: appBuild,
+                sdkVersion: pinnedSDKVersion
+              )
+        else { return false }
 
         SentrySDK.start { options in
             options.dsn = dsn
@@ -152,7 +179,8 @@ public enum SentryDiagnosticBootstrap {
             options.maxBreadcrumbs = 0
             options.maxCacheItems = 10
             options.sampleRate = 1
-            let scrubber = SentryHandledEventScrubber()
+            options.releaseName = metadata.releaseName
+            let scrubber = SentryHandledEventScrubber(metadata: metadata)
             options.beforeSend = { event in scrubber.scrub(event) }
         }
         return true

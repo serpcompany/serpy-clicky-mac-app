@@ -4,6 +4,12 @@ import Sentry
 import XCTest
 
 final class SentryDiagnosticReporterTests: XCTestCase {
+    private let trustedMetadata = SentryHandledEventMetadata(
+        appVersion: "0.1.0",
+        appBuild: "42",
+        sdkVersion: "9.27.0"
+    )!
+
     func testRuntimeConfigurationUsesInjectedBundleValueWithoutCommittingADSN() throws {
         XCTAssertNil(SentryRuntimeConfiguration.resolve(
             processEnvironment: [:],
@@ -91,7 +97,9 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         event.threads = []
         event.debugMeta = []
 
-        let scrubbed = try XCTUnwrap(SentryHandledEventScrubber().scrub(event))
+        let scrubbed = try XCTUnwrap(
+            SentryHandledEventScrubber(metadata: trustedMetadata).scrub(event)
+        )
 
         XCTAssertNil(scrubbed.user)
         XCTAssertNil(scrubbed.context)
@@ -108,8 +116,8 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         XCTAssertNil(scrubbed.startTimestamp)
         XCTAssertNil(scrubbed.logger)
         XCTAssertNil(scrubbed.serverName)
-        XCTAssertNil(scrubbed.releaseName)
-        XCTAssertNil(scrubbed.dist)
+        XCTAssertEqual(scrubbed.releaseName, "com.serpcompany.guidecompanion.internal@0.1.0+42")
+        XCTAssertEqual(scrubbed.dist, "42")
         XCTAssertNil(scrubbed.type)
         XCTAssertEqual(scrubbed.platform, "cocoa")
         XCTAssertEqual(scrubbed.level, .error)
@@ -127,7 +135,7 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         let unclassified = Event(level: .error)
         unclassified.message = SentryMessage(formatted: secret)
         unclassified.tags = ["serpy_schema": "handled-v1"]
-        XCTAssertNil(SentryHandledEventScrubber().scrub(unclassified))
+        XCTAssertNil(SentryHandledEventScrubber(metadata: trustedMetadata).scrub(unclassified))
 
         let wrongClassification = Event(level: .error)
         wrongClassification.environment = "development"
@@ -137,6 +145,13 @@ final class SentryDiagnosticReporterTests: XCTestCase {
             "failure_stage": "permission",
             "provider_kind": "none"
         ]
-        XCTAssertNil(SentryHandledEventScrubber().scrub(wrongClassification))
+        XCTAssertNil(
+            SentryHandledEventScrubber(metadata: trustedMetadata).scrub(wrongClassification)
+        )
+        XCTAssertNil(SentryHandledEventMetadata(
+            appVersion: "0.1.0-SECRET/../../../private",
+            appBuild: "42-SECRET",
+            sdkVersion: "9.27.0 SECRET"
+        ))
     }
 }
