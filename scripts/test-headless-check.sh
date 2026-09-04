@@ -51,6 +51,16 @@ for check_name in core-tests app-build; do
   [[ ! -e $fixture_root ]] || { print -u2 "$check_name left its owned temp root behind"; exit 1; }
 done
 
+phase_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$phase_root" -depth -delete
+set +e
+SERPY_HARNESS_ROOT=$phase_root SERPY_RUNNER_FIXTURE=all-phase-footprint \
+  scripts/run-headless-check.sh all >/dev/null 2>&1
+phase_status=$?
+set -e
+[[ $phase_status -eq 0 ]] || { print -u2 "all retained completed core products during app-build"; exit 1; }
+[[ ! -e $phase_root ]] || { print -u2 "all-phase fixture root survived"; exit 1; }
+
 traversal_base=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
 set +e
 SERPY_HARNESS_ROOT="$traversal_base/../../serpy-runner-escape" \

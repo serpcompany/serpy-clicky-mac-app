@@ -97,6 +97,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
 | `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, ambient failure recovery mapping, Dictation partial mapping, and target-display fallback; 100 XCTest, 87 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh all` | Green on Apple Silicon M3 after removing completed core build products before app-build; the pre-fix run failed closed at 10,581,672 KiB because both lanes' separate Sentry package/build trees accumulated under one 8 GiB cap | none | Green |
 
 ## Valid focused actual-app evidence
 

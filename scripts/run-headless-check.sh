@@ -157,6 +157,11 @@ if [[ ${SERPY_RUNNER_FIXTURE:-} == leader-exits ]]; then
 fi
 
 run_core_tests() {
+  if [[ ${SERPY_RUNNER_FIXTURE:-} == all-phase-footprint ]]; then
+    mkdir -p "$run_root/swiftpm"
+    print core > "$run_root/swiftpm/fixture"
+    return 0
+  fi
   run_bounded swift test \
     --package-path Packages/GuideModules \
     --scratch-path "$run_root/swiftpm" \
@@ -176,6 +181,13 @@ run_core_tests() {
 }
 
 run_app_build() {
+  if [[ ${SERPY_RUNNER_FIXTURE:-} == all-phase-footprint ]]; then
+    if [[ -d "$run_root/swiftpm" || -d "$run_root/composition-derived-data" || -d "$run_root/composition-source-packages" ]]; then
+      print -u2 "completed core build products survived into app-build"
+      return 75
+    fi
+    return 0
+  fi
   run_bounded xcodebuild build \
     -project GuideCompanion.xcodeproj \
     -scheme GuideCompanion \
@@ -221,11 +233,29 @@ run_app_build() {
     REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
 }
 
+remove_completed_core_products() {
+  local core_product
+  for core_product in \
+    "$run_root/swiftpm" \
+    "$run_root/composition-derived-data" \
+    "$run_root/composition-source-packages"; do
+    [[ -e "$core_product" ]] || continue
+    /usr/bin/find "$core_product" -depth -delete || {
+      print -u2 "unable to remove completed core build products"
+      return 75
+    }
+    if [[ -e "$core_product" ]]; then
+      print -u2 "completed core build products survived cleanup"
+      return 75
+    fi
+  done
+}
+
 run_selected_check() {
   case "$check_name" in
     core-tests) run_core_tests ;;
     app-build) run_app_build ;;
-    all) run_core_tests; run_app_build ;;
+    all) run_core_tests; remove_completed_core_products; run_app_build ;;
   esac
 }
 

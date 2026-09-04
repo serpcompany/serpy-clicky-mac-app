@@ -44,9 +44,14 @@ directory on success, failure, or interruption. Use
 `scripts/run-headless-check.sh core-tests` for the package suite and
 the App-owned composition contract, and `scripts/run-headless-check.sh
 app-build` for unsigned production-app and golden-UI-bundle compilation.
+`scripts/run-headless-check.sh all` runs those lanes in order and removes the
+completed core lane's owned SwiftPM, composition DerivedData, and cloned-package
+directories before app-build. This keeps the same 8 GiB fail-closed disk bound
+meaningful on machines where Sentry's binary artifacts expand differently.
 `scripts/test-headless-check.sh` deliberately
 injects failures, rejects traversal-shaped roots, interrupts a run, and proves
-that TERM-ignoring descendants are killed and the owned directory is removed.
+that TERM-ignoring descendants are killed, completed core products do not
+survive into app-build, and the owned directory is removed.
 Each command owns a new process group with a 30-minute wall limit and an 8 GiB
 disk limit. Neither command launches an application.
 
