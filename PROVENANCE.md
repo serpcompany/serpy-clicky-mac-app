@@ -6,12 +6,15 @@
 | --- | --- |
 | Installed `/Applications/HeyClicky.app` | Version 1 UX and behavior oracle |
 | `https://github.com/farzaa/clicky` at `a80fa80721a8aebe51a170a7780705024ebc6e46` | Approved MIT source donor for Dictation/Guide stabilization |
+| `https://github.com/FrigadeHQ/yap` at `5f06bb1aa889abaa064b09a9bf33aff984dc1583` | Approved primary MIT donor for the macOS 26 Dictation pipeline |
+| `https://github.com/Starmel/OpenSuperWhisper` at `bef6bc0421d0c010e8f2fb4288c0d74978c8b964` | Approved secondary MIT donor for recording lifecycle, stop-tail, and pasteboard behavior |
+| `https://github.com/human37/open-wispr` at `7ab4e62e8f182f3ecc2116e1094a1eb4416a248f` | Approved secondary MIT donor for lifecycle and insertion tests |
 | OpenClicky | Secondary behavioral/source reference when the approved donor lacks the required behavior |
 | Superwhisper public behavior | Dictation outcome benchmark only |
 
-The owner approved reuse of the pinned historical Clicky source for Version 1.
-An implementation agent does not need another permission decision before using
-code from that exact revision.
+The owner approved source-first reuse of these pinned donor revisions for
+Version 1. An implementation agent does not need another permission decision
+before using code from those exact revisions.
 
 ## Required import record
 

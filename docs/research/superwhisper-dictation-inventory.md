@@ -28,6 +28,8 @@ Primary external references:
 - [Saved product reference](../reference/superwhisper-product.md)
 - [Official introduction](https://superwhisper.com/docs/get-started/introduction)
 - [Product landing page](https://superwhisper.com/)
+- [Yap](https://github.com/FrigadeHQ/yap), primary MIT donor for the
+  protocol-driven macOS 26 `SpeechAnalyzer`/`SpeechTranscriber` pipeline
 - [OpenSuperWhisper](https://github.com/Starmel/OpenSuperWhisper), MIT candidate
   donor for native recording, transcription, shortcut, microphone, and
   clipboard behavior
@@ -192,19 +194,103 @@ Dictation:
    available.
 10. Quit/relaunch leaves one app instance and no repeated permission prompt.
 
+## Implementation-quality requirements
+
+Settings parity is not the quality target. The important Superwhisper behavior
+is that a long active recording remains recoverable and complete even when
+transcription or processing fails.
+
+The owner's current serpy report is: after speaking for long enough, the final
+result sometimes omits information or is not saved completely. This is a
+Version 1 blocker.
+
+Superwhisper's public changelog and troubleshooting material record the
+reliability mechanisms relevant to that symptom:
+
+- version 1.17 added a delay before stopping recording to avoid losing the last
+  word;
+- version 1.33 saves the WAV every 10 seconds to avoid losing long recordings;
+- later changes explicitly added long-recording support for Whisper/Groq;
+- troubleshooting says active dictations are saved every few seconds; and
+- History retains the original recording so it can be reprocessed after a poor
+  or failed result.
+
+References:
+[changelog](https://superwhisper.com/changelog),
+[troubleshooting](https://superwhisper.com/docs/common-issues/troubleshooting),
+[History](https://superwhisper.com/docs/get-started/interface-history), and
+[reprocessing](https://superwhisper.com/docs/get-started/transcribe-history).
+
+Apple documents that `SFSpeechRecognizer` tasks should be designed around a
+one-minute audio limit. Current serpy creates one
+`SFSpeechAudioBufferRecognitionRequest` for the entire recording, stores only
+the latest formatted result, and has no task rollover. When audio-history is
+off, it also keeps no temporary recording from which a missing tail can be
+reconstructed. Recording-file writes use `try?`, so a write failure is silent.
+These are source-evidenced risks; the exact owner symptom still requires the
+red feedback loop below.
+
+Reference:
+[Apple `SFSpeechRecognizer`](https://developer.apple.com/documentation/speech/sfspeechrecognizer).
+
+### Required red feedback loop
+
+Before changing the engine, add an agent-runnable long-dictation fixture with
+known sentinel phrases near the beginning, around the one-minute boundary, and
+at the end. The loop must exercise the production transcription path or the
+smallest extracted input seam and assert that every sentinel appears exactly
+once and in order.
+
+The final regression must cover:
+
+1. at least a multi-minute recording;
+2. periodic recoverable audio checkpoints no more than 10 seconds apart, or an
+   independently proven equivalent durability mechanism;
+3. a forced recognition-task limit/error after partial results;
+4. continuation or file-based final transcription without losing the committed
+   prefix;
+5. stop-tail preservation;
+6. cancellation without late insertion;
+7. forced checkpoint/write failure reported explicitly rather than ignored;
+8. sudden termination followed by recovery of all checkpointed audio; and
+9. final transcript persistence before delivery.
+
+Live partial text is feedback, not the source of truth. The complete temporary
+audio remains available until a final transcript is durably preserved or the
+user cancels. When history/audio retention is disabled, this recording remains
+temporary and is deleted after the bounded recovery contract permits it.
+
+### Active-session formatting observation
+
+The owner reports that installed Superwhisper can apply a Shift/Return action
+while a long recording is still active and continue the session without losing
+earlier speech. Official documentation separately describes Hold Shift to
+Auto-Send when finishing a Dictation; that is not necessarily the same action.
+
+Treat the owner's active-session behavior as an observation requiring one
+focused recording of the exact keystrokes and state transitions before it is
+implemented. The invariant is already clear: any processing/formatting command
+must operate on a derived transcript snapshot and must not stop, truncate,
+reorder, duplicate, or replace the durable raw recording. Because serpy does not
+currently expose this control, adding it is not a Version 1 stabilization blocker
+unless the owner explicitly promotes it into the release scope.
+
 ## Source-first implementation rule
 
-Before creating a new Dictation abstraction, the implementation agent must map
-each failing behavior to existing serpy code and to a licensed donor unit.
+Before creating an original Dictation abstraction, the implementation agent
+must map each failing behavior to existing serpy code and to a licensed donor
+unit. Yap's pinned tested `RecordingCoordinator` is the approved starting
+orchestration seam; it is donor code, not an agent-invented design.
 
 Adopt when a donor already supplies the required behavior. Adapt only for serpy
 module boundaries, local-provider choice, privacy, recovery, and stable app
 identity. Write a new unit only when the import map demonstrates that neither
 donor provides the required behavior.
 
-The previously proposed `DictationSessionCoordinator` is not approved as a
-preselected design. Its need and shape, if any, must emerge from the donor import
-map rather than from refactoring preference.
+Do not invent a parallel `DictationSessionCoordinator`. Copy/adapt Yap's
+`RecordingCoordinator`, `DictationSession`, `AudioBufferRelay`,
+`TranscriptionService`, `AudioCaptureService`, and corresponding coordinator
+tests, then add only the durability/recovery behavior identified above.
 
 ## Privacy and capture notes
 

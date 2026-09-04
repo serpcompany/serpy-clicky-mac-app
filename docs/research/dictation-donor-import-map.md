@@ -5,9 +5,67 @@
 - Behavior oracle: installed Superwhisper 2.18.3 and its public product documentation
 - Primary donor: [`Starmel/OpenSuperWhisper@bef6bc0421d0c010e8f2fb4288c0d74978c8b964`](https://github.com/Starmel/OpenSuperWhisper/tree/bef6bc0421d0c010e8f2fb4288c0d74978c8b964)
 - Secondary donor: [`human37/open-wispr@7ab4e62e8f182f3ecc2116e1094a1eb4416a248f`](https://github.com/human37/open-wispr/tree/7ab4e62e8f182f3ecc2116e1094a1eb4416a248f)
-- Status: source map only; no implementation or test authorization is implied
+- Status: source map with controlling long-session addendum; no implementation
+  or test authorization is implied
 
-## Decision
+## Controlling long-session addendum
+
+This section supersedes the initial coordinator/engine recommendation below.
+The owner's later report added a decisive Version 1 failure: long Dictation
+sessions sometimes lose or fail to save speech. Apple documents a one-minute
+audio limit for the `SFSpeechRecognizer` API used by current serpy. Current
+serpy creates one recognition task for the entire session, retains only the
+latest formatted result, and has no task rollover or durable temporary audio
+when audio history is disabled.
+
+The primary Dictation donor is now
+[`FrigadeHQ/yap@5f06bb1aa889abaa064b09a9bf33aff984dc1583`](https://github.com/FrigadeHQ/yap/tree/5f06bb1aa889abaa064b09a9bf33aff984dc1583),
+an MIT native Swift macOS 26 app using `SpeechAnalyzer` and
+`SpeechTranscriber`.
+
+Adopt or adapt these pinned donor units before writing original replacements:
+
+- `RecordingCoordinator` and `RecordingCoordinatorTests` as the public,
+  donor-derived orchestration seam;
+- `DictationSession` for capture-before-model-preparation ordering;
+- `AudioBufferRelay` for bounded retention of audio captured before the
+  transcriber is ready;
+- `TranscriptionService` for `SpeechAnalyzer`, permanent accumulation of final
+  segments, volatile partial display, and local model preparation; and
+- `AudioCaptureService` for fresh-engine reconstruction after microphone/device
+  changes.
+
+This makes a dedicated coordinator appropriate because it is copied/adapted
+from a tested working donor rather than invented from serpy in isolation.
+`GuideAppModel` becomes presentation/integration glue around that donor-derived
+Dictation boundary.
+
+Yap is not sufficient unchanged. The serpy adaptation must retain or add:
+
+1. Superwhisper's public durability contract: recoverable active audio saved at
+   least every 10 seconds, plus a bounded stop tail;
+2. explicit checkpoint/write failures instead of silent buffer loss;
+3. raw temporary audio as the recovery source until the final transcript is
+   durably preserved or the user cancels;
+4. serpy's original focused-target capture and revalidation;
+5. serpy's multi-item pasteboard preservation and truthful
+   confirmed/unconfirmed/failed delivery model;
+6. preserve-before-delivery ordering;
+7. cancellation and late-result suppression through recording, transcribing,
+   processing, and insertion; and
+8. independence from Guide, Sentry, OpenAI, and Keychain.
+
+The red feedback loop uses a multi-minute synthetic audio fixture with sentinel
+phrases before, around, and after the one-minute boundary. Every sentinel must
+appear exactly once and in order after forced task/error and recovery paths.
+
+Sources:
+[Apple `SFSpeechRecognizer`](https://developer.apple.com/documentation/speech/sfspeechrecognizer),
+[Apple `SpeechAnalyzer`](https://developer.apple.com/documentation/speech/speechanalyzer),
+[Superwhisper changelog](https://superwhisper.com/changelog), and
+[Superwhisper troubleshooting](https://superwhisper.com/docs/common-issues/troubleshooting).
+
+## Initial decision — superseded where the addendum conflicts
 
 Do **not** import either donor as an application framework and do not introduce a
 new `DictationSessionCoordinator` before a failing behavior test requires one.
