@@ -39,6 +39,21 @@ set -e
   print -u2 "TERM-ignoring descendant survived escalation"; exit 1
 }
 
+descendant_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$descendant_root" -depth -delete
+descendant_marker=$(uuidgen)
+set +e
+SERPY_HARNESS_ROOT=$descendant_root SERPY_RUNNER_FIXTURE=leader-exits \
+  SERPY_TEST_SESSION_ID=$descendant_marker SERPY_WALL_SECONDS=1 \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1
+descendant_status=$?
+set -e
+[[ $descendant_status -eq 75 ]] || { print -u2 "leader-exit descendant did not hit the budget"; exit 1; }
+[[ ! -e $descendant_root ]] || { print -u2 "leader-exit fixture root survived"; exit 1; }
+! pgrep -f "[s]erpy-runner-fixture-$descendant_marker" >/dev/null || {
+  print -u2 "descendant survived after its leader exited"; exit 1
+}
+
 interrupt_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
 find "$interrupt_root" -depth -delete
 interrupt_marker=$(uuidgen)

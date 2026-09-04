@@ -29,13 +29,15 @@ struct GoldenUserFlowHarnessTests {
     }
 
     @Test("GT-UF03-001 Dictation preserves transcript before reporting delivery")
-    func dictationJourney() throws {
+    @MainActor
+    func dictationJourney() async throws {
         var harness = GoldenUserFlowHarness(flow: .dictation)
         try harness.apply(.start)
         #expect(harness.phase == .listening)
         try harness.apply(.receivePartial("alpha beta"))
         #expect(harness.observableState.transcript == "alpha beta")
-        try harness.apply(.stop)
+        let observation = await GoldenDictationScenario.runConfirmed()
+        try harness.apply(.acceptDictationObservation(observation))
         #expect(harness.observableState.transcriptPreserved)
         #expect(harness.phase == .deliveryConfirmed)
         #expect(harness.observableState.targetMutationCount == 1)
@@ -56,8 +58,11 @@ struct GoldenUserFlowHarnessTests {
     }
 
     @Test("GT-UF05-001 Recovery exposes Copy Retry Delete for bounded Last Dictation")
-    func recoveryJourney() throws {
+    @MainActor
+    func recoveryJourney() async throws {
         var harness = GoldenUserFlowHarness(flow: .recovery)
+        let observation = try #require(await GoldenDictationScenario.runRecovery(variant: .failed))
+        try harness.apply(.acceptRecoveryObservation(observation))
         #expect(harness.phase == .recoveryAvailable)
         #expect(harness.observableState.availableActions == ["Copy", "Retry", "Delete"])
         #expect(harness.observableState.transcriptPreserved)
@@ -68,6 +73,20 @@ struct GoldenUserFlowHarnessTests {
         try harness.apply(.deleteRecovery)
         #expect(harness.observableState.recoveryDisposition == "deleted")
         #expect(!harness.observableState.transcriptPreserved)
+    }
+
+    @Test("GT-UF05-002 Recovery variants come from the production coordinator seam", arguments: [
+        GoldenRecoveryVariant.failed,
+        .unconfirmed,
+        .interrupted,
+    ])
+    @MainActor
+    func recoveryVariants(variant: GoldenRecoveryVariant) async throws {
+        var harness = GoldenUserFlowHarness(flow: .recovery)
+        let observation = try #require(await GoldenDictationScenario.runRecovery(variant: variant))
+        try harness.apply(.acceptRecoveryObservation(observation))
+        #expect(harness.phase == .recoveryAvailable)
+        #expect(harness.observableState.recoveryVariant == variant.rawValue)
     }
 
     @Test("GT-UF08-001 Guide question reaches readable follow-up-ready answer")

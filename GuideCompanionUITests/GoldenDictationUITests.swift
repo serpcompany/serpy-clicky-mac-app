@@ -33,7 +33,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
     }
 
     func test_GT_UF05_001_recoveryExposesCopyRetryDelete() {
-        launch(flow: "UF-05")
+        launch(flow: "UF-05", variant: "failed")
         expectPhase("recoveryAvailable")
         XCTAssertEqual(application.staticTexts["golden.recovery.disposition"].label, "pending")
         application.terminate()
@@ -41,6 +41,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
         application.launch()
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
         XCTAssertEqual(application.staticTexts["golden.recovery.disposition"].label, "restored")
+        XCTAssertEqual(application.staticTexts["golden.recovery.variant"].label, "failed")
         for action in ["Copy", "Retry", "Delete"] {
             XCTAssertTrue(application.buttons[action].exists)
         }
@@ -50,5 +51,15 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertEqual(application.staticTexts["golden.recovery.disposition"].label, "retryRequested")
         tap("Delete recovery fixture")
         XCTAssertEqual(application.staticTexts["golden.recovery.disposition"].label, "deleted")
+    }
+
+    func test_GT_UF05_002_unconfirmedRecoveryVariantIsVisible() {
+        launch(flow: "UF-05", variant: "unconfirmed")
+        XCTAssertEqual(application.staticTexts["golden.recovery.variant"].label, "unconfirmed")
+    }
+
+    func test_GT_UF05_003_interruptedRecoveryVariantIsVisible() {
+        launch(flow: "UF-05", variant: "interrupted")
+        XCTAssertEqual(application.staticTexts["golden.recovery.variant"].label, "interrupted")
     }
 }

@@ -71,6 +71,11 @@ tests, failure-only diagnostics, no environment secrets, and no successful
 screen captures. Make the check required only after ten consecutive clean runs
 with zero prompt, process, network, Keychain, or disk violations.
 
+The test plan owns the common `--ui-testing` argument and the complete
+`SERPY_GOLDEN_FIXTURE_CATALOG`. Individual test methods select only a named flow,
+phase, or recovery variant from that catalog; the host fails closed when a flow
+is not in the plan-owned catalog.
+
 ### Installed lane
 
 The installed lane runs only for a named acceptance workflow against one exact

@@ -13,6 +13,13 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   walkthrough progression, Talk authorization, and diagnostic classification
   decisions to the production `GuideCore` policies/state machines. It does not
   carry a second copy of those decisions.
+- The confirmed Dictation UI fixture runs the production `RecordingCoordinator`
+  with deterministic session, target, insertion, and Last Dictation adapters;
+  the UI can advance only from the coordinator's observed delivery result.
+- Failed, unconfirmed, and interrupted recovery fixtures likewise run through
+  the production coordinator and expose only the resulting persisted delivery
+  state. Permission denial and Last Dictation markers are bounded to a
+  canonical plan-owned session directory and are verified across host relaunch.
 - `AppRuntimeMode.uiTest` admits only deterministic fixtures and ephemeral
   storage; microphone, permission requests, Screen Recording, production
   Keychain, persistent user data, Sentry transport, network providers, and

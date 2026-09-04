@@ -10,6 +10,11 @@ final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
         tap("Deny fixture")
         expectPhase("permissionRecovery")
         XCTAssertEqual(application.staticTexts["golden.failure.recovery"].label, "Open Settings")
+        application.terminate()
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        application.launch()
+        XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
+        expectPhase("permissionRecovery")
     }
 
     func test_GT_UF02_001_launchesOneHarnessWindowWithoutIdleOverlay() {

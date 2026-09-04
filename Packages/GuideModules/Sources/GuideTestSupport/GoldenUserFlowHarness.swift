@@ -13,6 +13,7 @@ public enum GoldenFlowID: String, CaseIterable, Codable, Sendable {
 
 public enum GoldenHarnessPhase: String, Equatable, Sendable {
     case idle
+    case loadingFixture
     case permissionExplanation
     case permissionRequestReady
     case permissionRecovery
@@ -40,6 +41,12 @@ public enum GoldenCredentialStorage: String, Equatable, Sendable {
     case memoryOnly
 }
 
+public enum GoldenRecoveryVariant: String, Equatable, Sendable {
+    case failed
+    case unconfirmed
+    case interrupted
+}
+
 public struct GoldenHarnessObservableState: Equatable, Sendable {
     public var transcript = ""
     public var answer = ""
@@ -59,6 +66,7 @@ public struct GoldenHarnessObservableState: Equatable, Sendable {
     public var networkRequestCount = 0
     public var credentialStorage: GoldenCredentialStorage = .none
     public var recoveryDisposition = "pending"
+    public var recoveryVariant = ""
 
     public init() {}
 }
@@ -68,7 +76,6 @@ public enum GoldenHarnessAction: Equatable, Sendable {
     case deny
     case start
     case receivePartial(String)
-    case stop
     case cancel
     case lateResult(String)
     case staleEvidence
@@ -82,6 +89,8 @@ public enum GoldenHarnessAction: Equatable, Sendable {
     case copyRecovery
     case retryRecovery
     case deleteRecovery
+    case acceptDictationObservation(GoldenDictationScenarioObservation)
+    case acceptRecoveryObservation(GoldenRecoveryScenarioObservation)
 }
 
 public enum GoldenHarnessError: Error, Equatable, Sendable {
@@ -113,24 +122,26 @@ public struct GoldenUserFlowHarness: Sendable {
     public init(
         flow: GoldenFlowID,
         initialPhase: GoldenHarnessPhase? = nil,
-        recoveryWasRestored: Bool = false
+        recoveryWasRestored: Bool = false,
+        permissionWasDenied: Bool = false
     ) {
         self.flow = flow
         var state = GoldenHarnessObservableState()
         let defaultPhase: GoldenHarnessPhase
         switch flow {
         case .permissions:
-            defaultPhase = .permissionExplanation
+            defaultPhase = permissionWasDenied ? .permissionRecovery : .permissionExplanation
+            if permissionWasDenied {
+                state.recoveryAction = "Open Settings"
+            }
         case .lifecycle:
             defaultPhase = .idle
         case .dictation, .cancelDictation:
             defaultPhase = .idle
         case .recovery:
-            defaultPhase = .recoveryAvailable
-            state.transcript = "Recovered fixture dictation"
-            state.transcriptPreserved = true
-            state.availableActions = ["Copy", "Retry", "Delete"]
+            defaultPhase = .loadingFixture
             state.recoveryDisposition = recoveryWasRestored ? "restored" : "pending"
+            state.recoveryVariant = ""
         case .guideQuestion:
             defaultPhase = .idle
         case .walkthrough:
@@ -208,13 +219,19 @@ public struct GoldenUserFlowHarness: Sendable {
             observableState.overlayCount = 1
         case (.dictation, .listening, .receivePartial(let text)):
             observableState.transcript = text
-        case (.dictation, .listening, .stop):
+        case (.dictation, .listening, .acceptDictationObservation(let observation)):
             try dictationMachine.beginTranscription()
             try dictationMachine.beginInsertion()
             try dictationMachine.succeed()
+            guard observation.transcriptPreserved,
+                  observation.deliveryConfirmed,
+                  observation.targetMutationCount == 1 else {
+                throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
+            }
             phase = .deliveryConfirmed
-            observableState.transcriptPreserved = true
-            observableState.targetMutationCount = 1
+            observableState.transcript = observation.transcript
+            observableState.transcriptPreserved = observation.transcriptPreserved
+            observableState.targetMutationCount = observation.targetMutationCount
             observableState.overlayCount = 0
 
         case (.recovery, .recoveryAvailable, .copyRecovery):
@@ -226,6 +243,21 @@ public struct GoldenUserFlowHarness: Sendable {
             observableState.transcript = ""
             observableState.transcriptPreserved = false
             observableState.availableActions = []
+        case (.recovery, .loadingFixture, .acceptRecoveryObservation(let observation)):
+            let expectedState: TranscriptDeliveryState = switch observation.variant {
+            case .failed: .failed
+            case .unconfirmed: .unconfirmed
+            case .interrupted: .pending
+            }
+            guard observation.entry.deliveryState == expectedState,
+                  !observation.entry.text.isEmpty else {
+                throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
+            }
+            phase = .recoveryAvailable
+            observableState.transcript = observation.entry.text
+            observableState.transcriptPreserved = true
+            observableState.availableActions = ["Copy", "Retry", "Delete"]
+            observableState.recoveryVariant = observation.variant.rawValue
 
         case (.cancelDictation, _, .cancel), (.cancelGuide, _, .cancel):
             if flow == .cancelDictation {
@@ -329,6 +361,14 @@ public struct GoldenUserFlowHarness: Sendable {
         default:
             throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
         }
+    }
+
+    public mutating func recordFixtureFailure(_ cause: String) {
+        phase = .handledFailure
+        observableState.failureStage = "fixture"
+        observableState.failureCause = cause
+        observableState.recoveryAction = "Fix the deterministic fixture before another UI run."
+        observableState.overlayCount = 1
     }
 }
 import Foundation

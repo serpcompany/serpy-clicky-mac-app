@@ -79,7 +79,22 @@ run_bounded() {
   local started_at=$SECONDS
   perl -MPOSIX -e 'defined POSIX::setsid() or die "setsid failed"; exec @ARGV or die "exec failed"' -- "$@" &
   owned_pgid=$!
-  while kill -0 "$owned_pgid" 2>/dev/null; do
+  local session_ready=false
+  for _ in {1..50}; do
+    if kill -0 -- -"$owned_pgid" 2>/dev/null; then
+      session_ready=true
+      break
+    fi
+    kill -0 "$owned_pgid" 2>/dev/null || break
+    sleep 0.02
+  done
+  if [[ "$session_ready" != true ]]; then
+    local early_status
+    if wait "$owned_pgid"; then early_status=0; else early_status=$?; fi
+    owned_pgid=""
+    return "$early_status"
+  fi
+  while kill -0 -- -"$owned_pgid" 2>/dev/null; do
     sleep 2
     local used_kib=$(du -sk "$run_root" | awk '{print $1}')
     if (( used_kib > disk_budget_kib )); then
@@ -95,6 +110,10 @@ run_bounded() {
   done
   local child_status
   if wait "$owned_pgid"; then child_status=0; else child_status=$?; fi
+  if kill -0 -- -"$owned_pgid" 2>/dev/null; then
+    terminate_owned_group
+    return 75
+  fi
   owned_pgid=""
   return "$child_status"
 }
@@ -107,6 +126,16 @@ fi
 if [[ ${SERPY_RUNNER_FIXTURE:-} == ignore-term ]]; then
   fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
   if run_bounded /bin/zsh -c 'trap "" TERM; while true; do sleep 1; done' "serpy-runner-fixture-$fixture_marker"; then
+    exit 0
+  else
+    fixture_status=$?
+    exit "$fixture_status"
+  fi
+fi
+
+if [[ ${SERPY_RUNNER_FIXTURE:-} == leader-exits ]]; then
+  fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
+  if run_bounded /bin/zsh -c '(trap "" TERM; while true; do sleep 1; done) & exit 0' "serpy-runner-fixture-$fixture_marker"; then
     exit 0
   else
     fixture_status=$?
