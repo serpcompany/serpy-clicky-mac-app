@@ -18,7 +18,7 @@ class GoldenUITestCase: XCTestCase {
         openTranscript: Bool = false,
         recoveryVariant: String? = nil,
         extraArguments: [String] = []
-    ) {
+    ) async {
         preexistingProcessIDs = Set(NSRunningApplication.runningApplications(
             withBundleIdentifier: productBundleIdentifier
         ).map(\.processIdentifier))
@@ -26,9 +26,10 @@ class GoldenUITestCase: XCTestCase {
         self.application = application
         if sessionRoot == nil {
             do {
-                let session = try UITestRunSessionProvisioner.provision(
-                    environment: ProcessInfo.processInfo.environment
-                )
+                let environment = ProcessInfo.processInfo.environment
+                let session = try await Task.detached {
+                    try UITestRunSessionProvisioner.provision(environment: environment)
+                }.value
                 runToken = session.runToken
                 sessionTemporaryRoot = session.temporaryRoot
                 sessionParent = session.parent
@@ -97,16 +98,50 @@ class GoldenUITestCase: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
     }
 
-    func expectLatestLabel(identifier: String, label: String, timeout: TimeInterval = 5) {
-        let matches = application.descendants(matching: .any).matching(identifier: identifier)
-        XCTAssertTrue(matches.firstMatch.waitForExistence(timeout: timeout))
-        guard matches.count > 0 else { return }
-        let latest = matches.element(boundBy: matches.count - 1)
+    func expectAmbient(labelContains: String, value: String? = nil, timeout: TimeInterval = 5) {
+        let ambient = application.descendants(matching: .any)["guide.ambient"]
+        XCTAssertTrue(ambient.waitForExistence(timeout: timeout))
         let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", label),
-            object: latest
+            predicate: NSPredicate(format: "label CONTAINS %@", labelContains),
+            object: ambient
         )
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
+        if let value { XCTAssertEqual(ambient.value as? String, value) }
+    }
+
+    func closeSettingsForAmbientGuide() {
+        let settings = application.windows["SERPy Settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        let closeButton = settings.buttons["_XCUI:CloseWindow"]
+        XCTAssertTrue(closeButton.waitForExistence(timeout: 3))
+        closeButton.tap()
+        let closed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: settings
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed)
+        XCTAssertFalse(application.windows["SERPy Voice Transcript"].exists)
+    }
+
+    func triggerShortcut(_ action: String) {
+        let signal = sessionRoot.appendingPathComponent("shortcut.\(UUID().uuidString).\(action).trigger")
+        XCTAssertNoThrow(try Data().write(to: signal, options: .atomic))
+    }
+
+    func assertAmbientSurfaceOnly() {
+        let ambient = application.descendants(matching: .any).matching(identifier: "guide.ambient")
+        XCTAssertEqual(ambient.count, 1)
+        XCTAssertFalse(application.windows["SERPy Voice Transcript"].exists)
+        XCTAssertFalse(application.windows["SERPy Settings"].exists)
+    }
+
+    func expectAmbientGone(timeout: TimeInterval) {
+        let ambient = application.descendants(matching: .any)["guide.ambient"]
+        let gone = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: ambient
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: timeout), .completed)
     }
 
     func releaseFixture(_ name: String) {

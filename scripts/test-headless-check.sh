@@ -17,6 +17,13 @@ done
 /usr/bin/grep -Fq 'precondition(mode == .production, "UI-test composition is unavailable in Release builds")' App/GuideCompanionApp.swift || {
   print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
 }
+if /usr/bin/grep -Eq -- '--open-guide-transcript|openTranscript|tap\("Talk"\)|tap\("Finish Question"\)' GuideCompanionUITests/GoldenGuideUITests.swift; then
+  print -u2 "golden Guide tests use the transcript inspector instead of the ambient shortcut journey"
+  exit 1
+fi
+/usr/bin/grep -Fq 'triggerShortcut("guide-pressed")' GuideCompanionUITests/GoldenGuideUITests.swift || {
+  print -u2 "golden Guide tests do not enter through the shortcut driver"; exit 1
+}
 composition_invocation=$(/usr/bin/sed -n '/-scheme GuideCompanionCompositionTests/,/REGISTER_APP_WITH_LAUNCH_SERVICES=NO/p' scripts/run-headless-check.sh)
 print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_ALLOWED=NO' || {
   print -u2 "headless App composition tests require a developer certificate"; exit 1

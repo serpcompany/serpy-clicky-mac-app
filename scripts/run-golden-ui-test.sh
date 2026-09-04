@@ -33,6 +33,19 @@ owned_leader=""
 launch_services=/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister
 wall_seconds=${SERPY_UI_WALL_SECONDS:-900}
 disk_budget_kib=${SERPY_UI_DISK_KIB:-8388608}
+disk_usage_command=/usr/bin/du
+if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == disk-measurement-race ]]; then
+  disk_usage_command="$run_root/du-race-fixture"
+  /usr/bin/printf '%s\n' '#!/bin/zsh' \
+    'root=${@[-1]}' \
+    'counter_file="$root/.du-race-count"' \
+    'if [[ -f "$counter_file" ]]; then count=$(<"$counter_file"); else count=0; fi' \
+    'count=$((count + 1))' \
+    'print -n "$count" > "$counter_file"' \
+    '(( count < 3 )) && exit 1' \
+    'exec /usr/bin/du "$@"' > "$disk_usage_command"
+  /bin/chmod 700 "$disk_usage_command"
+fi
 
 terminate_owned_group() {
   [[ -n "$owned_pgid" ]] || return 0
@@ -157,7 +170,20 @@ run_bounded() {
   fi
   while kill -0 -- -"$owned_pgid" 2>/dev/null; do
     sleep 2
-    local used_kib=$(du -sk "$run_root" | awk '{print $1}')
+    local used_kib=""
+    local measurement=""
+    for _ in {1..3}; do
+      measurement=$($disk_usage_command -sk "$run_root" 2>/dev/null) || measurement=""
+      used_kib=${measurement%%[[:space:]]*}
+      [[ "$used_kib" == <-> ]] && break
+      used_kib=""
+      sleep 0.1
+    done
+    if [[ -z "$used_kib" ]]; then
+      print -u2 "disk usage measurement unavailable after 3 attempts"
+      terminate_owned_group
+      return 75
+    fi
     if (( used_kib > disk_budget_kib )); then
       print -u2 "disk budget exceeded: ${used_kib} KiB"
       terminate_owned_group
@@ -215,6 +241,9 @@ if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level ]]; then
     done
     exit 65
   ' "serpy-ui-runner-$fixture_marker" "$run_root")
+elif [[ ${SERPY_UI_RUNNER_FIXTURE:-} == disk-measurement-race ]]; then
+  fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
+  ui_command=(/bin/zsh -c 'sleep 4; exit 65' "serpy-ui-runner-$fixture_marker")
 else
   ui_command=(/usr/bin/env TEST_RUNNER_SERPY_XCUI_RUN_TOKEN="$run_token" xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
 fi

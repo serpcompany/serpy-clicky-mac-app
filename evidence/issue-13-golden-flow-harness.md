@@ -43,7 +43,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   status is retained and no descendant or run directory survives. A separate
   timeout fixture seeds token-owned sessions in the Darwin user temp and the
   exact serpy xctrunner container temp when present; wrapper fallback cleanup
-  removes those sessions while preserving unrelated sentinels.
+  removes those sessions while preserving unrelated sentinels. A disk-sampling
+  fixture fails its first two `du` measurements during a live process, succeeds
+  on the third, and preserves both budget enforcement and the child exit code.
 - UI session-root tests keep bounded-runner build scratch separate from the
   XCTest-owned session in XCTest's writable canonical temporary directory.
   They reject matching-name roots elsewhere and symlinked parents; independent
@@ -61,6 +63,11 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   headlessly, asserts the exact role-to-concrete-type allowlist and production
   denylist, and proves an injected production Keychain adapter makes the audit
   fail.
+- The App composition contract also drives token-owned press, release, and
+  cancel signals through the deterministic shortcut monitor and asserts that
+  the installed `GlobalShortcutCallbacks` receive them in order. Golden Guide
+  XCUI contains a static guard against transcript-opening arguments and visible
+  Talk/Finish controls.
 - Release excludes every UI-test composition source, rejects `--ui-testing`
   before production construction, and the bounded Release build scans the
   executable for fixture symbols. The headless harness self-test also rejects
@@ -77,7 +84,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning and Guide-message accessibility correction; 100 XCTest, 83 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning and shortcut callback-driver coverage; 100 XCTest, 83 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 
@@ -133,6 +140,19 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   speaker identity remains separate accessibility metadata. The exported video
   and frames contained existing Chrome content and were deleted without being
   committed.
+- The fifth owner-approved real-app attempt at
+  `evidence/issue-13-real-app-UF09-run5.xcresult` is mechanically green (one
+  passed, zero failed, cleanup passed) but rejected as product proof. It drove
+  the optional Voice Transcript inspector, while HeyClicky parity requires the
+  shortcut-invoked, nonactivating ambient Guide with no conventional Guide work
+  window. The golden Guide tests now drive the real `GlobalShortcutCallbacks`
+  through token-owned signals and assert only the ambient panel lifecycle. The
+  screenshot `evidence/issue-13-real-app-UF09-run5-xcode-report.png` is retained
+  only as a labeled record of this rejected proof and its runtime warning; it
+  must not be cited as golden acceptance. The warning was attributed to the
+  UI-test target before interaction while synchronous session provisioning ran
+  on the test's main actor. Provisioning now runs in a detached task; removal of
+  that warning remains pending the next authorized ambient execution.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

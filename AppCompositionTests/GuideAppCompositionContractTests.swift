@@ -87,6 +87,31 @@ final class GuideAppCompositionContractTests: XCTestCase {
         )
     }
 
+    func testTokenOwnedShortcutSignalsInvokeInstalledCallbacksInSequence() async throws {
+        let owned = try makeOwnedSessionRoot()
+        defer { owned.remove() }
+        let recorder = ShortcutCallbackRecorder()
+        let monitor = UITestShortcutMonitor(sessionRoot: owned.root)
+        monitor.install(callbacks: GlobalShortcutCallbacks(
+            dictationPressed: {},
+            dictationReleased: {},
+            guidePressed: { recorder.events.append("pressed") },
+            guideReleased: { recorder.events.append("released") },
+            cancelled: { recorder.events.append("cancelled") }
+        ))
+        try monitor.start()
+        defer { monitor.stop() }
+
+        for (index, action) in ["guide-pressed", "guide-released", "cancelled"].enumerated() {
+            let name = "shortcut.00000000-0000-4000-8000-00000000000\(index).\(action).trigger"
+            try Data().write(to: owned.root.appendingPathComponent(name), options: .atomic)
+        }
+        for _ in 0..<100 where recorder.events.count < 3 {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        XCTAssertEqual(recorder.events, ["pressed", "released", "cancelled"])
+    }
+
     private func makeOwnedSessionRoot() throws -> OwnedSessionRoot {
         let sessionID = UUID().uuidString
         let runToken = UUID().uuidString
@@ -116,6 +141,7 @@ final class GuideAppCompositionContractTests: XCTestCase {
         )
         return OwnedSessionRoot(
             parent: parent,
+            root: root,
             environment: [
                 "SERPY_TEST_SESSION_ID": sessionID,
                 "SERPY_XCUI_RUN_TOKEN": runToken,
@@ -131,9 +157,15 @@ private final class ContractFixtureAdapter: DeterministicUITestAdapter {}
 
 private struct OwnedSessionRoot {
     let parent: URL
+    let root: URL
     let environment: [String: String]
 
     func remove() {
         try? FileManager.default.removeItem(at: parent)
     }
+}
+
+@MainActor
+private final class ShortcutCallbackRecorder {
+    var events: [String] = []
 }

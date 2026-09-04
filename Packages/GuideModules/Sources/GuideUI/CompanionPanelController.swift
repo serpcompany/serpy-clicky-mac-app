@@ -514,8 +514,14 @@ private struct CompanionBubbleView: View {
     }
 
     private var accessibilityDescription: String {
-        if presentation.guideStage == .liveTranscript {
-            return ["SERPy is listening", presentation.caption, presentation.contextLabel]
+        let stageDescription: String? = switch presentation.guideStage {
+        case .liveTranscript: "SERPy is listening"
+        case .speaking: "SERPy is speaking"
+        case .readyForFollowUp: "SERPy is ready for a follow-up"
+        default: nil
+        }
+        if let stageDescription {
+            return [stageDescription, presentation.caption, presentation.contextLabel]
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
                 .joined(separator: ". ")

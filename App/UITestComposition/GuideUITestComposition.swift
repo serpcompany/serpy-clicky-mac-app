@@ -55,7 +55,7 @@ public enum GuideUITestComposition {
             credentialStore: credentialStore
         )
         let incidentReporter = UITestIncidentReporter(sessionRoot: sessionRoot)
-        let shortcutMonitor = UITestShortcutMonitor()
+        let shortcutMonitor = UITestShortcutMonitor(sessionRoot: sessionRoot)
         let constructedAdapters: [RuntimeAdapterRole: any DeterministicUITestAdapter] = [
             .dictationSession: session,
             .guideTranscription: transcription,
@@ -113,7 +113,10 @@ public enum GuideUITestComposition {
             talkVerificationExpirySleeper: expirySleeper,
             talkGenerator: router,
             incidentReporter: incidentReporter,
-            shortcutMonitorFactory: { _, _ in shortcutMonitor }
+            shortcutMonitorFactory: { _, callbacks in
+                shortcutMonitor.install(callbacks: callbacks)
+                return shortcutMonitor
+            }
         )
     }
 

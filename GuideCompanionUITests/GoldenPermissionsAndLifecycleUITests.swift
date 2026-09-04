@@ -2,8 +2,8 @@ import XCTest
 
 @MainActor
 final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
-    func test_GT_UF01_001_permissionDenialShowsRecoveryAcrossRelaunch() {
-        launch(flow: "UF-01")
+    func test_GT_UF01_001_permissionDenialShowsRecoveryAcrossRelaunch() async {
+        await launch(flow: "UF-01")
         XCTAssertTrue(
             application.staticTexts[
                 "macOS prompts only once. If a request was denied, use Open Settings on its row."
@@ -20,8 +20,8 @@ final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
         XCTAssertTrue(application.staticTexts["Denied"].waitForExistence(timeout: 5))
     }
 
-    func test_GT_UF02_001_realSettingsClosesAndReopensAsOneWindow() {
-        launch(flow: "UF-02")
+    func test_GT_UF02_001_realSettingsClosesAndReopensAsOneWindow() async {
+        await launch(flow: "UF-02")
         XCTAssertFalse(application.descendants(matching: .any)["guide.ambient"].exists)
         XCTAssertEqual(application.windows.matching(identifier: "SERPy Settings").count, 1)
         application.windows["SERPy Settings"].buttons[XCUIIdentifierCloseWindow].click()

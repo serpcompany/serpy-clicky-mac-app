@@ -85,6 +85,73 @@ final class UITestIncidentReporter: DiagnosticIncidentReporting, DeterministicUI
 
 @MainActor
 final class UITestShortcutMonitor: GlobalShortcutMonitoring, DeterministicUITestAdapter {
-    func start() throws {}
-    func stop() {}
+    private enum Trigger: String, Sendable {
+        case guidePressed = "guide-pressed"
+        case guideReleased = "guide-released"
+        case cancelled
+    }
+
+    private let sessionRoot: URL
+    private var callbacks: GlobalShortcutCallbacks?
+    private var monitorTask: Task<Void, Never>?
+
+    init(sessionRoot: URL) {
+        self.sessionRoot = sessionRoot
+    }
+
+    func install(callbacks: GlobalShortcutCallbacks) {
+        self.callbacks = callbacks
+    }
+
+    func start() throws {
+        guard callbacks != nil else { throw UITestShortcutMonitorError.callbacksMissing }
+        let sessionRoot = sessionRoot
+        monitorTask = Task.detached { [weak self] in
+            while !Task.isCancelled {
+                for (url, trigger) in Self.pendingTriggers(in: sessionRoot) {
+                    await self?.deliver(trigger)
+                    try? FileManager.default.removeItem(at: url)
+                }
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+        }
+    }
+
+    func stop() {
+        monitorTask?.cancel()
+        monitorTask = nil
+    }
+
+    private func deliver(_ trigger: Trigger) {
+        guard let callbacks else { return }
+        switch trigger {
+        case .guidePressed: callbacks.guidePressed()
+        case .guideReleased: callbacks.guideReleased()
+        case .cancelled: callbacks.cancelled()
+        }
+    }
+
+    nonisolated private static func pendingTriggers(in root: URL) -> [(URL, Trigger)] {
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )) ?? []
+        return urls.sorted { $0.lastPathComponent < $1.lastPathComponent }.compactMap { url in
+            let parts = url.lastPathComponent.split(separator: ".")
+            guard parts.count == 4,
+                  parts[0] == "shortcut",
+                  UUID(uuidString: String(parts[1])) != nil,
+                  parts[3] == "trigger",
+                  let trigger = Trigger(rawValue: String(parts[2])),
+                  (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
+                return nil
+            }
+            return (url, trigger)
+        }
+    }
+}
+
+enum UITestShortcutMonitorError: Error {
+    case callbacksMissing
 }

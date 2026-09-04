@@ -2,8 +2,8 @@ import XCTest
 
 @MainActor
 final class GoldenDictationUITests: GoldenUITestCase {
-    func test_GT_UF03_001_realModelCompletesDeterministicDictation() {
-        launch(flow: "UF-03")
+    func test_GT_UF03_001_realModelCompletesDeterministicDictation() async {
+        await launch(flow: "UF-03")
         tap("Start Dictation Fixture")
         XCTAssertTrue(application.buttons["Stop Dictation Fixture"].waitForExistence(timeout: 5))
         expectValue(identifier: "test.partial.transcript", value: "alpha beta")
@@ -21,16 +21,16 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertTrue(recoveryRecord?.contains("confirmed") == true)
     }
 
-    func test_GT_UF04_001_escapeCancelsRealDictationWithoutLateDelivery() {
-        launch(flow: "UF-04")
+    func test_GT_UF04_001_escapeCancelsRealDictationWithoutLateDelivery() async {
+        await launch(flow: "UF-04")
         tap("Start Dictation Fixture")
         application.typeKey(.escape, modifierFlags: [])
         XCTAssertTrue(application.staticTexts["Dictation cancelled."].waitForExistence(timeout: 5))
         XCTAssertFalse(application.staticTexts["The dictation was inserted locally."].exists)
     }
 
-    func test_GT_UF04_002_escapeCancelsRealTranscription() {
-        launch(flow: "UF-04", extraArguments: ["--block-dictation-stop"])
+    func test_GT_UF04_002_escapeCancelsRealTranscription() async {
+        await launch(flow: "UF-04", extraArguments: ["--block-dictation-stop"])
         tap("Start Dictation Fixture")
         tap("Stop Dictation Fixture")
         expectValue(identifier: "test.runtime.state", value: "dictation=transcribing;guide=idle")
@@ -38,8 +38,8 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertTrue(application.staticTexts["Dictation cancelled."].waitForExistence(timeout: 5))
     }
 
-    func test_GT_UF04_003_escapeCancelsRealPrecommitInsertion() {
-        launch(flow: "UF-04", extraArguments: ["--block-dictation-insertion"])
+    func test_GT_UF04_003_escapeCancelsRealPrecommitInsertion() async {
+        await launch(flow: "UF-04", extraArguments: ["--block-dictation-insertion"])
         tap("Start Dictation Fixture")
         tap("Stop Dictation Fixture")
         expectValue(identifier: "test.runtime.state", value: "dictation=inserting;guide=idle")
@@ -48,8 +48,8 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: sessionRoot.appendingPathComponent("insertion.fixture").path))
     }
 
-    func test_GT_UF05_001_realRecoveryUIShowsFailedLastDictation() {
-        launch(flow: "UF-05", recoveryVariant: "failed")
+    func test_GT_UF05_001_realRecoveryUIShowsFailedLastDictation() async {
+        await launch(flow: "UF-05", recoveryVariant: "failed")
         tap("History")
         XCTAssertTrue(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 5))
         XCTAssertTrue(application.staticTexts["Failed"].exists)
@@ -79,14 +79,14 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertFalse(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 1))
     }
 
-    func test_GT_UF05_002_realRecoveryUIShowsUnconfirmedState() {
-        launch(flow: "UF-05", recoveryVariant: "unconfirmed")
+    func test_GT_UF05_002_realRecoveryUIShowsUnconfirmedState() async {
+        await launch(flow: "UF-05", recoveryVariant: "unconfirmed")
         tap("History")
         XCTAssertTrue(application.staticTexts["Unconfirmed"].waitForExistence(timeout: 5))
     }
 
-    func test_GT_UF05_003_realRecoveryUIShowsInterruptedState() {
-        launch(flow: "UF-05", recoveryVariant: "interrupted")
+    func test_GT_UF05_003_realRecoveryUIShowsInterruptedState() async {
+        await launch(flow: "UF-05", recoveryVariant: "interrupted")
         tap("History")
         XCTAssertTrue(application.staticTexts["Pending"].waitForExistence(timeout: 5))
     }

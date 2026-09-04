@@ -72,6 +72,9 @@ outer wrapper searches only the current Darwin user temporary directory and
 the two exact serpy XCTest container temporary directories for the
 run-token-derived session name. It deletes the directory only after its owner
 token matches, and treats a surviving or mismatched session as cleanup failure.
+Disk-budget sampling tolerates a transient package-extraction race by retrying
+three times; persistent measurement failure terminates the owned group instead
+of silently disabling the budget.
 For local `xcodebuild`, the wrapper passes the authorization run token with the
 `TEST_RUNNER_` prefix so Xcode strips that prefix and exposes the original name
 inside the XCTest runner. The test then explicitly forwards the canonical
@@ -86,6 +89,13 @@ removes the exact XCTest-owned session. Missing or mismatched cloud identity
 fails before app launch.
 
 This lane launches the real serpy application target in `--ui-testing` mode.
+Golden Guide tests close Settings and drive the real shortcut callbacks through
+exact trigger files inside the token-owned XCTest session. The deterministic
+monitor consumes those signals off the main thread; XCUI never calls model
+methods, uses visible test controls, or opens the optional Voice Transcript
+inspector as Guide parity evidence. Assertions target the nonactivating ambient
+surface and its observable stage, context, response, progression, and
+cancellation state.
 It must not open TextEdit, Chrome, System Settings, or another external app; access real
 permissions, Keychain, Sentry, OpenAI, microphone, or persistent user data; or
 leave an app, runner, registration, scratch directory, or build cache behind.

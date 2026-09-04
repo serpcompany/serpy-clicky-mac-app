@@ -52,6 +52,16 @@ assert_clean "$marker" "$result"
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"
+set +e
+SERPY_UI_RUNNER_FIXTURE=disk-measurement-race SERPY_TEST_SESSION_ID=$marker \
+  scripts/run-golden-ui-test.sh focused GuideCompanionUITests/Fixture/never "$result" >/dev/null 2>&1
+disk_race_status=$?
+set -e
+[[ $disk_race_status -eq 65 ]] || { print -u2 "disk measurement race returned $disk_race_status"; exit 1; }
+assert_clean "$marker" "$result"
+
+marker=$(uuidgen)
+result="evidence/issue-13-runner-fixture-$marker.xcresult"
 cleanup_marker="/private/tmp/serpy-ui-cleanup-marker.$marker"
 set +e
 SERPY_UI_RUNNER_FIXTURE=command-fails-top-level SERPY_TEST_SESSION_ID=$marker \
