@@ -187,7 +187,7 @@ run_app_build() {
     REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
   local release_binary="$run_root/derived-data/Build/Products/Release/SERPy.app/Contents/MacOS/SERPy"
   strings "$release_binary" > "$run_root/release-strings.txt"
-  if rg -q 'GuideUITestComposition|UITestDictationSession|UITestPermissionService|UITestCloudGenerator|UITestIncidentReporter' "$run_root/release-strings.txt"; then
+  if /usr/bin/grep -Eq 'GuideUITestComposition|UITestDictationSession|UITestPermissionService|UITestCloudGenerator|UITestIncidentReporter' "$run_root/release-strings.txt"; then
     print -u2 "Release app contains deterministic UI-test fixture symbols"
     return 1
   fi

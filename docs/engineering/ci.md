@@ -73,9 +73,13 @@ passes.
 
 `.github/workflows/verification.yml` defines two secret-free, read-only jobs:
 
-- `core-tests`: adversarially tests the runner, then runs the complete package
-  suite.
+- `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
+  adversarially tests the runner, then runs the complete package suite and
+  App-owned composition contract.
 - `app-build`: compiles the production app and golden UI bundle without launch.
+
+Workflow actions are pinned to reviewed full commit SHAs. The checkout pin is
+official `actions/checkout` v7.0.1, which uses the Node 24 action runtime.
 
 The workflow runs for pull requests, merge queue candidates, and pushes to
 `main`. No remote result exists until one of those events occurs. Use stable

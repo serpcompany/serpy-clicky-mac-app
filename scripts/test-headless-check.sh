@@ -7,14 +7,14 @@ test -z "$(find Packages/GuideModules/Sources -type f -name '*UITest*' -print -q
   print -u2 "UI-test composition leaked into a shipping package target"; exit 1
 }
 for fixture_source in GuideUITestComposition.swift UITestDictationAdapters.swift UITestGuideAdapters.swift UITestTalkAdapters.swift; do
-  rg -q "$fixture_source" project.yml || {
+  /usr/bin/grep -Fq "$fixture_source" project.yml || {
     print -u2 "$fixture_source is not excluded from Release"; exit 1
   }
 done
-rg -q 'GuideCompanionCompositionTests' project.yml || {
+/usr/bin/grep -Fq 'GuideCompanionCompositionTests' project.yml || {
   print -u2 "App composition contract target is missing"; exit 1
 }
-rg -q 'precondition\(mode == \.production, "UI-test composition is unavailable in Release builds"\)' App/GuideCompanionApp.swift || {
+/usr/bin/grep -Fq 'precondition(mode == .production, "UI-test composition is unavailable in Release builds")' App/GuideCompanionApp.swift || {
   print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
 }
 
