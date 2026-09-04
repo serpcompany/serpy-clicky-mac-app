@@ -26,34 +26,14 @@ class GoldenUITestCase: XCTestCase {
         self.application = application
         if sessionRoot == nil {
             do {
-                let provisioning = try UITestRunParentPolicy.resolve(
+                let session = try UITestRunSessionProvisioner.provision(
                     environment: ProcessInfo.processInfo.environment
                 )
-                switch provisioning {
-                case let .boundedWrapper(parentPath, suppliedRunToken):
-                    runToken = suppliedRunToken
-                    sessionParent = URL(fileURLWithPath: parentPath, isDirectory: true)
-                case .verifiedXcodeCloud:
-                    runToken = UUID().uuidString
-                    let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-                    sessionParent = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
-                        .appendingPathComponent("serpy-local-xcui.\(suffix)")
-                    try FileManager.default.createDirectory(at: sessionParent, withIntermediateDirectories: false)
-                    try runToken.write(
-                        to: sessionParent.appendingPathComponent(".serpy-local-xcui-owner"),
-                        atomically: true,
-                        encoding: .utf8
-                    )
-                    ownsSessionParent = true
-                }
-                sessionID = UUID().uuidString
-                sessionRoot = sessionParent.appendingPathComponent("serpy-real-ui-\(sessionID)")
-                try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
-                try sessionID.write(
-                    to: sessionRoot.appendingPathComponent(".serpy-real-ui-owner"),
-                    atomically: true,
-                    encoding: .utf8
-                )
+                runToken = session.runToken
+                sessionParent = session.parent
+                sessionID = session.sessionID
+                sessionRoot = session.root
+                ownsSessionParent = session.ownsParent
             } catch {
                 XCTFail("could not provision an authorized isolated UI-test session: \(error)")
                 return

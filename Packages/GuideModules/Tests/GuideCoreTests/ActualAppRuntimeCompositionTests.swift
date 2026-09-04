@@ -173,6 +173,21 @@ struct ActualAppRuntimeCompositionTests {
         }
     }
 
+    @Test("GT-COMPOSITION-004G cloud failure after parent creation removes only its parent")
+    func cleansCloudFailureAfterParentCreation() throws {
+        try assertCloudProvisioningCleanup(fault: .afterParentCreation, suffix: "FaultAfterParent")
+    }
+
+    @Test("GT-COMPOSITION-004H cloud failure after session creation removes only its parent")
+    func cleansCloudFailureAfterSessionCreation() throws {
+        try assertCloudProvisioningCleanup(fault: .afterSessionCreation, suffix: "FaultAfterSession")
+    }
+
+    @Test("GT-COMPOSITION-004I cloud failure after token write removes only its parent")
+    func cleansCloudFailureAfterSessionTokenWrite() throws {
+        try assertCloudProvisioningCleanup(fault: .afterSessionTokenWrite, suffix: "FaultAfterToken")
+    }
+
     @Test("GT-COMPOSITION-005 UI dependency audit requires every deterministic external role")
     func validatesCompleteAdapterGraph() {
         let fixture = CompositionFixtureAdapter()
@@ -218,6 +233,35 @@ struct ActualAppRuntimeCompositionTests {
             "CI_XCODEBUILD_ACTION": "test-without-building",
             "CI_BUILD_ID": "fixture-build-id",
         ]
+    }
+
+    private func assertCloudProvisioningCleanup(
+        fault: UITestProvisioningFault,
+        suffix: String
+    ) throws {
+        let parent = sharedTemporaryDirectory().appendingPathComponent("serpy-local-xcui.\(suffix)")
+        let unrelated = sharedTemporaryDirectory()
+            .appendingPathComponent("serpy-unrelated-\(UUID().uuidString)")
+        try "keep".write(to: unrelated, atomically: true, encoding: .utf8)
+        defer {
+            try? FileManager.default.removeItem(at: parent)
+            try? FileManager.default.removeItem(at: unrelated)
+        }
+
+        #expect(throws: UITestSessionRootError.injectedProvisioningFailure) {
+            try UITestRunSessionProvisioner.provision(
+                environment: verifiedCloudEnvironment(),
+                fault: fault,
+                identifiers: UITestProvisioningIdentifiers(
+                    runToken: UUID().uuidString,
+                    sessionID: UUID().uuidString,
+                    parentSuffix: suffix
+                )
+            )
+        }
+        #expect(!FileManager.default.fileExists(atPath: parent.path))
+        #expect(FileManager.default.fileExists(atPath: unrelated.path))
+        #expect(try String(contentsOf: unrelated, encoding: .utf8) == "keep")
     }
 }
 

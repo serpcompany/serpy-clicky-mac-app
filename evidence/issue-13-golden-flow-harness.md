@@ -74,7 +74,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after local and Xcode Cloud shared-root correction; 100 XCTest, 78 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after atomic local/Xcode Cloud provisioning; 100 XCTest, 81 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 

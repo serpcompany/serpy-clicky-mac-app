@@ -20,6 +20,8 @@ public enum UITestSessionRootError: Error, Equatable, Sendable {
     case invalidIdentity
     case invalidLocation
     case missingOwnership
+    case injectedProvisioningFailure
+    case provisioningCleanupFailed
 }
 
 public enum UITestRunParentProvisioning: Equatable, Sendable {
@@ -44,6 +46,106 @@ public enum UITestRunParentPolicy {
             throw UITestSessionRootError.invalidIdentity
         }
         return .verifiedXcodeCloud
+    }
+}
+
+public enum UITestProvisioningFault: Equatable, Sendable {
+    case none
+    case afterParentCreation
+    case afterSessionCreation
+    case afterSessionTokenWrite
+}
+
+public struct UITestRunSession: Sendable {
+    public let parent: URL
+    public let root: URL
+    public let runToken: String
+    public let sessionID: String
+    public let ownsParent: Bool
+
+    public func remove(fileManager: FileManager = .default) throws {
+        try fileManager.removeItem(at: ownsParent ? parent : root)
+    }
+}
+
+public struct UITestProvisioningIdentifiers: Sendable {
+    public let runToken: String?
+    public let sessionID: String?
+    public let parentSuffix: String?
+
+    public init(runToken: String? = nil, sessionID: String? = nil, parentSuffix: String? = nil) {
+        self.runToken = runToken
+        self.sessionID = sessionID
+        self.parentSuffix = parentSuffix
+    }
+}
+
+public enum UITestRunSessionProvisioner {
+    public static func provision(
+        environment: [String: String],
+        fileManager: FileManager = .default,
+        fault: UITestProvisioningFault = .none,
+        identifiers: UITestProvisioningIdentifiers = .init()
+    ) throws -> UITestRunSession {
+        let provisioning = try UITestRunParentPolicy.resolve(environment: environment)
+        let runToken: String
+        let parent: URL
+        let ownsParent: Bool
+        switch provisioning {
+        case let .boundedWrapper(parentPath, suppliedRunToken):
+            runToken = suppliedRunToken
+            parent = URL(fileURLWithPath: parentPath, isDirectory: true)
+            ownsParent = false
+        case .verifiedXcodeCloud:
+            runToken = identifiers.runToken ?? UUID().uuidString
+            let suffix = identifiers.parentSuffix
+                ?? UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            parent = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
+                .appendingPathComponent("serpy-local-xcui.\(suffix)")
+            ownsParent = true
+        }
+
+        let sessionID = identifiers.sessionID ?? UUID().uuidString
+        let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
+        do {
+            if ownsParent {
+                try fileManager.createDirectory(at: parent, withIntermediateDirectories: false)
+                if fault == .afterParentCreation {
+                    throw UITestSessionRootError.injectedProvisioningFailure
+                }
+                try runToken.write(
+                    to: parent.appendingPathComponent(".serpy-local-xcui-owner"),
+                    atomically: true,
+                    encoding: .utf8
+                )
+            }
+            try fileManager.createDirectory(at: root, withIntermediateDirectories: false)
+            if fault == .afterSessionCreation {
+                throw UITestSessionRootError.injectedProvisioningFailure
+            }
+            try sessionID.write(
+                to: root.appendingPathComponent(".serpy-real-ui-owner"),
+                atomically: true,
+                encoding: .utf8
+            )
+            if fault == .afterSessionTokenWrite {
+                throw UITestSessionRootError.injectedProvisioningFailure
+            }
+            return UITestRunSession(
+                parent: parent,
+                root: root,
+                runToken: runToken,
+                sessionID: sessionID,
+                ownsParent: ownsParent
+            )
+        } catch {
+            let ownedPath = ownsParent ? parent : root
+            if fileManager.fileExists(atPath: ownedPath.path) {
+                do { try fileManager.removeItem(at: ownedPath) }
+                catch { throw UITestSessionRootError.provisioningCleanupFailed }
+            }
+            throw error
+        }
     }
 }
 
