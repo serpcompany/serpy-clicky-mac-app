@@ -6,7 +6,7 @@ private struct TranscriptHistoryDocument: Codable, Equatable, Sendable {
     var entries: [TranscriptHistoryEntry]
 }
 
-public actor TranscriptHistoryStore {
+public actor TranscriptHistoryStore: LastDictationStoring {
     public static let defaultMaximumEntries = 25
     public static let defaultRetentionInterval: TimeInterval = 30 * 24 * 60 * 60
     public static let recoveryRetentionInterval: TimeInterval = 24 * 60 * 60

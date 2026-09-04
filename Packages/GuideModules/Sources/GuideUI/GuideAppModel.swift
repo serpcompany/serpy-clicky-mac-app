@@ -67,7 +67,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let permissionService: PermissionService
-    @ObservationIgnored private let transcriber: AppleSpeechTranscriber
+    @ObservationIgnored private let dictationSession: any DictationSessioning
     @ObservationIgnored private let insertionService: TextInsertionService
     @ObservationIgnored private let historyStore: TranscriptHistoryStore
     @ObservationIgnored private let screenContextService: ScreenContextService
@@ -86,10 +86,20 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private let companionController: CompanionPanelController
     @ObservationIgnored private let shortcutMonitorFactory: ShortcutMonitorFactory
     @ObservationIgnored private var shortcutService: (any GlobalShortcutMonitoring)?
-    @ObservationIgnored private var dictationMachine = DictationStateMachine()
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private let transientSurfaceVisibilityPolicy = TransientCompanionSurfaceVisibilityPolicy()
-    @ObservationIgnored private var focusedTarget: FocusedTextTarget?
+    @ObservationIgnored private lazy var recordingCoordinator: RecordingCoordinator<FocusedTextTarget> = {
+        let coordinator = RecordingCoordinator(
+            session: dictationSession,
+            targetReader: insertionService,
+            inserter: insertionService,
+            history: historyStore
+        )
+        coordinator.onStateChange = { [weak self] in
+            self?.synchronizeDictationState()
+        }
+        return coordinator
+    }()
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
     @ObservationIgnored private var guideResponseDismissalTask: Task<Void, Never>?
     @ObservationIgnored private lazy var guideTurnCoordinator = GuideTurnCoordinator(
@@ -128,7 +138,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     ) {
         self.defaults = defaults
         permissionService = PermissionService()
-        transcriber = AppleSpeechTranscriber()
+        dictationSession = DurableDictationSession()
         insertionService = TextInsertionService()
         historyStore = TranscriptHistoryStore()
         screenContextService = ScreenContextService()
@@ -211,11 +221,11 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public var dictationReady: Bool {
-        permissions.dictationReady && transcriber.isOnDeviceAvailable
+        permissions.dictationReady && dictationSession.isOnDeviceAvailable
     }
 
     public var speechAvailability: String {
-        transcriber.availabilityDescription
+        dictationSession.availabilityDescription
     }
 
     public var shortcutDescription: String {
@@ -406,6 +416,14 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         started = true
         refreshPermissions()
         await loadTranscriptHistory()
+        if transcriptHistory.isEmpty {
+            recordingCoordinator.recoverInterruptedSession(
+                retainInHistory: historyEnabled,
+                saveAudio: historyEnabled && saveAudioHistory
+            )
+            await recordingCoordinator.waitUntilSettled()
+            synchronizeDictationState()
+        }
 
         let service = makeShortcutService(
             dictationConfiguration: dictationShortcut,
@@ -448,7 +466,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public func stop() {
         shortcutService?.stop()
         shortcutService = nil
-        transcriber.cancel()
+        recordingCoordinator.stop()
         guidanceTranscriber.cancel()
         guidanceSpeaker.stop()
         guideTurnCoordinator.cancel()
@@ -787,11 +805,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public func cancelDictation() {
         guard phase.isActive else { return }
-        transcriber.cancel()
-        dictationMachine.cancel()
-        phase = dictationMachine.phase
-        focusedTarget = nil
-        partialTranscript = ""
+        recordingCoordinator.cancel()
+        synchronizeDictationState()
         statusMessage = "Dictation cancelled."
         lastDictationStage = "Cancelled"
         Self.logger.notice("Dictation cancelled")
@@ -1028,36 +1043,15 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         guard !phase.isActive else { return }
-
-        do {
-            dictationMachine.reset()
-            try dictationMachine.prepare()
-            phase = dictationMachine.phase
-            lastDictationStage = "Capturing focused text field"
-            focusedTarget = try insertionService.captureFocusedTarget()
-            lastInsertionMethod = nil
-            partialTranscript = ""
-            recoveryMessage = ""
-            try transcriber.start(saveAudio: historyEnabled && saveAudioHistory) { [weak self] text in
-                self?.partialTranscript = text
-                if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    self?.lastDictationStage = "Speech detected (\(text.count) characters)"
-                }
-            }
-            try dictationMachine.beginRecording()
-            phase = dictationMachine.phase
-            statusMessage = "Listening… press \(shortcutDescription) again to insert, or Escape to cancel."
-            lastDictationStage = "Listening"
-            Self.logger.notice("Microphone recording started")
-            presentation.mode = .recording
-            presentation.caption = "Listening…"
-            companionController.refresh()
-        } catch {
-            focusedTarget = nil
-            lastDictationStage = "Failed before recording"
-            Self.logger.error("Dictation failed before recording: \(error.localizedDescription, privacy: .public)")
-            presentFailure(normalize(error, stage: .recording))
-        }
+        lastInsertionMethod = nil
+        partialTranscript = ""
+        recoveryMessage = ""
+        lastDictationStage = "Preparing local Dictation"
+        presentation.mode = .working
+        presentation.caption = "Preparing…"
+        companionController.refresh()
+        recordingCoordinator.start(saveAudio: historyEnabled && saveAudioHistory)
+        synchronizeDictationState()
     }
 
     private func hotKeyReleased() {
@@ -1089,110 +1083,78 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func finishDictation(source: String) {
-        guard phase == .recording, let focusedTarget else { return }
+        guard phase == .recording else { return }
         Self.logger.notice("Dictation finish received; source=\(source, privacy: .public)")
-        do {
-            try dictationMachine.beginTranscription()
-            phase = dictationMachine.phase
+        recordingCoordinator.finish(retainInHistory: historyEnabled)
+        synchronizeDictationState()
+    }
+
+    private func synchronizeDictationState() {
+        phase = recordingCoordinator.phase
+        partialTranscript = recordingCoordinator.partialTranscript
+        lastInsertionMethod = recordingCoordinator.lastInsertionMethod
+        if !recordingCoordinator.transcriptHistory.isEmpty {
+            transcriptHistory = recordingCoordinator.transcriptHistory
+            historyStatusMessage = historySummary
+        }
+        if !partialTranscript.isEmpty {
+            transcriptRecovery.preserve(partialTranscript)
+        }
+
+        switch phase {
+        case .idle:
+            break
+        case .preparing:
+            statusMessage = "Preparing local Dictation…"
+            lastDictationStage = "Preparing local Dictation"
+            presentation.mode = .working
+            presentation.caption = "Preparing…"
+        case .recording:
+            statusMessage = "Listening… press \(shortcutDescription) again to insert, or Escape to cancel."
+            lastDictationStage = partialTranscript.isEmpty
+                ? "Listening"
+                : "Speech detected (\(partialTranscript.count) characters)"
+            presentation.mode = .recording
+            presentation.caption = "Listening…"
+        case .transcribing:
             statusMessage = "Finishing local transcription…"
             lastDictationStage = "Finishing transcription"
             presentation.mode = .working
             presentation.caption = "Transcribing…"
-            companionController.refresh()
-        } catch {
-            presentFailure(normalize(error, stage: .transcription))
+        case .inserting:
+            statusMessage = "Inserting text…"
+            lastDictationStage = "Transcript saved before delivery"
+            presentation.mode = .working
+            presentation.caption = "Inserting…"
+        case .succeeded:
+            let confirmed = lastInsertionMethod?.isConfirmed == true
+            statusMessage = confirmed
+                ? "Dictation inserted locally."
+                : "Paste sent, but the destination could not be verified."
+            lastDictationStage = confirmed
+                ? "Confirmed via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                : "Unconfirmed via \(lastInsertionMethod?.rawValue ?? "unknown")"
+            recoveryMessage = confirmed
+                ? (historyEnabled ? "Saved in local history." : "A short-lived recovery copy is available.")
+                : "Check the destination. The transcript is saved; use Copy or Retry only if it is missing."
+            lastFailureMessage = "None"
+            presentation.mode = confirmed ? .success : .error
+            presentation.caption = confirmed ? "Inserted" : "Saved — verify paste"
+            scheduleReset(after: confirmed ? 0.8 : 12)
+        case .cancelled:
+            statusMessage = "Dictation cancelled."
+            lastDictationStage = "Cancelled"
+            presentation.mode = .ready
+            presentation.caption = "Cancelled"
+        case let .failed(failure):
+            presentFailure(failure)
             return
         }
-
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let result = try await transcriber.stop()
-                let transcript = result.transcript
-                transcriptRecovery.preserve(transcript)
-                partialTranscript = transcript
-                let historyEntry: TranscriptHistoryEntry
-                do {
-                    let entry = try await historyStore.preserve(
-                        text: transcript,
-                        targetBundleIdentifier: focusedTarget.bundleIdentifier,
-                        temporaryAudioURL: result.temporaryAudioURL,
-                        retainInHistory: historyEnabled
-                    )
-                    historyEntry = entry
-                    transcriptHistory = try await historyStore.load()
-                    historyStatusMessage = historySummary
-                    lastDictationStage = "Transcript saved before delivery"
-                } catch {
-                    if let url = result.temporaryAudioURL {
-                        try? FileManager.default.removeItem(at: url)
-                    }
-                    copyTranscript(transcript)
-                    throw GuideFailure(
-                        stage: .storage,
-                        message: "The transcript could not be saved safely, so automatic insertion was stopped.",
-                        recovery: "The transcript is still shown in SERPy and copied to the clipboard. Check available disk space, then paste it manually."
-                    )
-                }
-                try dictationMachine.beginInsertion()
-                phase = dictationMachine.phase
-                statusMessage = "Inserting text…"
-                lastDictationStage = "Inserting text"
-                do {
-                    lastInsertionMethod = try await insertionService.insert(transcript, into: focusedTarget)
-                } catch {
-                    transcriptHistory = (try? await historyStore.updateDelivery(
-                        id: historyEntry.id,
-                        state: .failed,
-                        method: lastInsertionMethod?.rawValue
-                    )) ?? transcriptHistory
-                    throw error
-                }
-                let confirmed = lastInsertionMethod?.isConfirmed == true
-                transcriptHistory = (try? await historyStore.updateDelivery(
-                    id: historyEntry.id,
-                    state: confirmed ? .confirmed : .unconfirmed,
-                    method: lastInsertionMethod?.rawValue
-                )) ?? transcriptHistory
-                historyStatusMessage = historySummary
-                try dictationMachine.succeed()
-                phase = dictationMachine.phase
-                statusMessage = confirmed
-                    ? "Dictation inserted locally."
-                    : "Paste sent, but the destination could not be verified."
-                lastDictationStage = confirmed
-                    ? "Confirmed via \(lastInsertionMethod?.rawValue ?? "unknown")"
-                    : "Unconfirmed via \(lastInsertionMethod?.rawValue ?? "unknown")"
-                Self.logger.notice(
-                    "Dictation delivery completed; method=\(self.lastInsertionMethod?.rawValue ?? "unknown", privacy: .public) confirmed=\(confirmed)"
-                )
-                recoveryMessage = confirmed
-                    ? (historyEnabled ? "Saved in local history." : "A short-lived recovery copy is available.")
-                    : "Check the destination. The transcript is saved; use Copy or Retry only if it is missing."
-                lastFailureMessage = "None"
-                self.focusedTarget = nil
-                presentation.mode = confirmed ? .success : .error
-                presentation.caption = confirmed ? "Inserted" : "Saved — verify paste"
-                companionController.refresh()
-                scheduleReset(after: confirmed ? 0.8 : 12)
-            } catch is CancellationError {
-                cancelDictation()
-            } catch {
-                self.focusedTarget = nil
-                lastDictationStage = "Failed while finishing or inserting"
-                Self.logger.error("Dictation failed while finishing: \(error.localizedDescription, privacy: .public)")
-                presentFailure(normalize(error, stage: .transcription))
-            }
-        }
+        companionController.refresh()
     }
 
     private func presentFailure(_ failure: GuideFailure) {
-        if phase.isActive {
-            dictationMachine.fail(failure)
-            phase = dictationMachine.phase
-        } else {
-            phase = .failed(failure)
-        }
+        phase = .failed(failure)
         statusMessage = failure.message
         recoveryMessage = failure.recovery
         lastFailureMessage = "\(failure.message) \(failure.recovery)"
@@ -1300,7 +1262,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
             guard let self, !phase.isActive else { return }
-            dictationMachine.reset()
             phase = .idle
             partialTranscript = ""
             presentation.mode = .ready

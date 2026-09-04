@@ -10,7 +10,7 @@ private let insertionLogger = Logger(
     category: "insertion"
 )
 
-public final class FocusedTextTarget: @unchecked Sendable {
+public final class FocusedTextTarget: FocusedTextTargetRepresenting, @unchecked Sendable {
     fileprivate let processIdentifier: pid_t
     fileprivate let element: AXUIElement?
     public let bundleIdentifier: String?
@@ -19,17 +19,6 @@ public final class FocusedTextTarget: @unchecked Sendable {
         self.processIdentifier = processIdentifier
         self.element = element
         self.bundleIdentifier = bundleIdentifier
-    }
-}
-
-public enum TextInsertionMethod: String, Equatable, Sendable {
-    case accessibility
-    case accessibilityValue
-    case paste
-    case pasteUnconfirmed
-
-    public var isConfirmed: Bool {
-        self != .pasteUnconfirmed
     }
 }
 
@@ -70,7 +59,7 @@ public enum TextValueReplacement {
 }
 
 @MainActor
-public final class TextInsertionService {
+public final class TextInsertionService: FocusedTextTargetReading, TextInserting {
     public init() {}
 
     public func captureFocusedTarget() throws -> FocusedTextTarget {

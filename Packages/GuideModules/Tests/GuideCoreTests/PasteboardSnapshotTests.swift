@@ -1,4 +1,5 @@
 import AppKit
+import GuideCore
 @testable import GuideMac
 import Testing
 

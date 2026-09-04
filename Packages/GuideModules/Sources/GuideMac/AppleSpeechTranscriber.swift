@@ -287,16 +287,6 @@ public final class AppleSpeechTranscriber {
     }
 }
 
-public struct SpeechTranscriptionResult: Equatable, Sendable {
-    public let transcript: String
-    public let temporaryAudioURL: URL?
-
-    public init(transcript: String, temporaryAudioURL: URL?) {
-        self.transcript = transcript
-        self.temporaryAudioURL = temporaryAudioURL
-    }
-}
-
 struct SpeechCompletionGate: Equatable, Sendable {
     private(set) var didReceiveFinalResult = false
 
