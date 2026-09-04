@@ -3,13 +3,20 @@ import XCTest
 @MainActor
 final class GoldenGuideUITests: GoldenUITestCase {
     func test_GT_UF08_001_realGuideAnswersOneFixtureQuestion() {
-        launch(flow: "UF-08", openTranscript: true)
+        launch(flow: "UF-08", openTranscript: true, extraArguments: ["--stepwise-guide"])
         tap("Talk")
+        expectValue(identifier: "guide.activity", value: "Heard: Open a new window")
         tap("Finish Question")
+        expectValue(identifier: "guide.activity", value: "Reading the selected window…")
+        releaseFixture("capture")
+        expectValue(identifier: "guide.activity", value: "Thinking locally…")
+        releaseFixture("generation")
         expectValue(
             identifier: "guide.message.guide",
             value: "Open the File menu, then choose New Window."
         )
+        releaseFixture("speech")
+        XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
     }
 
     func test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep() {
@@ -22,6 +29,10 @@ final class GoldenGuideUITests: GoldenUITestCase {
             identifier: "guide.message.guide",
             value: "Open the File menu, then choose New Window."
         )
+
+        tap("Talk")
+        tap("Finish Question")
+        expectValue(identifier: "guide.message.guide", value: "Open the File menu.")
 
         tap("Talk")
         tap("Finish Question")
@@ -76,13 +87,29 @@ final class GoldenGuideUITests: GoldenUITestCase {
     }
 
     func test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization() {
-        launch(flow: "UF-11")
+        launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
         tap("Configure OpenAI Fixture")
         XCTAssertTrue(
             application.staticTexts[
                 "Provider verified for 15 minutes. OpenAI Talk may now send an explicitly disclosed turn."
             ].waitForExistence(timeout: 5)
         )
+        tap("Open Guide Transcript")
+        XCTAssertTrue(application.windows["SERPy Voice Transcript"].waitForExistence(timeout: 5))
+        tap("Talk")
+        tap("Finish Question")
+        let requestReceipt = sessionRoot.appendingPathComponent("cloud-request.fixture")
+        let requestWritten = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: requestReceipt.path) },
+            object: nil
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [requestWritten], timeout: 5), .completed)
+        XCTAssertEqual(
+            try? String(contentsOf: requestReceipt, encoding: .utf8),
+            "question=Open a new window;raster=3;evidence=0"
+        )
+        application.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
     }
 
     func test_GT_UF12_001_realUIShowsMalformedPlanFailureAndRecovery() {

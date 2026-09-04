@@ -49,6 +49,26 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertTrue(application.buttons["Copy"].exists)
         XCTAssertTrue(application.buttons["Retry in 4 Seconds"].exists)
         XCTAssertTrue(application.buttons["Delete"].exists)
+        application.terminate()
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        application.launch()
+        XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
+        tap("History")
+        XCTAssertTrue(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 5))
+        tap("Copy")
+        XCTAssertEqual(
+            try? String(contentsOf: sessionRoot.appendingPathComponent("clipboard.fixture"), encoding: .utf8),
+            "Recovered fixture dictation"
+        )
+        tap("Retry in 4 Seconds")
+        let insertionReceipt = sessionRoot.appendingPathComponent("insertion.fixture")
+        let inserted = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: insertionReceipt.path) },
+            object: nil
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [inserted], timeout: 7), .completed)
+        tap("Delete")
+        XCTAssertFalse(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 1))
     }
 
     func test_GT_UF05_002_realRecoveryUIShowsUnconfirmedAndInterruptedStates() {

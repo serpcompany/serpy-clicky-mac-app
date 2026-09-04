@@ -33,6 +33,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public private(set) var guideShortcut: GlobalModifierChordConfiguration
     public private(set) var talkCredentialAvailable = false
     public let runtimeMode: AppRuntimeMode
+    public let runtimeCompositionAudit: RuntimeCompositionAudit
     public private(set) var talkCredentialVerification: TalkCredentialVerificationState = .missing
     public private(set) var talkCredentialStatus = "No OpenAI key saved."
     public var talkCredentialDraft = ""
@@ -67,6 +68,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     @ObservationIgnored private let defaults: any AppPreferences
+    @ObservationIgnored private let clipboard: any AppClipboardServicing
     @ObservationIgnored private let permissionService: any AppPermissionServicing
     @ObservationIgnored private let insertionService: any AppTextInsertionServicing
     @ObservationIgnored private let historyStore: any AppTranscriptHistoryServicing
@@ -118,6 +120,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public init(
         defaults: any AppPreferences = UserDefaults.standard,
         runtimeMode: AppRuntimeMode = .production,
+        runtimeCompositionAudit: RuntimeCompositionAudit = .production,
+        clipboard: any AppClipboardServicing = SystemAppClipboardService(),
         permissionService: any AppPermissionServicing,
         recordingCoordinator: RecordingCoordinator<FocusedTextTarget>,
         insertionService: any AppTextInsertionServicing,
@@ -134,7 +138,10 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         shortcutMonitorFactory: @escaping ShortcutMonitorFactory
     ) {
         self.defaults = defaults
+        self.clipboard = clipboard
         self.runtimeMode = runtimeMode
+        precondition(runtimeCompositionAudit.isValid(for: runtimeMode))
+        self.runtimeCompositionAudit = runtimeCompositionAudit
         self.permissionService = permissionService
         self.recordingCoordinator = recordingCoordinator
         self.insertionService = insertionService
@@ -875,9 +882,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func copyTranscript(_ transcript: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        guard pasteboard.setString(transcript, forType: .string) else {
+        guard clipboard.copy(transcript) else {
             statusMessage = "The last dictation could not be copied."
             return
         }

@@ -44,14 +44,23 @@ compiles the production app and golden UI test bundle without executing them.
 
 ### Debugging one UI journey locally
 
-Select one test under the `GuideCompanion` scheme and
-`GuideCompanionGolden` test plan in Xcode's Test navigator. A focused local
-XCUI run briefly takes foreground control. It launches the real app in
+Use the bounded runner with one exact test identifier and a new result path:
+
+```sh
+scripts/run-golden-ui-test.sh focused \
+  GuideCompanionUITests/GoldenGuideUITests/test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep \
+  evidence/issue-13-real-app-UF09-green.xcresult
+```
+
+A focused local XCUI run briefly takes foreground control. It launches the real app in
 side-effect-incapable UI-test mode; it must not open another application.
 
 Save an `.xcresult` for every claimed run. A compile-only result is not a test
 result. After execution, confirm serpy and the XCTest runner terminated
 and the temporary build directory was removed.
+
+`scripts/test-golden-ui-runner.sh` exercises timeout, TERM-to-KILL process-group
+cleanup, result isolation, and temporary-root removal without launching an app.
 
 The first local execution of `GT-UF09-001` on 2026-09-04 is retained as evidence
 that the now-rejected standalone host failed to acquire a process ID. It does

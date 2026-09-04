@@ -26,26 +26,41 @@ enum GuideUITestComposition {
             inserter: insertion,
             history: history
         )
-        let capture = UITestScreenContextService(block: arguments.contains("--block-guide-capture"))
+        let capture = UITestScreenContextService(
+            block: arguments.contains("--block-guide-capture"),
+            stepwise: arguments.contains("--stepwise-guide"),
+            sessionRoot: sessionRoot
+        )
         let transcription = UITestGuideTranscriber()
-        let generation = UITestGuideGenerator(arguments: arguments)
+        let generation = UITestGuideGenerator(arguments: arguments, sessionRoot: sessionRoot)
         let credentialStore = UITestCredentialStore()
         let localService = LocalGuidanceService(provider: UITestLocalModelProvider())
         let router = TalkGenerationRouter(
             local: generation,
-            cloud: UITestCloudGenerator(),
+            cloud: UITestCloudGenerator(
+                sessionRoot: sessionRoot,
+                block: arguments.contains("--block-cloud-generation")
+            ),
             credentialStore: credentialStore
         )
         return GuideAppModel(
             defaults: UITestPreferences(),
             runtimeMode: .uiTest,
+            runtimeCompositionAudit: RuntimeCompositionAudit(
+                adapters: Dictionary(uniqueKeysWithValues: RuntimeAdapterRole.allCases.map { ($0, .deterministic) })
+            ),
+            clipboard: UITestClipboardService(sessionRoot: sessionRoot),
             permissionService: permissions,
             recordingCoordinator: recording,
             insertionService: insertion,
             historyStore: history,
             screenContextService: capture,
             guidanceTranscriber: transcription,
-            guidanceSpeaker: UITestGuideSpeaker(block: arguments.contains("--block-guide-speech")),
+            guidanceSpeaker: UITestGuideSpeaker(
+                block: arguments.contains("--block-guide-speech"),
+                stepwise: arguments.contains("--stepwise-guide"),
+                sessionRoot: sessionRoot
+            ),
             localGuidanceService: localService,
             talkCredentialStore: credentialStore,
             talkCredentialVerifier: UITestCredentialVerifier(),
@@ -57,16 +72,22 @@ enum GuideUITestComposition {
     }
 
     private static func validatedSessionRoot(environment: [String: String]) -> URL {
-        guard let sessionID = environment["SERPY_TEST_SESSION_ID"], UUID(uuidString: sessionID) != nil,
-              let rawRoot = environment["SERPY_TEST_ROOT"] else {
-            preconditionFailure("UI-test mode requires an isolated session root")
+        do { return try UITestSessionRootPolicy.validate(environment: environment) }
+        catch { preconditionFailure("UI-test session root is not owned by this run: \(error)") }
+    }
+}
+
+@MainActor
+private final class UITestClipboardService: AppClipboardServicing {
+    private let receiptURL: URL
+    init(sessionRoot: URL) { receiptURL = sessionRoot.appendingPathComponent("clipboard.fixture") }
+    func copy(_ text: String) -> Bool {
+        do {
+            try text.write(to: receiptURL, atomically: true, encoding: .utf8)
+            return true
+        } catch {
+            return false
         }
-        let root = URL(fileURLWithPath: rawRoot).standardizedFileURL
-        guard root.lastPathComponent == "serpy-real-ui-\(sessionID)",
-              FileManager.default.fileExists(atPath: root.path) else {
-            preconditionFailure("UI-test session root is not owned by this run")
-        }
-        return root
     }
 }
 
@@ -191,7 +212,13 @@ private actor UITestHistoryStore: AppTranscriptHistoryServicing {
 private final class UITestScreenContextService: AppScreenContextServicing, @unchecked Sendable {
     @MainActor private var captureCount = 0
     private let block: Bool
-    init(block: Bool) { self.block = block }
+    private let stepwise: Bool
+    private let sessionRoot: URL
+    init(block: Bool, stepwise: Bool, sessionRoot: URL) {
+        self.block = block
+        self.stepwise = stepwise
+        self.sessionRoot = sessionRoot
+    }
     @MainActor func rememberFrontmostApplication() {}
     @MainActor func snapshotTarget() throws -> GuideWindowTarget {
         GuideWindowTarget(
@@ -204,17 +231,20 @@ private final class UITestScreenContextService: AppScreenContextServicing, @unch
     }
     func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
         if block { try await Task.sleep(for: .seconds(3_600)) }
+        if stepwise { try await waitForUITestRelease(sessionRoot.appendingPathComponent("capture.release")) }
         let count = await MainActor.run { captureCount += 1; return captureCount }
         let visible = switch count {
-        case 2: "File menu open"
-        case 3...: "New Window visible"
+        case 2: "Unchanged fixture"
+        case 3: "File menu open"
+        case 4...: "New Window visible"
         default: "File New Window"
         }
         return ScreenContext(
             applicationName: target.applicationName,
             windowTitle: target.windowTitle,
             windowFrame: target.frame,
-            textBlocks: [.init(text: visible, normalizedBounds: CGRect(x: 0.1, y: 0.1, width: 0.3, height: 0.1), confidence: 1)]
+            textBlocks: [.init(text: visible, normalizedBounds: CGRect(x: 0.1, y: 0.1, width: 0.3, height: 0.1), confidence: 1)],
+            raster: GuideRaster(bytes: Data("png".utf8), mimeType: "image/png", pixelWidth: 2, pixelHeight: 2)
         )
     }
 }
@@ -231,14 +261,19 @@ private final class UITestGuideTranscriber: AppGuideTranscribing {
 private final class UITestGuideGenerator: GuideTurnGenerating {
     private let malformed: Bool
     private let block: Bool
-    init(arguments: [String]) {
+    private let stepwise: Bool
+    private let sessionRoot: URL
+    init(arguments: [String], sessionRoot: URL) {
         malformed = arguments.contains("--inject-guide-failure")
             || arguments.contains("--golden-flow=UF-12")
         block = arguments.contains("--block-guide-generation")
+        stepwise = arguments.contains("--stepwise-guide")
+        self.sessionRoot = sessionRoot
     }
     func answer(question: String, context: ScreenContext, conversation: [GuidanceMessage]) async throws -> GuidancePlan {
         if malformed { throw GuideFailure.malformedGuidance(provider: .local) }
         if block { try await Task.sleep(for: .seconds(3_600)) }
+        if stepwise { try await waitForUITestRelease(sessionRoot.appendingPathComponent("generation.release")) }
         return GuidancePlan(
             answer: "Open the File menu, then choose New Window.",
             confidence: 1,
@@ -253,9 +288,16 @@ private final class UITestGuideGenerator: GuideTurnGenerating {
 @MainActor
 private final class UITestGuideSpeaker: GuideTurnSpeaking {
     private let block: Bool
-    init(block: Bool) { self.block = block }
+    private let stepwise: Bool
+    private let sessionRoot: URL
+    init(block: Bool, stepwise: Bool, sessionRoot: URL) {
+        self.block = block
+        self.stepwise = stepwise
+        self.sessionRoot = sessionRoot
+    }
     func speak(_ text: String) async throws {
         if block { try await Task.sleep(for: .seconds(3_600)) }
+        if stepwise { try await waitForUITestRelease(sessionRoot.appendingPathComponent("speech.release")) }
     }
     func stop() {}
 }
@@ -287,10 +329,45 @@ private struct UITestExpirySleeper: TalkVerificationExpirySleeping {
 }
 
 private final class UITestCloudGenerator: GuidanceGenerating, @unchecked Sendable {
-    func stream(_ request: MultimodalGuideRequest) -> AsyncThrowingStream<GuidanceStreamEvent, Error> {
-        AsyncThrowingStream { continuation in continuation.finish() }
+    private let sessionRoot: URL
+    private let block: Bool
+    private let lock = NSLock()
+    private var continuation: AsyncThrowingStream<GuidanceStreamEvent, Error>.Continuation?
+
+    init(sessionRoot: URL, block: Bool) {
+        self.sessionRoot = sessionRoot
+        self.block = block
     }
-    func cancel() {}
+
+    func stream(_ request: MultimodalGuideRequest) -> AsyncThrowingStream<GuidanceStreamEvent, Error> {
+        let receipt = "question=\(request.question);raster=\(request.raster.bytes.count);evidence=\(request.evidence.count)"
+        do {
+            try receipt.write(
+                to: sessionRoot.appendingPathComponent("cloud-request.fixture"),
+                atomically: true,
+                encoding: .utf8
+            )
+        } catch {
+            return AsyncThrowingStream { $0.finish(throwing: error) }
+        }
+        return AsyncThrowingStream { continuation in
+            if block {
+                lock.withLock { self.continuation = continuation }
+            } else {
+                let plan = GuidancePlan(answer: "Cloud fixture answer.", confidence: 1)
+                continuation.yield(.textDelta(plan.answer))
+                continuation.yield(.planReady(plan))
+                continuation.yield(.completed)
+                continuation.finish()
+            }
+        }
+    }
+    func cancel() {
+        lock.withLock {
+            continuation?.finish(throwing: CancellationError())
+            continuation = nil
+        }
+    }
 }
 
 private struct UITestIncidentReporter: DiagnosticIncidentReporting {
@@ -312,4 +389,17 @@ private struct UITestIncidentReporter: DiagnosticIncidentReporting {
 private final class UITestShortcutMonitor: GlobalShortcutMonitoring {
     func start() throws {}
     func stop() {}
+}
+
+private func waitForUITestRelease(_ url: URL) async throws {
+    for _ in 0..<100 {
+        try Task.checkCancellation()
+        if FileManager.default.fileExists(atPath: url.path) { return }
+        try await Task.sleep(for: .milliseconds(50))
+    }
+    throw GuideFailure(
+        stage: .presentation,
+        message: "The deterministic UI fixture timed out.",
+        recovery: "Fix the test driver release signal."
+    )
 }

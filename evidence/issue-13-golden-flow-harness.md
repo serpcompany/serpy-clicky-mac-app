@@ -45,6 +45,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | Check | Result | Output retention | Cleanup |
 | --- | --- | --- | --- |
 | `scripts/test-headless-check.sh` | Green | none | Green |
+| `scripts/test-golden-ui-runner.sh` | Green; timeout fixture only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green after real-app retarget; production app and XCUI bundle compiled only | none | Green |
 | `scripts/run-headless-check.sh core-tests` | Green after real-app retarget; complete package suite passed | none | Green |
 

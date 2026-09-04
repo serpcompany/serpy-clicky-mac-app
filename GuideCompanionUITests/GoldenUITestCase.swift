@@ -26,6 +26,11 @@ class GoldenUITestCase: XCTestCase {
                 .appendingPathComponent("serpy-real-ui-\(sessionID)")
             do {
                 try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
+                try sessionID.write(
+                    to: sessionRoot.appendingPathComponent(".serpy-real-ui-owner"),
+                    atomically: true,
+                    encoding: .utf8
+                )
             } catch {
                 XCTFail("could not create isolated UI-test session: \(error)")
                 return
@@ -83,5 +88,12 @@ class GoldenUITestCase: XCTestCase {
             object: element
         )
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
+    }
+
+    func releaseFixture(_ name: String) {
+        XCTAssertNoThrow(try Data().write(
+            to: sessionRoot.appendingPathComponent("\(name).release"),
+            options: .atomic
+        ))
     }
 }

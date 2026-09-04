@@ -15,11 +15,14 @@ final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
 
     func test_GT_UF02_001_realSettingsClosesAndReopensAsOneWindow() {
         launch(flow: "UF-02")
+        XCTAssertFalse(application.descendants(matching: .any)["guide.ambient"].exists)
         XCTAssertEqual(application.windows.matching(identifier: "SERPy Settings").count, 1)
         application.windows["SERPy Settings"].buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertFalse(application.windows["SERPy Settings"].exists)
         application.activate()
         XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
         XCTAssertEqual(application.windows.matching(identifier: "SERPy Settings").count, 1)
+        application.terminate()
+        XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
     }
 }

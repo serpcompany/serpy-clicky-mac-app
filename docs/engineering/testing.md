@@ -56,6 +56,9 @@ when the owner requests that exact run. Run it through Xcode or `xcodebuild`
 with the production `GuideCompanion` scheme, `GuideCompanionGolden.xctestplan`, and a saved
 `.xcresult`. The run may briefly take foreground control.
 
+The supported CLI entrypoint is `scripts/run-golden-ui-test.sh focused`; its
+adversarial no-app self-test is `scripts/test-golden-ui-runner.sh`.
+
 This lane launches the real serpy application target in `--ui-testing` mode.
 It must not open TextEdit, Chrome, System Settings, or another external app; access real
 permissions, Keychain, Sentry, OpenAI, microphone, or persistent user data; or

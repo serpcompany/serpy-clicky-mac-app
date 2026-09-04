@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import GuideCore
 
@@ -26,5 +27,50 @@ struct ActualAppRuntimeCompositionTests {
             .screenRecording,
             .sentryTransport,
         ]))
+    }
+
+    @Test("GT-COMPOSITION-003 UI session rejects an unowned root")
+    func rejectsUnownedSessionRoot() {
+        let sessionID = "9E8EA177-1513-4E7A-88D7-180BB516E820"
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("serpy-real-ui-\(sessionID)")
+        #expect(throws: UITestSessionRootError.missingOwnership) {
+            try UITestSessionRootPolicy.validate(environment: [
+                "SERPY_TEST_SESSION_ID": sessionID,
+                "SERPY_TEST_ROOT": root.path,
+            ])
+        }
+    }
+
+    @Test("GT-COMPOSITION-004 UI session accepts one UUID-owned temp root")
+    func acceptsOwnedSessionRoot() throws {
+        let sessionID = UUID().uuidString
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("serpy-real-ui-\(sessionID)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try sessionID.write(
+            to: root.appendingPathComponent(".serpy-real-ui-owner"),
+            atomically: true,
+            encoding: .utf8
+        )
+        #expect(try UITestSessionRootPolicy.validate(environment: [
+            "SERPY_TEST_SESSION_ID": sessionID,
+            "SERPY_TEST_ROOT": root.path,
+        ]) == root.standardizedFileURL)
+    }
+
+    @Test("GT-COMPOSITION-005 UI dependency audit requires every deterministic external role")
+    func validatesCompleteAdapterGraph() {
+        let complete = RuntimeCompositionAudit(
+            adapters: Dictionary(uniqueKeysWithValues: RuntimeAdapterRole.allCases.map { ($0, .deterministic) })
+        )
+        #expect(complete.isValid(for: .uiTest))
+        var missing = complete.adapters
+        missing.removeValue(forKey: .credentialStore)
+        #expect(!RuntimeCompositionAudit(adapters: missing).isValid(for: .uiTest))
+        var unsafe = complete.adapters
+        unsafe[.credentialStore] = .production
+        #expect(!RuntimeCompositionAudit(adapters: unsafe).isValid(for: .uiTest))
     }
 }

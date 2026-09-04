@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import GuideCore
 import GuideMac
@@ -11,6 +12,21 @@ public protocol AppPreferences: AnyObject {
 }
 
 extension UserDefaults: AppPreferences {}
+
+@MainActor
+public protocol AppClipboardServicing: AnyObject {
+    func copy(_ text: String) -> Bool
+}
+
+@MainActor
+public final class SystemAppClipboardService: AppClipboardServicing {
+    public init() {}
+    public func copy(_ text: String) -> Bool {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        return pasteboard.setString(text, forType: .string)
+    }
+}
 
 @MainActor
 public protocol AppPermissionServicing: AnyObject {
