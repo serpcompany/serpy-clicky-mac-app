@@ -2,13 +2,12 @@ import AppKit
 import Foundation
 import GuideCore
 import GuideMac
-import GuideUI
 
 @MainActor
-enum GuideUITestComposition {
-    static func makeModel(arguments: [String]) -> GuideAppModel {
+public enum GuideUITestComposition {
+    public static func makeModel(arguments: [String], environment: [String: String] = ProcessInfo.processInfo.environment) -> GuideAppModel {
         precondition(AppRuntimeMode.resolve(arguments: arguments) == .uiTest)
-        let sessionRoot = validatedSessionRoot(environment: ProcessInfo.processInfo.environment)
+        let sessionRoot = validatedSessionRoot(environment: environment)
         let flow = arguments.first(where: { $0.hasPrefix("--golden-flow=") }) ?? ""
         let permissions = UITestPermissionService(
             denyMicrophone: flow == "--golden-flow=UF-01",

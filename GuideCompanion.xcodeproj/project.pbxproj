@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		025CC4B358D7A1B43A932405 /* GuideUITestComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837A10EF3292103B344E4B75 /* GuideUITestComposition.swift */; };
 		33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11CF664193125A6D4EDC0FAF /* GuideUI */; };
 		34A605741DE02A6B17DB039F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 402E6AB6BF038ED9D42B35CD /* Assets.xcassets */; };
 		4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */; };
@@ -36,7 +35,6 @@
 		402E6AB6BF038ED9D42B35CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GuideCompanion.entitlements; sourceTree = "<group>"; };
 		7B5A59E59D09E17D90B28F0B /* GoldenPermissionsAndLifecycleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenPermissionsAndLifecycleUITests.swift; sourceTree = "<group>"; };
-		837A10EF3292103B344E4B75 /* GuideUITestComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideUITestComposition.swift; sourceTree = "<group>"; };
 		87D90639FE6C002C325CBBBA /* GoldenDictationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenDictationUITests.swift; sourceTree = "<group>"; };
 		9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionApp.swift; sourceTree = "<group>"; };
 		92ABEB16055301DBFF398885 /* SERPy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SERPy.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -92,7 +90,6 @@
 				48FD6FB2B86163145DF82BC6 /* Resources */,
 				665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */,
 				9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */,
-				837A10EF3292103B344E4B75 /* GuideUITestComposition.swift */,
 				3F61D8657750A3BC5FE004B3 /* Info.plist */,
 			);
 			path = App;
@@ -230,7 +227,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */,
-				025CC4B358D7A1B43A932405 /* GuideUITestComposition.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

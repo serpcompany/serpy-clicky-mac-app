@@ -1,4 +1,5 @@
 import Foundation
+import GuideUI
 import Testing
 @testable import GuideCore
 
@@ -72,5 +73,30 @@ struct ActualAppRuntimeCompositionTests {
         var unsafe = complete.adapters
         unsafe[.credentialStore] = .production
         #expect(!RuntimeCompositionAudit(adapters: unsafe).isValid(for: .uiTest))
+    }
+
+    @Test("GT-COMPOSITION-006 Actual UI-test model constructs the audited safe graph")
+    @MainActor
+    func constructsActualSafeModel() throws {
+        let sessionID = UUID().uuidString
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("serpy-real-ui-\(sessionID)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try sessionID.write(
+            to: root.appendingPathComponent(".serpy-real-ui-owner"),
+            atomically: true,
+            encoding: .utf8
+        )
+        let model = GuideUITestComposition.makeModel(
+            arguments: ["serpy", "--ui-testing", "--golden-flow=UF-09"],
+            environment: [
+                "SERPY_TEST_SESSION_ID": sessionID,
+                "SERPY_TEST_ROOT": root.path,
+            ]
+        )
+        #expect(model.runtimeMode == .uiTest)
+        #expect(model.runtimeCompositionAudit.isValid(for: .uiTest))
+        #expect(model.runtimeCompositionAudit.adapters.values.allSatisfy { $0 == .deterministic })
     }
 }
