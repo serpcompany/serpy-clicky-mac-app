@@ -8,9 +8,9 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Workflow committed; requires a PR or `main` push to produce the first remote report |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Workflow committed; requires a PR or `main` push to produce the first remote report |
-| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Real app launched in the latest retained run, but its cross-process session-root validation failed before flow assertions; regression fixed headlessly, rerun pending |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `81bb5de` in run `33921232918` |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `81bb5de` in run `33921232918` |
+| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Not configured; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
@@ -66,8 +66,11 @@ The first local execution of `GT-UF09-001` on 2026-09-04 is retained as evidence
 that the now-rejected standalone host failed to acquire a process ID. It does
 not count as serpy evidence. The first real-app execution on 2026-09-05 stopped
 before the test method because macOS canceled XCTest automation-mode biometric
-authentication. Do not mark UF-09 green until an authenticated executed report
-passes.
+authentication. Later runs corrected the session boundary and the rejected
+transcript-window design. The valid run at `79cd0d2` executes `GT-UF09-001`
+through the ambient shortcut path, passes stale/fresh progression and
+completion assertions, and retains its local `.xcresult` plus committed
+redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
 
 ## GitHub Actions
 
@@ -82,8 +85,9 @@ Workflow actions are pinned to reviewed full commit SHAs. The checkout pin is
 official `actions/checkout` v7.0.1, which uses the Node 24 action runtime.
 
 The workflow runs for pull requests, merge queue candidates, and pushes to
-`main`. No remote result exists until one of those events occurs. Use stable
-job names when configuring required branch checks.
+`main`. For PR #14 at `81bb5de`, both jobs passed in
+[GitHub Actions run 33921232918](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33921232918).
+Use stable job names when configuring required branch checks.
 
 ## Xcode Cloud account requirements
 

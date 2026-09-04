@@ -99,6 +99,13 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, ambient failure recovery mapping, Dictation partial mapping, and target-display fallback; 100 XCTest, 87 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
 | `scripts/run-headless-check.sh all` | Green on Apple Silicon M3 after removing completed core build products before app-build; the pre-fix run failed closed at 10,581,672 KiB because both lanes' separate Sentry package/build trees accumulated under one 8 GiB cap | none | Green |
 
+## GitHub Actions results
+
+- PR #14 verification run
+  [33921232918](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33921232918)
+  passed for exact commit `81bb5de09a6db91b0ca9737d01f0caadc57c4941`:
+  `core-tests` in 4m09s and `app-build` in 3m43s.
+
 ## Valid focused actual-app evidence
 
 - `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
