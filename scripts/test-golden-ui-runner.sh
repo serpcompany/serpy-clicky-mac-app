@@ -81,11 +81,21 @@ if /usr/bin/grep -Fq 'env SERPY_XCUI_PARENT=' scripts/run-golden-ui-test.sh; the
   print -u2 "runner authorization variables bypass TEST_RUNNER_ propagation"
   exit 1
 fi
-if /usr/bin/grep -Fq 'cd "$container_root" && pwd -P' scripts/run-golden-ui-test.sh; then
-  print -u2 "XCTest cleanup can hang when a container temp root disappears"
-  exit 1
-fi
-/usr/bin/grep -Fq 'canonical_root=$(/bin/realpath "$root" 2>/dev/null) || continue' scripts/run-golden-ui-test.sh
+
+marker=$(uuidgen)
+result="evidence/issue-13-runner-fixture-$marker.xcresult"
+disappearing_root="/private/tmp/serpy-xctest-disappearing.$marker"
+set +e
+SERPY_UI_RUNNER_FIXTURE=disappearing-approved-root SERPY_TEST_SESSION_ID=$marker \
+  SERPY_UI_FIXTURE_APPROVED_ROOT=$disappearing_root \
+  scripts/run-golden-ui-test.sh focused GuideCompanionUITests/Fixture/never "$result" >/dev/null 2>&1
+disappearing_status=$?
+set -e
+[[ $disappearing_status -eq 65 ]] || {
+  print -u2 "disappearing approved root changed the command status to $disappearing_status"; exit 1
+}
+[[ ! -e "$disappearing_root" ]] || { print -u2 "disappearing approved root survived"; exit 1; }
+assert_clean "$marker" "$result"
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"

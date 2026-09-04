@@ -61,6 +61,26 @@ set -e
 [[ $phase_status -eq 0 ]] || { print -u2 "all retained completed core products during app-build"; exit 1; }
 [[ ! -e $phase_root ]] || { print -u2 "all-phase fixture root survived"; exit 1; }
 
+for failure_case in all-core-fails:86 all-cleanup-fails:75; do
+  fixture=${failure_case%%:*}
+  expected_status=${failure_case##*:}
+  failure_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+  find "$failure_root" -depth -delete
+  phase_marker="$temp_parent/serpy-headless-phase-marker.$(uuidgen)"
+  set +e
+  SERPY_HARNESS_ROOT=$failure_root SERPY_RUNNER_FIXTURE=$fixture \
+    SERPY_PHASE_MARKER=$phase_marker scripts/run-headless-check.sh all >/dev/null 2>&1
+  failure_status=$?
+  set -e
+  [[ $failure_status -eq $expected_status ]] || {
+    print -u2 "$fixture was masked by a later all phase (returned $failure_status)"; exit 1
+  }
+  [[ ! -e $phase_marker ]] || {
+    print -u2 "$fixture continued into app-build after failure"; exit 1
+  }
+  [[ ! -e $failure_root ]] || { print -u2 "$fixture root survived"; exit 1; }
+done
+
 traversal_base=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
 set +e
 SERPY_HARNESS_ROOT="$traversal_base/../../serpy-runner-escape" \

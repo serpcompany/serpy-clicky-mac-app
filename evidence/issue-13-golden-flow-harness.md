@@ -34,8 +34,12 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
 - `ActualAppRuntimeCompositionTests` lock mode-before-composition and the
   production-capability exclusion contract.
-- Injected `core-tests` and `app-build` failures each exit 86. The self-test
-  proves the owned temporary root is removed after either failure.
+- Injected `core-tests` and `app-build` failures each exit 86. The combined
+  `all` path also stops immediately on an injected core failure (86) or
+  completed-core cleanup failure (75), never enters app-build, and removes its
+  owned temporary root. This locks the explicit fail-closed sequencing needed
+  because zsh suppresses implicit `errexit` inside a function used as an `if`
+  condition.
 - The focused-XCUI runner self-test rejects full-suite and outside-evidence
   invocations, forces TERM-ignoring and leader-exit descendants through bounded
   TERM-to-KILL escalation, interrupts a live owned group, and runs a command
@@ -46,6 +50,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   removes those sessions while preserving unrelated sentinels. A disk-sampling
   fixture fails its first two `du` measurements during a live process, succeeds
   on the third, and preserves both budget enforcement and the child exit code.
+  A behavioral fixture removes an approved XCTest temporary root before wrapper
+  cleanup and proves cleanup returns the original command status without a hang
+  or residue; this exercises the `realpath`-without-`cd` implementation.
 - UI session-root tests keep bounded-runner build scratch separate from the
   XCTest-owned session in XCTest's writable canonical temporary directory.
   They reject matching-name roots elsewhere and symlinked parents; independent
@@ -97,7 +104,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
 | `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, ambient failure recovery mapping, Dictation partial mapping, and target-display fallback; 100 XCTest, 87 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
-| `scripts/run-headless-check.sh all` | Green on Apple Silicon M3 after removing completed core build products before app-build; the pre-fix run failed closed at 10,581,672 KiB because both lanes' separate Sentry package/build trees accumulated under one 8 GiB cap | none | Green |
+| `scripts/run-headless-check.sh all` | Green on Apple Silicon M3 after explicit fail-closed phase sequencing and removal of completed core build products before app-build; a red-first fixture proved the prior zsh control flow could mask an earlier phase failure, and the pre-footprint fix run exceeded 10,581,672 KiB because both lanes' separate Sentry package/build trees accumulated under one 8 GiB cap | none | Green |
 
 ## GitHub Actions results
 
@@ -119,6 +126,14 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   the committed redacted machine-readable proof is
   `evidence/issue-13-real-app-UF12-m3-run3-proof.json`. Process and wrapper-root
   cleanup passed, with no serpy or XCUI process remaining.
+- The M3 authenticated to Sentry with the read-only personal token held in
+  macOS Keychain and retrieved issue `SERPY-CLICKY-MAC-APP-1` plus exact event
+  `139c9b86601e416e9b59db36a6f0e952` through Sentry's API. The issue remained
+  unresolved with four events; the selected event was the expected development
+  Cocoa error for `com.serpcompany.guidecompanion.internal@0.1.0+42`. No token,
+  raw event payload, identity, question, transcript, or screenshot was retained.
+  The committed redacted proof is
+  `evidence/issue-9-sentry-m3-retrieval-proof.json`.
 - `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
   `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
   ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
@@ -136,6 +151,16 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   Services cleanup passed. No private-desktop video or frame was committed.
 
 ## Deliberately red evidence
+
+- With `SERPY_INJECT_GUIDE_FAILURE=1`, the bounded runner executed the normal
+  `GT-UF08-001` journey against the real `GuideCompanion` app on the M3 and the
+  `GuideCompanionGolden` plan reported one executed, one failed, zero passed,
+  and zero skipped. This proves an external deterministic Guide adapter failure
+  makes the actual-app lane red rather than being swallowed. The local bundle
+  is `evidence/issue-13-real-app-UF08-injected-red-m3.xcresult` (generated and
+  ignored); the committed redacted summary is
+  `evidence/issue-13-real-app-UF08-injected-red-m3-proof.json`. Cleanup left no
+  serpy/XCUI process or wrapper root.
 
 - The first M3 focused UF-12 attempt is retained locally at
   `evidence/issue-13-real-app-UF12-m3-run1.xcresult` (generated and ignored).
@@ -231,6 +256,10 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   arbitrary 58-point height threshold. Run 10 uses the product invariant:
   response cards must exceed the 46-point icon state in both dimensions. All
   private-desktop diagnostic exports for runs 6–9 were removed.
+- A Developer ID signed build 43 was notarized successfully before the
+  fail-open combined-runner defect was found. That candidate is rejected and
+  must not be installed or cited: its DMG, checksum, manifest, staging output,
+  and Release derived data are removed before rebuilding from the reviewed fix.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

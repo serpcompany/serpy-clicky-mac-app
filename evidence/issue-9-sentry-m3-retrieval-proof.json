@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "issue": 9,
+  "retrievedAt": "2026-09-04T23:36:02Z",
+  "retrievalHost": "owner M3",
+  "authentication": {
+    "storage": "macOS Keychain",
+    "tokenScopes": ["event:read", "project:read"],
+    "tokenIncluded": false
+  },
+  "sentry": {
+    "organization": "serpcompany",
+    "project": "serpy-clicky-mac-app",
+    "issueId": "7711327390",
+    "shortId": "SERPY-CLICKY-MAC-APP-1",
+    "title": "guidance.plan.malformed",
+    "status": "unresolved",
+    "eventCount": 4,
+    "eventId": "139c9b86601e416e9b59db36a6f0e952",
+    "eventPlatform": "cocoa",
+    "eventEnvironment": "development",
+    "eventLevel": "error",
+    "eventRelease": "com.serpcompany.guidecompanion.internal@0.1.0+42"
+  },
+  "redaction": {
+    "rawEventPayloadIncluded": false,
+    "tokenIncluded": false,
+    "identityIncluded": false,
+    "questionTranscriptOrScreenshotIncluded": false
+  }
+}

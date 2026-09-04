@@ -4,6 +4,14 @@
   "testId": "GT-UF12-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
   "testedCommit": "0a21ed140f9ebc6211f85b9ddf3636031a9ecf36",
+  "testPlan": "GuideCompanionGolden",
+  "testPlanConfiguration": "Golden UI",
+  "destination": {
+    "platform": "macOS",
+    "architecture": "arm64",
+    "osVersion": "26.5.2",
+    "osBuildNumber": "25F84"
+  },
   "resultBundle": "evidence/issue-13-real-app-UF12-m3-run3.xcresult",
   "result": {
     "status": "passed",

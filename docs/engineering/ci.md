@@ -38,9 +38,10 @@ scripts/run-headless-check.sh core-tests
 scripts/run-headless-check.sh app-build
 ```
 
-The first command deliberately injects failures and proves path rejection,
-timeout, interruption, descendant termination, and cleanup. `app-build`
-compiles the production app and golden UI test bundle without executing them.
+The first command deliberately injects individual and combined-phase failures
+and proves fail-closed sequencing, path rejection, timeout, interruption,
+descendant termination, and cleanup. `app-build` compiles the production app
+and golden UI test bundle without executing them.
 
 ### Debugging one UI journey locally
 
@@ -60,7 +61,8 @@ result. After execution, confirm serpy and the XCTest runner terminated
 and the temporary build directory was removed.
 
 `scripts/test-golden-ui-runner.sh` exercises timeout, TERM-to-KILL process-group
-cleanup, result isolation, and temporary-root removal without launching an app.
+cleanup, result isolation, temporary-root removal, and an approved XCTest root
+that disappears before cleanup without launching an app.
 
 The first local execution of `GT-UF09-001` on 2026-09-04 is retained as evidence
 that the now-rejected standalone host failed to acquire a process ID. It does

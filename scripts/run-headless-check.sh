@@ -157,6 +157,13 @@ if [[ ${SERPY_RUNNER_FIXTURE:-} == leader-exits ]]; then
 fi
 
 run_core_tests() {
+  if [[ ${SERPY_RUNNER_FIXTURE:-} == all-core-fails ]]; then
+    return 86
+  fi
+  if [[ ${SERPY_RUNNER_FIXTURE:-} == all-cleanup-fails ]]; then
+    mkdir -p "$run_root/swiftpm"
+    return 0
+  fi
   if [[ ${SERPY_RUNNER_FIXTURE:-} == all-phase-footprint ]]; then
     mkdir -p "$run_root/swiftpm"
     print core > "$run_root/swiftpm/fixture"
@@ -181,6 +188,10 @@ run_core_tests() {
 }
 
 run_app_build() {
+  if [[ ${SERPY_RUNNER_FIXTURE:-} == all-core-fails || ${SERPY_RUNNER_FIXTURE:-} == all-cleanup-fails ]]; then
+    [[ -z ${SERPY_PHASE_MARKER:-} ]] || print app-build-ran > "$SERPY_PHASE_MARKER"
+    return 87
+  fi
   if [[ ${SERPY_RUNNER_FIXTURE:-} == all-phase-footprint ]]; then
     if [[ -d "$run_root/swiftpm" || -d "$run_root/composition-derived-data" || -d "$run_root/composition-source-packages" ]]; then
       print -u2 "completed core build products survived into app-build"
@@ -234,6 +245,9 @@ run_app_build() {
 }
 
 remove_completed_core_products() {
+  if [[ ${SERPY_RUNNER_FIXTURE:-} == all-cleanup-fails ]]; then
+    return 75
+  fi
   local core_product
   for core_product in \
     "$run_root/swiftpm" \
@@ -255,7 +269,11 @@ run_selected_check() {
   case "$check_name" in
     core-tests) run_core_tests ;;
     app-build) run_app_build ;;
-    all) run_core_tests; remove_completed_core_products; run_app_build ;;
+    all)
+      run_core_tests || return $?
+      remove_completed_core_products || return $?
+      run_app_build || return $?
+      ;;
   esac
 }
 

@@ -75,12 +75,17 @@ terminate_owned_group() {
 approved_xctest_temporary_roots() {
   local root container_root canonical_root
   local darwin_temp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR)
-  local roots=("$darwin_temp")
-  for container_root in \
-    "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests/Data/tmp" \
-    "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests.xctrunner/Data/tmp"; do
-    roots+=("$container_root")
-  done
+  local roots
+  if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == disappearing-approved-root ]]; then
+    roots=("${SERPY_UI_FIXTURE_APPROVED_ROOT:?missing fixture approved root}")
+  else
+    roots=("$darwin_temp")
+    for container_root in \
+      "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests/Data/tmp" \
+      "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests.xctrunner/Data/tmp"; do
+      roots+=("$container_root")
+    done
+  fi
   for root in "${roots[@]}"; do
     canonical_root=$(/bin/realpath "$root" 2>/dev/null) || continue
     [[ -d "$canonical_root" ]] && print -r -- "$canonical_root"
@@ -245,6 +250,13 @@ if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level ]]; then
     done
     exit 65
   ' "serpy-ui-runner-$fixture_marker" "$run_root")
+elif [[ ${SERPY_UI_RUNNER_FIXTURE:-} == disappearing-approved-root ]]; then
+  fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
+  fixture_root=${SERPY_UI_FIXTURE_APPROVED_ROOT:?missing fixture approved root}
+  /bin/mkdir "$fixture_root"
+  /usr/bin/printf '%s' "$run_token" > "$fixture_root/.serpy-xctest-run-owner"
+  /usr/bin/find "$fixture_root" -depth -delete
+  ui_command=(/bin/zsh -c 'exit 65' "serpy-ui-runner-$fixture_marker")
 elif [[ ${SERPY_UI_RUNNER_FIXTURE:-} == disk-measurement-race ]]; then
   fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
   ui_command=(/bin/zsh -c 'sleep 4; exit 65' "serpy-ui-runner-$fixture_marker")

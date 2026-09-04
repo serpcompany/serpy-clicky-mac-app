@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "issue": 13,
+  "purpose": "prove the actual-app golden lane reports an injected external-adapter failure as red",
+  "testId": "GT-UF08-001",
+  "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+  "injection": "SERPY_INJECT_GUIDE_FAILURE=1",
+  "testPlan": "GuideCompanionGolden",
+  "testPlanConfiguration": "Golden UI",
+  "destination": {
+    "platform": "macOS",
+    "architecture": "arm64",
+    "osVersion": "26.5.2",
+    "osBuildNumber": "25F84"
+  },
+  "resultBundle": "evidence/issue-13-real-app-UF08-injected-red-m3.xcresult",
+  "result": {
+    "status": "failed-as-injected",
+    "executed": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0
+  },
+  "cleanup": {
+    "serpyAndUITestProcessesRemaining": 0,
+    "wrapperRootsRemaining": 0,
+    "status": "passed"
+  },
+  "redaction": {
+    "hardwareIdentifiersIncluded": false,
+    "hostLabelsIncluded": false,
+    "privateDesktopCaptureIncluded": false
+  }
+}
