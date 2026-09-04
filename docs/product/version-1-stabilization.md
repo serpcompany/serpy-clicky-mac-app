@@ -36,6 +36,9 @@ capabilities, or other app integrations into these stabilization steps.
 
 ## Dictation acceptance workflow
 
+Reference inventory:
+`docs/research/superwhisper-dictation-inventory.md`.
+
 With an editable field focused in TextEdit and then Chrome:
 
 1. Invoke the existing Dictation shortcut.

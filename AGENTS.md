@@ -59,6 +59,10 @@ screenshots, document content, identity, or arbitrary error strings.
 
 - **Version 1:** read `docs/product/version-1-stabilization.md` before planning,
   implementing, reviewing, or verifying product work.
+- **Dictation reference:** before changing recording, transcription, shortcuts,
+  insertion, cancellation, or recovery, read
+  `docs/research/superwhisper-dictation-inventory.md` and produce the donor
+  import map it requires before introducing a new abstraction.
 - **User flows:** read `docs/product/user-flows.md` before changing or verifying
   user-visible behavior; update its issue traceability when the contract changes.
 - **Testing:** read `docs/engineering/testing.md` before running tests or changing
