@@ -31,4 +31,10 @@ struct GuidanceMessageAccessibilityTests {
 
         #expect(GuideAmbientResponseText.resolve(turn) == "Last readable step.\n\nTry the question again.")
     }
+
+    @Test("Dictation ambient caption exposes a real partial transcript")
+    func exposesDictationPartial() {
+        #expect(DictationAmbientCaption.resolve(partialTranscript: "  alpha beta  ") == "alpha beta")
+        #expect(DictationAmbientCaption.resolve(partialTranscript: "") == "Listening…")
+    }
 }

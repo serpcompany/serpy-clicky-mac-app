@@ -1121,7 +1121,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                 ? "Listening"
                 : "Speech detected (\(partialTranscript.count) characters)"
             presentation.mode = .recording
-            presentation.caption = "Listening…"
+            presentation.caption = DictationAmbientCaption.resolve(partialTranscript: partialTranscript)
         case .transcribing:
             statusMessage = "Finishing local transcription…"
             lastDictationStage = "Finishing transcription"
@@ -1297,5 +1297,12 @@ struct GuideAmbientResponseText {
         return [turn.responseText, recovery]
             .filter { !$0.isEmpty }
             .joined(separator: "\n\n")
+    }
+}
+
+struct DictationAmbientCaption {
+    static func resolve(partialTranscript: String) -> String {
+        let partial = partialTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        return partial.isEmpty ? "Listening…" : partial
     }
 }

@@ -61,8 +61,11 @@ final class UITestPermissionService: AppPermissionServicing, DeterministicUITest
 @MainActor
 final class UITestTextInsertionService: AppTextInsertionServicing, DeterministicUITestAdapter {
     private let receiptURL: URL
+    private let sessionRoot: URL
     private let block: Bool
+    private var cancelled = false
     init(sessionRoot: URL, block: Bool) {
+        self.sessionRoot = sessionRoot
         receiptURL = sessionRoot.appendingPathComponent("insertion.fixture")
         self.block = block
     }
@@ -74,11 +77,18 @@ final class UITestTextInsertionService: AppTextInsertionServicing, Deterministic
         )
     }
     func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
-        if block { try await Task.sleep(for: .seconds(3_600)) }
+        if block {
+            await waitForUITestLateDictationRelease(sessionRoot.appendingPathComponent("insertion.late-release"))
+            try Data().write(to: sessionRoot.appendingPathComponent("insertion.late-returned"), options: .atomic)
+            guard !cancelled else { return .accessibility }
+        }
         try text.write(to: receiptURL, atomically: true, encoding: .utf8)
         return .accessibility
     }
-    func cancel() -> Bool { true }
+    func cancel() -> Bool {
+        cancelled = true
+        return true
+    }
 }
 
 @MainActor
@@ -87,14 +97,31 @@ final class UITestDictationSession: DictationSessioning, DeterministicUITestAdap
     var isOnDeviceAvailable: Bool { true }
     var availabilityDescription: String { "Deterministic local speech fixture" }
     private let blockStop: Bool
-    init(blockStop: Bool) { self.blockStop = blockStop }
+    private let sessionRoot: URL
+    init(blockStop: Bool, sessionRoot: URL) {
+        self.blockStop = blockStop
+        self.sessionRoot = sessionRoot
+    }
     func start(retainAudioInHistory: Bool) async throws { onPartial?("alpha beta") }
     func stop() async throws -> SpeechTranscriptionResult {
-        if blockStop { try await Task.sleep(for: .seconds(3_600)) }
+        if blockStop {
+            await waitForUITestLateDictationRelease(sessionRoot.appendingPathComponent("transcription.late-release"))
+            try Data().write(to: sessionRoot.appendingPathComponent("transcription.late-returned"), options: .atomic)
+        }
         return .init(transcript: "alpha beta", temporaryAudioURL: nil)
     }
     func cancel() throws {}
     func discardTemporaryAudio(at url: URL) throws {}
+}
+
+private func waitForUITestLateDictationRelease(_ url: URL) async {
+    while !FileManager.default.fileExists(atPath: url.path) {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.025) {
+                continuation.resume()
+            }
+        }
+    }
 }
 
 actor UITestHistoryStore: AppTranscriptHistoryServicing, DeterministicUITestAdapter {

@@ -5,7 +5,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
     func test_GT_UF03_001_realModelCompletesDeterministicDictation() async {
         await launch(flow: "UF-03")
         triggerShortcut("dictation-pressed")
-        expectAmbient(labelContains: "Listening")
+        expectAmbient(labelContains: "alpha beta")
         triggerShortcut("dictation-pressed")
         XCTAssertTrue(application.staticTexts["The dictation was inserted locally."].waitForExistence(timeout: 5))
         XCTAssertEqual(
@@ -37,6 +37,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
         expectAmbient(labelContains: "Transcribing")
         triggerShortcut("cancelled")
         XCTAssertTrue(application.staticTexts["Dictation cancelled."].waitForExistence(timeout: 5))
+        assertNoLateDictationOutput(adapter: "transcription")
     }
 
     func test_GT_UF04_003_escapeCancelsRealPrecommitInsertion() async {
@@ -47,7 +48,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
         expectAmbient(labelContains: "Inserting")
         triggerShortcut("cancelled")
         XCTAssertTrue(application.staticTexts["Dictation cancelled."].waitForExistence(timeout: 5))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: sessionRoot.appendingPathComponent("insertion.fixture").path))
+        assertNoLateDictationOutput(adapter: "insertion")
     }
 
     func test_GT_UF05_001_realRecoveryUIShowsFailedLastDictation() async {
@@ -91,5 +92,16 @@ final class GoldenDictationUITests: GoldenUITestCase {
         await launch(flow: "UF-05", recoveryVariant: "interrupted")
         tap("History")
         XCTAssertTrue(application.staticTexts["Pending"].waitForExistence(timeout: 5))
+    }
+
+    private func assertNoLateDictationOutput(adapter: String) {
+        writeFixtureSignal("\(adapter).late-release")
+        waitForFixture("\(adapter).late-returned")
+        expectAmbientGone(timeout: 3)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: sessionRoot.appendingPathComponent("insertion.fixture").path
+        ))
+        XCTAssertFalse(application.staticTexts["Last dictation recovery"].exists)
+        XCTAssertFalse(application.staticTexts["alpha beta"].exists)
     }
 }

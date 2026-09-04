@@ -21,7 +21,10 @@ public enum GuideUITestComposition {
             block: arguments.contains("--block-dictation-insertion")
         )
         let history = UITestHistoryStore(arguments: arguments, sessionRoot: sessionRoot)
-        let session = UITestDictationSession(blockStop: arguments.contains("--block-dictation-stop"))
+        let session = UITestDictationSession(
+            blockStop: arguments.contains("--block-dictation-stop"),
+            sessionRoot: sessionRoot
+        )
         let recording = RecordingCoordinator(
             session: session,
             targetReader: insertion,
