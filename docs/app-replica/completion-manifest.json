@@ -4,7 +4,7 @@
   "scope_statement": "AI Guide only: reproduce the observable voice-first HeyClicky journey across global held invocation, ambient state presentation, exact request-scoped vision, streamed readable and spoken guidance, follow-up continuity, safe spatial guidance, cancellation, truthful recovery, Settings entry, privacy, and installed distribution while preserving SERPy identity and the explicit product boundaries",
   "inventory_complete": false,
   "primary_workflow_passed": false,
-  "installed_artifact_verified": false,
+  "installed_artifact_verified": true,
   "independent_verification": {
     "required": true,
     "passed": false,
@@ -261,7 +261,7 @@
       "in_scope": true,
       "status": "unresolved",
       "exercised": true,
-      "evidence": {"reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg"], "candidate": ["evidence/heyclicky-1.0.48-vs-serpy-build-40/candidate/guidance-settings.jpeg"], "comparison": [], "behavior": ["Installed build-40 Settings opened as a normal window; owner UX acceptance remains pending"]}
+      "evidence": {"reference": ["evidence/heyclicky-1.0.48-vs-serpy-build-39/reference/shortcuts.jpeg"], "candidate": ["evidence/issue-7-serpy-build-42/candidate/setup.jpeg", "evidence/issue-7-serpy-build-42/candidate/guidance.jpeg"], "comparison": [], "behavior": ["Installed build 42 opens one owned normal Settings window on launch and Dock reopen; owner UX acceptance remains pending"]}
     },
     {
       "id": "G30.ephemeral-privacy",
@@ -275,9 +275,9 @@
       "id": "G31.installed-distribution",
       "kind": "behavior",
       "in_scope": true,
-      "status": "unresolved",
+      "status": "pass",
       "exercised": true,
-      "evidence": {"reference": ["scope.md#frozen-observation-environment"], "candidate": ["serpy-issue-7-guide-parity.md"], "comparison": [], "behavior": ["Build 40 remains installed, but no reviewed issue #7 artifact has been signed, notarized, installed, or hash-matched"]}
+      "evidence": {"reference": ["scope.md#frozen-observation-environment"], "candidate": ["serpy-issue-7-build-42.md#exact-artifact"], "comparison": [], "behavior": ["Commit-tied build 42 DMG is notarized and stapled; installed executable hash matches reviewed Release; Gatekeeper accepts"]}
     },
     {
       "id": "G32.identity-boundary",

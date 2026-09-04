@@ -1,8 +1,20 @@
-# SERPy issue #7 installed Guide QA
+# SERPy build 42 issue #7 installed Guide QA
 
-Candidate build, signing identity, notarization result, installed executable
-hash, and artifact hash are intentionally blank until the reviewed source commit
-is packaged and installed. Source tests are not installed proof.
+Use only installed `/Applications/SERPy.app` `0.1.0 (42)` from commit
+`badc0b0a992708a8edcce9a88aa7a3275498ad6f`.
+
+- Installed executable SHA-256:
+  `0a5a1b06ebfccb40931d33308e54309805ba7918af8b89ef9683a0a5a3e2f8e1`
+- Notarized DMG: `dist/SERPy-0.1.0-42.dmg`
+- DMG SHA-256:
+  `4873ddc933dd8e30b41821d3864482cd8ed3cfc6f83bc49a015b0ee49f708f73`
+- Apple notarization submission:
+  `a4809fe6-49f0-436a-b9d3-24dbf843fae1` (`Accepted`)
+- Gatekeeper: `accepted`, Notarized Developer ID, team `847HR8U8D9`
+
+The installed and reviewed Release executable hashes match. Source tests,
+signing, and the visible Settings window are not proof of the spoken Guide
+journey; the matrix below remains the owner acceptance gate.
 
 ## Required P0 matrix — all red until recorded
 

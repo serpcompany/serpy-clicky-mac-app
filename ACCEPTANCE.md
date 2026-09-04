@@ -133,10 +133,14 @@ Issue #7 source work on `codex/issue-7-guide-parity` removes `LSUIElement`,
 defines regular lifetime presence, removes the rejected idle cursor badge,
 makes Guide overlays click-through, adds ordered provider-neutral walkthrough
 plans and explicit fresh-capture progression, presents one active `Step n of m`
-cue, and sanitizes/deduplicates ordered speech. These rows are unit-tested only.
-The installed artifact, Dock/Command-Tab behavior, focus/hit-testing, physical
-voice, Chrome/Slack walkthroughs, audible speech quality, accessibility,
-multi-display/Spaces/full-screen behavior, and owner acceptance remain red.
+cue, and sanitizes/deduplicates ordered speech. Build 42 installs the reviewed
+source at commit `badc0b0a`, hash-matches the retained Release executable,
+passes Gatekeeper as a notarized Developer ID app, runs as a foreground app
+without `LSUIElement`, and presents one normal `SERPy Settings` window on launch
+and Dock reopen. Package tests (129) and UI tests (2) pass. Physical voice,
+work-app focus/hit testing, Chrome/Slack progression, audible output,
+accessibility/motion, multi-display/Spaces/full-screen, device recovery, and
+owner acceptance remain red.
 
 ## D — Distribution and Privacy
 
