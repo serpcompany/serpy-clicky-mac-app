@@ -11,9 +11,9 @@ final class GoldenGuideUITests: GoldenUITestCase {
         releaseFixture("capture")
         expectValue(identifier: "guide.activity", value: "Thinking locally…")
         releaseFixture("generation")
-        expectValue(
+        expectLatestLabel(
             identifier: "guide.message.guide",
-            value: "Open the File menu, then choose New Window."
+            label: "Open the File menu, then choose New Window."
         )
         releaseFixture("speech")
         XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
@@ -25,22 +25,22 @@ final class GoldenGuideUITests: GoldenUITestCase {
         tap("Talk")
         XCTAssertTrue(application.buttons["Finish Question"].waitForExistence(timeout: 3))
         tap("Finish Question")
-        expectValue(
+        expectLatestLabel(
             identifier: "guide.message.guide",
-            value: "Open the File menu, then choose New Window."
+            label: "Open the File menu, then choose New Window."
         )
 
         tap("Talk")
         tap("Finish Question")
-        expectValue(identifier: "guide.message.guide", value: "Open the File menu.")
+        expectLatestLabel(identifier: "guide.message.guide", label: "Open the File menu.")
 
         tap("Talk")
         tap("Finish Question")
-        expectValue(identifier: "guide.message.guide", value: "Choose New Window.")
+        expectLatestLabel(identifier: "guide.message.guide", label: "Choose New Window.")
 
         tap("Talk")
         tap("Finish Question")
-        expectValue(identifier: "guide.message.guide", value: "Done. This walkthrough is complete.")
+        expectLatestLabel(identifier: "guide.message.guide", label: "Done. This walkthrough is complete.")
     }
 
     func test_GT_UF10_001_escapeCancelsTheRealGuideModel() {
@@ -72,7 +72,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
         launch(flow: "UF-10", openTranscript: true)
         tap("Talk")
         tap("Finish Question")
-        expectValue(identifier: "guide.message.guide", value: "Open the File menu, then choose New Window.")
+        expectLatestLabel(identifier: "guide.message.guide", label: "Open the File menu, then choose New Window.")
         application.typeKey(.escape, modifierFlags: [])
         XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
     }

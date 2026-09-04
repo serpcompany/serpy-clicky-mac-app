@@ -151,6 +151,7 @@ private struct GuidanceMessageRow: View {
     let message: GuidanceMessage
 
     var body: some View {
+        let accessibility = GuidanceMessageAccessibility(message: message)
         HStack {
             if message.role == .user {
                 Spacer(minLength: 72)
@@ -178,8 +179,20 @@ private struct GuidanceMessageRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier(message.role == .user ? "guide.message.user" : "guide.message.guide")
-        .accessibilityLabel(message.role == .user ? "You" : "SERPy")
-        .accessibilityValue(message.content)
+        .accessibilityIdentifier(accessibility.identifier)
+        .accessibilityLabel(accessibility.label)
+        .accessibilityValue(accessibility.speaker)
+    }
+}
+
+struct GuidanceMessageAccessibility: Equatable {
+    let identifier: String
+    let label: String
+    let speaker: String
+
+    init(message: GuidanceMessage) {
+        identifier = message.role == .user ? "guide.message.user" : "guide.message.guide"
+        label = message.content
+        speaker = message.role == .user ? "You" : "serpy"
     }
 }

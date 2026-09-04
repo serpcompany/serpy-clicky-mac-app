@@ -77,7 +77,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning; 100 XCTest, 82 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning and Guide-message accessibility correction; 100 XCTest, 83 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 
@@ -121,6 +121,18 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   accepts only the current Darwin user temporary directory or the exact serpy
   XCTest runner container temporary directory; spoofed and symlinked paths
   remain rejected.
+- The fourth owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-run4.xcresult` (generated and ignored). The
+  real app launched, the test method ran, every Talk/Finish action progressed,
+  and cleanup passed. Local-only AX/video inspection showed the transcript
+  visibly advancing through the combined answer, `Open the File menu.`, and
+  `Choose New Window.`. The failures were assertion-only: the combined SwiftUI
+  row exposed label `SERPy` and no accessibility value, while the test waited
+  for message text in `value`. The row now exposes its visible content as its
+  accessibility label and the test selects the latest matching transcript row;
+  speaker identity remains separate accessibility metadata. The exported video
+  and frames contained existing Chrome content and were deleted without being
+  committed.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

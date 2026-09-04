@@ -97,6 +97,18 @@ class GoldenUITestCase: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
     }
 
+    func expectLatestLabel(identifier: String, label: String, timeout: TimeInterval = 5) {
+        let matches = application.descendants(matching: .any).matching(identifier: identifier)
+        XCTAssertTrue(matches.firstMatch.waitForExistence(timeout: timeout))
+        guard matches.count > 0 else { return }
+        let latest = matches.element(boundBy: matches.count - 1)
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == %@", label),
+            object: latest
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
+    }
+
     func releaseFixture(_ name: String) {
         XCTAssertNoThrow(try Data().write(
             to: sessionRoot.appendingPathComponent("\(name).release"),
