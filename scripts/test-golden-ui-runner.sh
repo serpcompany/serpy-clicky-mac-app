@@ -22,6 +22,35 @@ for fixture in ignore-term leader-exits; do
 done
 
 marker=$(uuidgen)
+run_token=$(uuidgen)
+result="evidence/issue-13-runner-fixture-$marker.xcresult"
+set +e
+SERPY_UI_RUNNER_FIXTURE=external-session-timeout SERPY_UI_FIXTURE_RUN_TOKEN=$run_token \
+  SERPY_TEST_SESSION_ID=$marker SERPY_UI_WALL_SECONDS=1 \
+  scripts/run-golden-ui-test.sh focused GuideCompanionUITests/Fixture/never "$result" >/dev/null 2>&1
+external_status=$?
+set -e
+[[ $external_status -eq 75 ]] || { print -u2 "external session timeout returned $external_status"; exit 1; }
+darwin_temp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR)
+approved_roots=("${darwin_temp:A}")
+for container_root in \
+  "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests/Data/tmp" \
+  "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests.xctrunner/Data/tmp"; do
+  [[ -d "$container_root" ]] && approved_roots+=("${container_root:A}")
+done
+for approved_root in "${approved_roots[@]}"; do
+  [[ ! -e "$approved_root/serpy-xctest-session.${run_token//-/}" ]] || {
+    print -u2 "external XCTest session survived timeout"; exit 1
+  }
+  sentinel="$approved_root/serpy-unrelated-$run_token"
+  [[ -f "$sentinel" && $(<"$sentinel") == keep ]] || {
+    print -u2 "unrelated XCTest-temp sentinel was changed"; exit 1
+  }
+  /bin/rm "$sentinel"
+done
+assert_clean "$marker" "$result"
+
+marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"
 cleanup_marker="/private/tmp/serpy-ui-cleanup-marker.$marker"
 set +e

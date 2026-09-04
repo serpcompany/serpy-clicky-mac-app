@@ -22,7 +22,11 @@ esac
 
 temp_parent=$(cd /private/tmp && pwd -P)
 run_root=$(mktemp -d "$temp_parent/serpy-local-xcui.XXXXXX")
-run_token=$(uuidgen)
+if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == external-session-timeout && -n ${SERPY_UI_FIXTURE_RUN_TOKEN:-} ]]; then
+  run_token=$SERPY_UI_FIXTURE_RUN_TOKEN
+else
+  run_token=$(uuidgen)
+fi
 /usr/bin/printf '%s' "$run_token" > "$run_root/.serpy-local-xcui-owner"
 owned_pgid=""
 owned_leader=""
@@ -55,10 +59,51 @@ terminate_owned_group() {
   owned_leader=""
 }
 
+approved_xctest_temporary_roots() {
+  local darwin_temp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR)
+  [[ -d "$darwin_temp" ]] && (cd "$darwin_temp" && pwd -P)
+  local container_root
+  for container_root in \
+    "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests/Data/tmp" \
+    "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests.xctrunner/Data/tmp"; do
+    [[ -d "$container_root" ]] && (cd "$container_root" && pwd -P)
+  done
+}
+
+cleanup_xctest_session() {
+  local session_name="serpy-xctest-session.${run_token//-/}"
+  local approved_root candidate owner
+  while IFS= read -r approved_root; do
+    [[ -n "$approved_root" ]] || continue
+    candidate="$approved_root/$session_name"
+    [[ -d "$candidate" && ! -L "$candidate" ]] || continue
+    [[ $(cd "$candidate" && pwd -P) == "$candidate" ]] || {
+      print -u2 "refusing noncanonical XCTest session: $candidate"
+      return 1
+    }
+    owner=$(<"$candidate/.serpy-xctest-run-owner" 2>/dev/null) || {
+      print -u2 "refusing unowned XCTest session: $candidate"
+      return 1
+    }
+    [[ "$owner" == "$run_token" ]] || {
+      print -u2 "refusing mismatched XCTest session: $candidate"
+      return 1
+    }
+    /bin/chmod -RN "$candidate" 2>/dev/null || true
+    /usr/bin/find "$candidate" -depth -delete 2>/dev/null || true
+    [[ ! -e "$candidate" ]] || {
+      print -u2 "owned XCTest session survived teardown: $candidate"
+      return 1
+    }
+  done < <(approved_xctest_temporary_roots)
+}
+
 cleanup() {
   local original_status=${1:-0}
   trap - EXIT
   terminate_owned_group || true
+  local cleanup_failed=false
+  cleanup_xctest_session || cleanup_failed=true
   local app
   for app in "$run_root/DerivedData/Build/Products/Debug/SERPy.app" "$run_root/DerivedData/Build/Products/Debug/GuideCompanionUITests-Runner.app"; do
     [[ -d "$app" ]] && "$launch_services" -u "$app" 2>/dev/null || true
@@ -74,6 +119,10 @@ cleanup() {
       /usr/bin/printf '%s' "cleanup-failed status=$original_status root-absent=false" > "$SERPY_UI_CLEANUP_MARKER"
     fi
     print -u2 "owned UI run root survived teardown: $run_root"
+    exit 74
+  fi
+  if [[ "$cleanup_failed" == true ]]; then
+    print -u2 "XCTest session cleanup failed"
     exit 74
   fi
   if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level && -n ${SERPY_UI_CLEANUP_MARKER:-} ]]; then
@@ -139,6 +188,18 @@ fi
 if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == leader-exits ]]; then
   fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
   if run_bounded /bin/zsh -c '(trap "" TERM; while true; do sleep 1; done) & exit 0' "serpy-ui-runner-$fixture_marker"; then exit 0; else exit $?; fi
+fi
+
+if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == external-session-timeout ]]; then
+  fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
+  session_name="serpy-xctest-session.${run_token//-/}"
+  while IFS= read -r approved_root; do
+    [[ -n "$approved_root" ]] || continue
+    /bin/mkdir "$approved_root/$session_name"
+    /usr/bin/printf '%s' "$run_token" > "$approved_root/$session_name/.serpy-xctest-run-owner"
+    /usr/bin/printf '%s' keep > "$approved_root/serpy-unrelated-$run_token"
+  done < <(approved_xctest_temporary_roots)
+  if run_bounded /bin/zsh -c 'trap "" TERM; while true; do sleep 1; done' "serpy-ui-runner-$fixture_marker"; then exit 0; else exit $?; fi
 fi
 
 if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level ]]; then

@@ -40,7 +40,10 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   invocations, forces TERM-ignoring and leader-exit descendants through bounded
   TERM-to-KILL escalation, interrupts a live owned group, and runs a command
   that creates build-shaped output before exiting 65. It proves the original
-  status is retained and no descendant or run directory survives.
+  status is retained and no descendant or run directory survives. A separate
+  timeout fixture seeds token-owned sessions in the Darwin user temp and the
+  exact serpy xctrunner container temp when present; wrapper fallback cleanup
+  removes those sessions while preserving unrelated sentinels.
 - UI session-root tests keep bounded-runner build scratch separate from the
   XCTest-owned session in XCTest's writable canonical temporary directory.
   They reject matching-name roots elsewhere and symlinked parents; independent

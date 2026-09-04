@@ -67,6 +67,11 @@ writes inside it. XCTest creates and owns a separate `serpy-xctest-session.*`
 directory in its own writable canonical temporary directory, with independent
 run and session owner tokens. The app validates that exact base-parent-root
 chain without substituting its process-specific `TMPDIR`.
+If XCTest crashes, times out, or is interrupted before its teardown runs, the
+outer wrapper searches only the current Darwin user temporary directory and
+the two exact serpy XCTest container temporary directories for the
+run-token-derived session name. It deletes the directory only after its owner
+token matches, and treats a surviving or mismatched session as cleanup failure.
 For local `xcodebuild`, the wrapper passes the authorization run token with the
 `TEST_RUNNER_` prefix so Xcode strips that prefix and exposes the original name
 inside the XCTest runner. The test then explicitly forwards the canonical
