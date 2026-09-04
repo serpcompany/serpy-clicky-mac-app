@@ -63,7 +63,7 @@ public struct GoldenHarnessObservableState: Equatable, Sendable {
 }
 
 public enum GoldenHarnessAction: Equatable, Sendable {
-    case continueFlow
+    case advancePhase
     case deny
     case start
     case receivePartial(String)
@@ -138,7 +138,7 @@ public struct GoldenUserFlowHarness: Sendable {
 
     public mutating func apply(_ action: GoldenHarnessAction) throws {
         switch (flow, phase, action) {
-        case (.permissions, .permissionExplanation, .continueFlow):
+        case (.permissions, .permissionExplanation, .advancePhase):
             phase = .permissionRequestReady
         case (.permissions, .permissionRequestReady, .deny):
             phase = .permissionRecovery
@@ -173,16 +173,16 @@ public struct GoldenUserFlowHarness: Sendable {
              (.cancelGuide, .cancelled, .lateResult):
             break
 
-        case (.guideQuestion, .idle, .continueFlow):
+        case (.guideQuestion, .idle, .advancePhase):
             phase = .listening
             observableState.overlayCount = 1
-        case (.guideQuestion, .listening, .continueFlow): phase = .transcribing
-        case (.guideQuestion, .transcribing, .continueFlow): phase = .capturing
-        case (.guideQuestion, .capturing, .continueFlow): phase = .thinking
-        case (.guideQuestion, .thinking, .continueFlow):
+        case (.guideQuestion, .listening, .advancePhase): phase = .transcribing
+        case (.guideQuestion, .transcribing, .advancePhase): phase = .capturing
+        case (.guideQuestion, .capturing, .advancePhase): phase = .thinking
+        case (.guideQuestion, .thinking, .advancePhase):
             phase = .speaking
             observableState.answer = "Open the File menu, then choose New Window."
-        case (.guideQuestion, .speaking, .continueFlow): phase = .followUpReady
+        case (.guideQuestion, .speaking, .advancePhase): phase = .followUpReady
 
         case (.walkthrough, .walkthroughStepOne, .staleEvidence),
              (.walkthrough, .walkthroughStepTwo, .staleEvidence):

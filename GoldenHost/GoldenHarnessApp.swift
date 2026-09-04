@@ -3,9 +3,19 @@ import SwiftUI
 
 @main
 struct GoldenHarnessApp: App {
+    private let runtimeMode: AppRuntimeMode
+
+    init() {
+        do {
+            runtimeMode = try GoldenHostRuntimeContract.resolve(arguments: CommandLine.arguments)
+        } catch {
+            preconditionFailure("serpyGoldenHost may run only with --ui-testing")
+        }
+    }
+
     var body: some Scene {
         WindowGroup("serpy Golden Harness") {
-            GoldenHarnessView(arguments: CommandLine.arguments)
+            GoldenHarnessView(arguments: CommandLine.arguments, runtimeMode: runtimeMode)
         }
     }
 }
@@ -13,7 +23,8 @@ struct GoldenHarnessApp: App {
 private struct GoldenHarnessView: View {
     @State private var harness: GoldenUserFlowHarness
 
-    init(arguments: [String]) {
+    init(arguments: [String], runtimeMode: AppRuntimeMode) {
+        precondition(runtimeMode == .uiTest)
         let rawFlow = arguments
             .first(where: { $0.hasPrefix("--golden-flow=") })?
             .dropFirst("--golden-flow=".count)
@@ -58,7 +69,7 @@ private struct GoldenHarnessView: View {
     private var controls: some View {
         switch harness.flow {
         case .permissions:
-            actionButton("Continue", .continueFlow)
+            actionButton("Continue", .advancePhase)
             actionButton("Deny fixture", .deny)
         case .lifecycle:
             actionButton("Close Settings fixture", .closeSettings)
@@ -71,7 +82,7 @@ private struct GoldenHarnessView: View {
             actionButton("Cancel", .cancel)
             actionButton("Deliver Late Result fixture", .lateResult("must be ignored"))
         case .guideQuestion:
-            actionButton("Advance fixture", .continueFlow)
+            actionButton("Advance fixture", .advancePhase)
         case .walkthrough:
             actionButton("Stale Evidence fixture", .staleEvidence)
             actionButton("Fresh Evidence fixture", .freshEvidence)

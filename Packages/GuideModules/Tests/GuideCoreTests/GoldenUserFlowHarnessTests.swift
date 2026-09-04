@@ -7,7 +7,7 @@ struct GoldenUserFlowHarnessTests {
     func permissionJourney() throws {
         var harness = GoldenUserFlowHarness(flow: .permissions)
         #expect(harness.phase == .permissionExplanation)
-        try harness.apply(.continueFlow)
+        try harness.apply(.advancePhase)
         #expect(harness.phase == .permissionRequestReady)
         try harness.apply(.deny)
         #expect(harness.phase == .permissionRecovery)
@@ -67,7 +67,7 @@ struct GoldenUserFlowHarnessTests {
     func guideQuestionJourney() throws {
         var harness = GoldenUserFlowHarness(flow: .guideQuestion)
         for expected in [GoldenHarnessPhase.listening, .transcribing, .capturing, .thinking, .speaking, .followUpReady] {
-            try harness.apply(.continueFlow)
+            try harness.apply(.advancePhase)
             #expect(harness.phase == expected)
         }
         #expect(harness.observableState.answer == "Open the File menu, then choose New Window.")

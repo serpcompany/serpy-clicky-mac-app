@@ -1,17 +1,64 @@
 #!/bin/zsh
 set -euo pipefail
 
-for check_name in core-tests app-build; do
-  fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/serpy-headless.XXXXXX")
-  find "$fixture_root" -depth -delete
+temp_parent=$(cd "${TMPDIR:-/tmp}" && pwd -P)
 
+for check_name in core-tests app-build; do
+  fixture_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+  find "$fixture_root" -depth -delete
   set +e
   SERPY_HARNESS_ROOT=$fixture_root SERPY_INJECT_FAILURE=$check_name \
     scripts/run-headless-check.sh "$check_name" >/dev/null 2>&1
   run_status=$?
   set -e
-
   [[ $run_status -eq 86 ]] || { print -u2 "$check_name injected failure did not fail predictably"; exit 1; }
   [[ ! -e $fixture_root ]] || { print -u2 "$check_name left its owned temp root behind"; exit 1; }
 done
-print "headless runner red-capability and cleanup: PASS"
+
+traversal_base=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+set +e
+SERPY_HARNESS_ROOT="$traversal_base/../../serpy-runner-escape" \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1
+traversal_status=$?
+set -e
+find "$traversal_base" -depth -delete
+[[ $traversal_status -eq 64 ]] || { print -u2 "traversal-shaped root was not rejected"; exit 1; }
+
+timeout_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$timeout_root" -depth -delete
+timeout_marker=$(uuidgen)
+set +e
+SERPY_HARNESS_ROOT=$timeout_root SERPY_RUNNER_FIXTURE=ignore-term \
+  SERPY_TEST_SESSION_ID=$timeout_marker SERPY_WALL_SECONDS=1 \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1
+timeout_status=$?
+set -e
+[[ $timeout_status -eq 75 ]] || { print -u2 "TERM-ignoring fixture did not hit the budget"; exit 1; }
+[[ ! -e $timeout_root ]] || { print -u2 "timed-out fixture root survived"; exit 1; }
+! pgrep -f "[s]erpy-runner-fixture-$timeout_marker" >/dev/null || {
+  print -u2 "TERM-ignoring descendant survived escalation"; exit 1
+}
+
+interrupt_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$interrupt_root" -depth -delete
+interrupt_marker=$(uuidgen)
+SERPY_HARNESS_ROOT=$interrupt_root SERPY_RUNNER_FIXTURE=ignore-term \
+  SERPY_TEST_SESSION_ID=$interrupt_marker SERPY_WALL_SECONDS=60 \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1 &
+runner_pid=$!
+for _ in {1..30}; do
+  pgrep -f "[s]erpy-runner-fixture-$interrupt_marker" >/dev/null && break
+  sleep 0.1
+done
+kill -TERM "$runner_pid"
+set +e
+wait "$runner_pid"
+interrupt_status=$?
+set -e
+[[ $interrupt_status -eq 143 ]] || { print -u2 "interrupted runner returned $interrupt_status"; exit 1; }
+[[ ! -e $interrupt_root ]] || { print -u2 "interrupted fixture root survived"; exit 1; }
+! pgrep -f "[s]erpy-runner-fixture-$interrupt_marker" >/dev/null || {
+  print -u2 "interrupted descendant survived teardown"; exit 1
+}
+
+print "headless runner rejection, red-capability, escalation, and cleanup: PASS"

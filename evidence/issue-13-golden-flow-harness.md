@@ -26,6 +26,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   fixture existed.
 - Injected `core-tests` and `app-build` failures each exit 86. The self-test
   proves the owned temporary root is removed after either failure.
+- The runner self-test rejects a traversal-shaped override, forces a
+  TERM-ignoring descendant through bounded TERM-to-KILL escalation, interrupts
+  a live owned group, and proves no descendant or run directory survives.
 
 ## Local results
 

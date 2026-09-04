@@ -24,7 +24,7 @@ class GoldenUITestCase: XCTestCase {
             try? FileManager.default.removeItem(at: sessionRoot)
             XCTAssertFalse(FileManager.default.fileExists(atPath: sessionRoot.path))
         }
-        application.launchArguments = ["--golden-flow=\(flow)"]
+        application.launchArguments = ["--ui-testing", "--golden-flow=\(flow)"]
         application.launchEnvironment = [
             "SENTRY_DSN": "",
             "SENTRY_ENVIRONMENT": "ui-test",

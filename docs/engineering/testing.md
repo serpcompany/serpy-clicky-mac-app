@@ -44,8 +44,10 @@ directory on success, failure, or interruption. Use
 `scripts/run-headless-check.sh core-tests` for the package suite and
 `scripts/run-headless-check.sh app-build` for unsigned production-app and
 golden-UI-bundle compilation. `scripts/test-headless-check.sh` deliberately
-injects a failure and proves the owned directory is still removed. Neither
-command launches an application.
+injects failures, rejects traversal-shaped roots, interrupts a run, and proves
+that TERM-ignoring descendants are killed and the owned directory is removed.
+Each command owns a new process group with a 30-minute wall limit and an 8 GiB
+disk limit. Neither command launches an application.
 
 ### Isolated UI lane
 

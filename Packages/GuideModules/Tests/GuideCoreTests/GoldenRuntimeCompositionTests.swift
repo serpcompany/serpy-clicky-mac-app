@@ -5,10 +5,17 @@ import Testing
 struct GoldenRuntimeCompositionTests {
     @Test("GT-UF00-001 UI runtime is selected before composition")
     func uiRuntimeSelection() {
-        let runtime = AppRuntimeMode.resolve(arguments: ["serpy", "--ui-testing"])
+        let runtime = try? GoldenHostRuntimeContract.resolve(arguments: ["serpy", "--ui-testing"])
 
         #expect(runtime == .uiTest)
         #expect(runtime.capabilities == [.deterministicFixtures, .ephemeralStorage])
+    }
+
+    @Test("GT-UF00-004 Golden host refuses to compose without UI runtime")
+    func goldenHostRefusesProductionRuntime() {
+        #expect(throws: GoldenHostRuntimeError.uiTestingArgumentRequired) {
+            try GoldenHostRuntimeContract.resolve(arguments: ["serpy"])
+        }
     }
 
     @Test("GT-UF00-002 UI runtime rejects production capabilities")

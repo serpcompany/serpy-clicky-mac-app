@@ -37,3 +37,17 @@ public enum AppRuntimeMode: Equatable, Sendable {
         }
     }
 }
+
+public enum GoldenHostRuntimeError: Error, Equatable, Sendable {
+    case uiTestingArgumentRequired
+}
+
+public enum GoldenHostRuntimeContract {
+    public static func resolve(arguments: [String]) throws -> AppRuntimeMode {
+        let mode = AppRuntimeMode.resolve(arguments: arguments)
+        guard mode == .uiTest else {
+            throw GoldenHostRuntimeError.uiTestingArgumentRequired
+        }
+        return mode
+    }
+}
