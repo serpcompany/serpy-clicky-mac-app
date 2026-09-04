@@ -57,6 +57,43 @@ create-mode action, mode testing, and a global change-mode shortcut. Version 1
 requires the existing plain Dictation path; custom mode creation and cloud text
 processing are later features.
 
+#### Default voice-to-text mode
+
+![Superwhisper Default mode](images/superwhisper/mode-default.jpg)
+
+Observed: the Default mode drills into a Voice to text preset, language, voice
+model, optional app/site activation, mode-specific recording shortcut, and
+advanced controls for playback during recording, system-audio recording,
+speaker identification, automatic capitalization, auto paste, and deletion.
+
+Version 1 functional reference: plain voice-to-text, the existing local voice
+model, and automatic insertion. App-specific activation, system-audio capture,
+speaker identification, and Settings parity are later work.
+
+#### Message processing mode
+
+![Superwhisper Message mode](images/superwhisper/mode-message.jpg)
+
+Observed: the Message preset adds a casual-to-formal tone control and a separate
+language model to the same voice-model, activation, shortcut, playback,
+system-audio, speaker, capitalization, auto-paste, and deletion controls.
+
+This confirms that Superwhisper separates transcription from optional text
+processing. Version 1 serpy Dictation stays local and does not depend on a
+language model; Guide remains a separate capability.
+
+#### Voice-model picker
+
+![Superwhisper voice-model picker](images/superwhisper/voice-model-picker.jpg)
+
+Observed: a searchable model picker distinguishes cloud entries, downloadable
+local entries, installed entries, language variants, and the current selection.
+The captured lower section includes Whisper Large, Medium, Small, Base, and Tiny
+variants.
+
+The picker is reference evidence for a replaceable voice-model boundary. Adding
+model selection/download UI is not part of Version 1 stabilization.
+
 ### Vocabulary
 
 The supplied Vocabulary capture is intentionally not committed because it
