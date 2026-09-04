@@ -12,6 +12,11 @@ Version 1 stabilizes the two capabilities already present in the app:
 2. **Guide** — HeyClicky-style voice conversation, screen-aware answers, and
    progressive visual guidance.
 
+HeyClicky is the sole Guide reference product. Its installed app, the owner's
+Issue #7 recording, public product material, and pinned historical MIT source
+are one reference family. Do not add Frigade Assistant or another assistant as
+an additional Guide reference. Yap remains a Dictation-only code donor.
+
 Version 1 adds no new product area. Onboarding redesign, payments, accounts,
 expanded Settings/options, selected-keyboard language support, automatic
 language detection, changed history defaults, Window Manager, Shortcut Coach,

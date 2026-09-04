@@ -37,9 +37,13 @@ screenshots, document content, identity, or arbitrary error strings.
   sync, billing, product analytics, pets, widgets, browser control, or MCP in
   the product. The only approved cloud paths are the request-scoped Talk
   adapter and development-only Sentry pilot described above.
-- Use installed HeyClicky as the UX/behavior oracle. The historical public MIT
-  source `farzaa/clicky@a80fa80721a8aebe51a170a7780705024ebc6e46` is an approved
-  donor for Version 1; follow `PROVENANCE.md` for attribution and separation.
+- **Guide has one reference product family: HeyClicky.** Use the installed app,
+  the owner's Issue #7 recording, and the historical public MIT source
+  `farzaa/clicky@a80fa80721a8aebe51a170a7780705024ebc6e46`. Do not introduce
+  Frigade Assistant or any other assistant as a Guide behavior, UX, or code
+  reference. Follow `PROVENANCE.md` for attribution and separation.
+- FrigadeHQ/Yap is approved only for Dictation implementation. Its publisher
+  relationship to Frigade does not make Frigade Assistant a Guide reference.
 - Preserve serpy identity and use only the approved historical source revision;
   later private HeyClicky code, credentials, signing, services, and release
   configuration are outside the donor boundary.

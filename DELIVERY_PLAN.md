@@ -19,7 +19,9 @@ recovery, quit, and relaunch without a permission loop or duplicate process.
 
 Use installed HeyClicky and the Issue #7 Clipy recording as the UX/behavior
 oracle. The pinned historical MIT Clicky revision in `PROVENANCE.md` is an
-approved implementation donor.
+approved implementation donor. This is the sole Guide reference family: do not
+introduce Frigade Assistant or any other assistant product. FrigadeHQ/Yap is a
+Dictation-only donor.
 
 Reproduce and fix the existing Guide workflow in vertical slices: lifecycle,
 compact phase UI, target lock, two-step Chrome walkthrough, progression, safe

@@ -4,17 +4,21 @@
 
 | Reference | Role |
 | --- | --- |
-| Installed `/Applications/HeyClicky.app` | Version 1 UX and behavior oracle |
-| `https://github.com/farzaa/clicky` at `a80fa80721a8aebe51a170a7780705024ebc6e46` | Approved MIT source donor for Dictation/Guide stabilization |
+| Installed `/Applications/HeyClicky.app`, the owner's Issue #7 recording, and HeyClicky's public product material | Sole Version 1 Guide UX and behavior oracle |
+| `https://github.com/farzaa/clicky` at `a80fa80721a8aebe51a170a7780705024ebc6e46` | Approved MIT source donor from the same HeyClicky product family |
 | `https://github.com/FrigadeHQ/yap` at `5f06bb1aa889abaa064b09a9bf33aff984dc1583` | Approved primary MIT donor for the macOS 26 Dictation pipeline |
 | `https://github.com/Starmel/OpenSuperWhisper` at `bef6bc0421d0c010e8f2fb4288c0d74978c8b964` | Approved secondary MIT donor for recording lifecycle, stop-tail, and pasteboard behavior |
 | `https://github.com/human37/open-wispr` at `7ab4e62e8f182f3ecc2116e1094a1eb4416a248f` | Approved secondary MIT donor for lifecycle and insertion tests |
-| OpenClicky | Secondary behavioral/source reference when the approved donor lacks the required behavior |
 | Superwhisper public behavior | Dictation outcome benchmark only |
 
 The owner approved source-first reuse of these pinned donor revisions for
 Version 1. An implementation agent does not need another permission decision
 before using code from those exact revisions.
+
+Guide work must not use a second assistant product to fill perceived gaps.
+HeyClicky is the only Guide product reference. Frigade Assistant is explicitly
+excluded from Guide research and implementation; Yap's approval is limited to
+Dictation code.
 
 ## Required import record
 

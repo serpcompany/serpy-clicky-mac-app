@@ -3,6 +3,10 @@
 > Historical evidence: current Version 1 scope is
 > `docs/product/version-1-stabilization.md`; current source reuse permission is
 > defined only by `PROVENANCE.md`.
+>
+> This record is not a Guide behavior, UX, architecture, or code reference.
+> HeyClicky is the sole Guide reference product family. Do not use OpenClicky
+> to resolve an implementation decision.
 
 ## Purpose
 

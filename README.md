@@ -37,7 +37,7 @@ Status: Version 1 stabilization is tracked by
 The historical `v0.1.0-beta.1` artifact does not satisfy the current functional
 acceptance gate. Public distribution remains separately approval-gated.
 
-## Source-of-Truth References
+## Historical non-controlling records
 
 - [OpenClicky evaluation record](docs/reference/openclicky-evaluation.md)
 - Prior clean-room evidence workspace:
@@ -45,4 +45,6 @@ acceptance gate. Public distribution remains separately approval-gated.
 - Recorded OpenClicky findings:
   `https://github.com/devinschumacher/openclicky-internal-releases/issues`
 
-These records are evidence inputs. They are not dependencies of this repo.
+These records are retained only for archaeology. They are not Guide references,
+implementation inputs, or dependencies. HeyClicky is the sole Guide reference
+product family under `PROVENANCE.md`.
