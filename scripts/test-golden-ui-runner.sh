@@ -23,13 +23,26 @@ done
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"
+cleanup_marker="/private/tmp/serpy-ui-cleanup-marker.$marker"
 set +e
-SERPY_UI_RUNNER_FIXTURE=command-fails SERPY_TEST_SESSION_ID=$marker \
+SERPY_UI_RUNNER_FIXTURE=command-fails-top-level SERPY_TEST_SESSION_ID=$marker \
+  SERPY_UI_CLEANUP_MARKER="$cleanup_marker" \
   scripts/run-golden-ui-test.sh focused GuideCompanionUITests/Fixture/never "$result" >/dev/null 2>&1
 command_status=$?
 set -e
 [[ $command_status -eq 65 ]] || { print -u2 "nonzero command fixture returned $command_status"; exit 1; }
+[[ $(<"$cleanup_marker") == "cleanup-complete status=65 root-absent=true" ]] || {
+  print -u2 "nonzero command did not synchronously complete cleanup"; exit 1
+}
+rm "$cleanup_marker"
 assert_clean "$marker" "$result"
+
+/usr/bin/grep -Fq 'TEST_RUNNER_SERPY_XCUI_PARENT="$run_root"' scripts/run-golden-ui-test.sh
+/usr/bin/grep -Fq 'TEST_RUNNER_SERPY_XCUI_RUN_TOKEN="$run_token"' scripts/run-golden-ui-test.sh
+if /usr/bin/grep -Fq 'env SERPY_XCUI_PARENT=' scripts/run-golden-ui-test.sh; then
+  print -u2 "runner authorization variables bypass TEST_RUNNER_ propagation"
+  exit 1
+fi
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"

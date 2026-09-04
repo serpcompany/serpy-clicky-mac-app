@@ -97,6 +97,16 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   one minute before any flow assertion. The cross-process root contract is now
   headlessly regression-tested; executed UI proof remains red until a new
   explicitly authorized run.
+- The second owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-run2.xcresult` (generated and ignored). It
+  executed one test and failed immediately with `invalidIdentity` before app
+  launch because the local wrapper supplied its two authorization values to
+  `xcodebuild`, not to the XCTest runner. The wrapper now uses Apple's required
+  `TEST_RUNNER_` prefix, while XCTest continues to forward the validated
+  session values explicitly to the app. The same run exposed a separate zsh
+  top-level nonzero-exit path that skipped the EXIT trap and retained its build
+  root; the adversarial runner test now exercises that exact path with a deep,
+  3.5 GiB sparse build tree and requires synchronous cleanup before exit.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

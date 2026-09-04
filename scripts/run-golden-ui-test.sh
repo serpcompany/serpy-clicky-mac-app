@@ -63,14 +63,21 @@ cleanup() {
   for app in "$run_root/DerivedData/Build/Products/Debug/SERPy.app" "$run_root/DerivedData/Build/Products/Debug/GuideCompanionUITests-Runner.app"; do
     [[ -d "$app" ]] && "$launch_services" -u "$app" 2>/dev/null || true
   done
-  for _ in {1..3}; do
+  for _ in {1..5}; do
+    /bin/chmod -RN "$run_root" 2>/dev/null || true
     find "$run_root" -depth -delete 2>/dev/null || true
     [[ ! -e "$run_root" ]] && break
-    sleep 0.2
+    sleep 0.5
   done
   if [[ -e "$run_root" ]]; then
+    if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level && -n ${SERPY_UI_CLEANUP_MARKER:-} ]]; then
+      /usr/bin/printf '%s' "cleanup-failed status=$original_status root-absent=false" > "$SERPY_UI_CLEANUP_MARKER"
+    fi
     print -u2 "owned UI run root survived teardown: $run_root"
     exit 74
+  fi
+  if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level && -n ${SERPY_UI_CLEANUP_MARKER:-} ]]; then
+    /usr/bin/printf '%s' "cleanup-complete status=$original_status root-absent=true" > "$SERPY_UI_CLEANUP_MARKER"
   fi
   exit "$original_status"
 }
@@ -134,10 +141,24 @@ if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == leader-exits ]]; then
   if run_bounded /bin/zsh -c '(trap "" TERM; while true; do sleep 1; done) & exit 0' "serpy-ui-runner-$fixture_marker"; then exit 0; else exit $?; fi
 fi
 
-if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails ]]; then
+if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level ]]; then
   fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
-  if run_bounded /bin/zsh -c '/bin/mkdir -p "$1/DerivedData/Build/Products/Debug"; /usr/bin/mkfile -n 64m "$1/DerivedData/Build/Products/Debug/nonzero.fixture"; exit 65' "serpy-ui-runner-$fixture_marker" "$run_root"; then exit 0; else exit $?; fi
+  ui_command=(/bin/zsh -c '
+    /bin/mkdir -p "$1/DerivedData/Build/Products/Debug"
+    /bin/dd if=/dev/zero of="$1/DerivedData/Build/Products/Debug/nonzero.fixture" bs=1 count=0 seek=3758096384 2>/dev/null
+    for directory in {1..64}; do
+      /bin/mkdir -p "$1/DerivedData/Build/Intermediates.noindex/$directory"
+      for file in {1..64}; do
+        : > "$1/DerivedData/Build/Intermediates.noindex/$directory/$file"
+      done
+    done
+    exit 65
+  ' "serpy-ui-runner-$fixture_marker" "$run_root")
+else
+  ui_command=(/usr/bin/env TEST_RUNNER_SERPY_XCUI_PARENT="$run_root" TEST_RUNNER_SERPY_XCUI_RUN_TOKEN="$run_token" xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
 fi
-
-ui_command=(/usr/bin/env SERPY_XCUI_PARENT="$run_root" SERPY_XCUI_RUN_TOKEN="$run_token" xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
-run_bounded "${ui_command[@]}"
+if run_bounded "${ui_command[@]}"; then
+  exit 0
+else
+  exit $?
+fi
