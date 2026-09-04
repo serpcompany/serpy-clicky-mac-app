@@ -60,8 +60,11 @@ final class LocalGuidanceProviderContractTests: XCTestCase {
             _ = try await service.answer(question: "Open a window", context: context)
             XCTFail("Expected malformed plan failure")
         } catch {
-            XCTAssertEqual((error as? GuideFailure)?.stage, .guidance)
-            XCTAssertTrue((error as? GuideFailure)?.recovery.contains("incomplete steps") == true)
+            let failure = error as? GuideFailure
+            XCTAssertEqual(failure?.stage, .guidance)
+            XCTAssertEqual(failure?.code, .guidancePlanMalformed)
+            XCTAssertEqual(failure?.provider, .local)
+            XCTAssertTrue(failure?.recovery.contains("incomplete steps") == true)
         }
     }
 

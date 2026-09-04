@@ -268,7 +268,9 @@ transcript.
 - Audio history is a separate opt-in and is never enabled implicitly.
 - Transcript and audio files use owner-only permissions and are excluded from
   backups. Screenshots are never stored.
-- No account, telemetry SDK, analytics identifier, or localhost control bridge.
+- No product account, analytics identifier, or localhost control bridge. The
+  development-only handled-error Sentry seam is constrained by ADR 0007 and is
+  inactive when no runtime DSN is present.
 - Logs contain session IDs, durations, stages, and error categories—not content.
 
 ## Release Shape

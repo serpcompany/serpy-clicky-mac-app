@@ -12,11 +12,20 @@ let package = Package(
         .library(name: "GuideMac", targets: ["GuideMac"]),
         .library(name: "GuideUI", targets: ["GuideUI"])
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/getsentry/sentry-cocoa.git",
+            exact: "9.27.0"
+        )
+    ],
     targets: [
         .target(name: "GuideCore"),
         .target(
             name: "GuideMac",
-            dependencies: ["GuideCore"]
+            dependencies: [
+                "GuideCore",
+                .product(name: "Sentry", package: "sentry-cocoa")
+            ]
         ),
         .target(
             name: "GuideUI",

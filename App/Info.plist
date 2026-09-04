@@ -30,6 +30,10 @@
     <string>SERPy captures the screen only when you explicitly ask for visual guidance.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>SERPy uses Apple's on-device speech recognizer to turn your voice into text.</string>
+    <key>SentryDSN</key>
+    <string>$(SENTRY_DSN)</string>
+    <key>SentryEnvironment</key>
+    <string>$(SENTRY_ENVIRONMENT)</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>

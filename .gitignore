@@ -5,11 +5,13 @@
 .release-derived/
 .xcode-test-derived/
 .issue7-test-derived/
+.debug-derived/
 DerivedData/
 build/
 dist/
 *.xcuserstate
 xcuserdata/
+default.profraw
 
 # Downloaded local models are versioned by manifest, not committed as binaries.
 Models/

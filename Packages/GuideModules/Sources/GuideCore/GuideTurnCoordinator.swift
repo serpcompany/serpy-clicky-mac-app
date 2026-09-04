@@ -179,6 +179,7 @@ public final class GuideTurnCoordinator {
     private let generation: any GuideTurnGenerating
     private let speech: any GuideTurnSpeaking
     private let overlay: any GuideTurnOverlayPresenting
+    private let incidentReporter: any DiagnosticIncidentReporting
     private let transcriptPreview = GuidanceLiveTranscriptPreview()
     private let failurePolicy = GuideTurnFailurePolicy()
     private var activeTurnTask: Task<Void, Never>?
@@ -195,13 +196,15 @@ public final class GuideTurnCoordinator {
         transcription: any GuideTurnTranscribing,
         generation: any GuideTurnGenerating,
         speech: any GuideTurnSpeaking,
-        overlay: any GuideTurnOverlayPresenting
+        overlay: any GuideTurnOverlayPresenting,
+        incidentReporter: any DiagnosticIncidentReporting = NullDiagnosticIncidentReporter()
     ) {
         self.capture = capture
         self.transcription = transcription
         self.generation = generation
         self.speech = speech
         self.overlay = overlay
+        self.incidentReporter = incidentReporter
     }
 
     public func start() throws {
@@ -426,6 +429,9 @@ public final class GuideTurnCoordinator {
                     message: error.localizedDescription,
                     recovery: "Try again."
                 )
+                if failure.code != .unclassified {
+                    incidentReporter.report(DiagnosticIncident(failure: failure))
+                }
                 phase = .failed(failure)
                 let readable = lastReadablePresentation
                 presentOverlay(.init(

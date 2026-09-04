@@ -7,6 +7,21 @@ import SwiftUI
 @MainActor
 private enum GuideAppComposition {
     static let model: GuideAppModel = {
+        let environment = ProcessInfo.processInfo.environment
+        let sentryConfiguration = SentryRuntimeConfiguration.resolve(
+            processEnvironment: environment,
+            bundleInfo: Bundle.main.infoDictionary ?? [:]
+        )
+        let sentryEnabled = sentryConfiguration.map {
+            SentryDiagnosticBootstrap.startIfConfigured(
+                dsn: $0.dsn,
+                environment: $0.environment,
+                debug: $0.debug
+            )
+        } ?? false
+        let incidentReporter: any DiagnosticIncidentReporting = sentryEnabled
+            ? SentryDiagnosticReporter()
+            : NullDiagnosticIncidentReporter()
         let local = LocalGuidanceService()
         let credentialStore = KeychainTalkCredentialStore()
         let credentialVerifier = OpenAITalkCredentialVerifier()
@@ -22,6 +37,7 @@ private enum GuideAppComposition {
             talkCredentialVerifier: credentialVerifier,
             talkVerificationExpirySleeper: SystemTalkVerificationExpirySleeper(),
             talkGenerator: router,
+            incidentReporter: incidentReporter,
             shortcutMonitorFactory: makeShortcutMonitor
         )
     }()
@@ -89,6 +105,10 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
             if CommandLine.arguments.contains("--ui-testing"),
                CommandLine.arguments.contains("--open-guide-transcript") {
                 GuideAppComposition.model.openGuidanceTranscript()
+            }
+            if CommandLine.arguments.contains("--ui-testing"),
+               CommandLine.arguments.contains("--guide-fixture=malformed-plan") {
+                GuideAppComposition.model.presentMalformedGuidanceFixtureForTesting()
             }
         }
     }

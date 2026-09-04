@@ -154,11 +154,19 @@ final class OpenAIMultimodalAdapterTests: XCTestCase {
     func testSSEDecoderRejectsMalformedOrMissingRequiredAnswer() throws {
         var missing = OpenAIResponsesSSEDecoder()
         _ = try missing.consume(line: #"data: {"type":"response.output_text.delta","delta":"{\"point\":null}"}"#)
-        XCTAssertThrowsError(try missing.consume(line: #"data: {"type":"response.completed"}"#))
+        XCTAssertThrowsError(try missing.consume(line: #"data: {"type":"response.completed"}"#)) { error in
+            let failure = error as? GuideFailure
+            XCTAssertEqual(failure?.code, .guidancePlanMalformed)
+            XCTAssertEqual(failure?.provider, .openAI)
+        }
 
         var malformed = OpenAIResponsesSSEDecoder()
         _ = try malformed.consume(line: #"data: {"type":"response.output_text.delta","delta":"{\"answer\":"}"#)
-        XCTAssertThrowsError(try malformed.consume(line: #"data: {"type":"response.completed"}"#))
+        XCTAssertThrowsError(try malformed.consume(line: #"data: {"type":"response.completed"}"#)) { error in
+            let failure = error as? GuideFailure
+            XCTAssertEqual(failure?.code, .guidancePlanMalformed)
+            XCTAssertEqual(failure?.provider, .openAI)
+        }
     }
 
     func testSSEDecoderPreservesCombiningMarksAndEmojiZWJAcrossDeltaBoundaries() throws {

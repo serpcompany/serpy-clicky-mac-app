@@ -22,12 +22,20 @@ Ordinary dictation remains local. This exception does not authorize live API
 spend during automated work, hosted accounts, sync, analytics, autonomous
 computer control, or persistence of guide content.
 
+On 2026-09-04 the owner also authorized a development-only Sentry pilot for
+allowlisted handled failures and agent-assisted QA. Follow ADR 0007. The DSN is
+injected at runtime and never committed. This does not authorize production or
+private-beta telemetry, product analytics, automatic GitHub writes, autonomous
+merge/release, or transmission of questions, transcripts, model output,
+screenshots, document content, identity, or arbitrary error strings.
+
 ## Hard Boundaries
 
 - Dictation must not depend on an assistant engine, API key, or network.
-- Do not add autonomous computer use, shell execution, agents, accounts, sync,
-  billing, analytics, pets, widgets, browser control, or MCP. The only allowed
-  cloud provider is the explicitly enabled, request-scoped Talk adapter above.
+- Do not embed autonomous computer use, shell execution, agents, accounts,
+  sync, billing, product analytics, pets, widgets, browser control, or MCP in
+  the product. The only approved cloud paths are the request-scoped Talk
+  adapter and development-only Sentry pilot described above.
 - Do not copy or decompile HeyClicky code, assets, private protocols, or product
   identity. Use it only as observable behavioral evidence.
 - Do not import OpenClicky code without completing the gate in `PROVENANCE.md`.

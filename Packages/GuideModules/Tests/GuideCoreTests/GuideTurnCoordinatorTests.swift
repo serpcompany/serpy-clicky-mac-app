@@ -180,6 +180,34 @@ final class GuideTurnCoordinatorTests: XCTestCase {
         XCTAssertEqual(overlay.scheduledRestoreDelays, [.seconds(4)])
     }
 
+    func testClassifiedFailureReportsOneContentFreeDiagnosticIncident() async throws {
+        let events = EventRecorder()
+        let target = fixtureTarget
+        let reporter = RecordingDiagnosticIncidentReporter()
+        let failure = GuideFailure(
+            stage: .guidance,
+            code: .guidancePlanMalformed,
+            provider: .local,
+            message: "SECRET-QUESTION-MUST-NOT-BE-REPORTED",
+            recovery: "SECRET-RESPONSE-MUST-NOT-BE-REPORTED"
+        )
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: fixtureContext(target), events: events),
+            transcription: FakeTranscription(result: "Where is it?", events: events),
+            generation: FailingGeneration(failure: failure),
+            speech: FakeSpeech(events: events),
+            overlay: FakeOverlay(events: events),
+            incidentReporter: reporter
+        )
+
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        XCTAssertEqual(reporter.incidents, [DiagnosticIncident(failure: failure)])
+    }
+
     func testCancellingWhileThinkingDiscardsTheUnfinishedTurn() async throws {
         let events = EventRecorder()
         let target = fixtureTarget
@@ -739,6 +767,31 @@ private final class FakeGeneration: GuideTurnGenerating {
         events.values.append("generation")
         receivedContexts.append(context)
         return GuidancePlan(answer: answer, confidence: 0.7)
+    }
+}
+
+@MainActor
+private final class FailingGeneration: GuideTurnGenerating {
+    let failure: GuideFailure
+
+    init(failure: GuideFailure) {
+        self.failure = failure
+    }
+
+    func answer(
+        question: String,
+        context: ScreenContext,
+        conversation: [GuidanceMessage]
+    ) async throws -> GuidancePlan {
+        throw failure
+    }
+}
+
+private final class RecordingDiagnosticIncidentReporter: DiagnosticIncidentReporting {
+    var incidents: [DiagnosticIncident] = []
+
+    func report(_ incident: DiagnosticIncident) {
+        incidents.append(incident)
     }
 }
 

@@ -78,6 +78,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private let talkCredentialVerifier: any TalkCredentialVerifying
     @ObservationIgnored private let talkVerificationExpirySleeper: any TalkVerificationExpirySleeping
     @ObservationIgnored private let talkGenerator: TalkGenerationRouter
+    @ObservationIgnored private let incidentReporter: any DiagnosticIncidentReporting
     @ObservationIgnored private var verifiedTalkCredential: String?
     @ObservationIgnored private var talkCredentialGeneration = 0
     @ObservationIgnored private var talkVerificationExpiryTask: Task<Void, Never>?
@@ -96,7 +97,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         transcription: AppleSpeechGuideTurnTranscriber(transcriber: guidanceTranscriber),
         generation: talkGenerator,
         speech: LocalGuideTurnSpeaker(speaker: guidanceSpeaker),
-        overlay: self
+        overlay: self,
+        incidentReporter: incidentReporter
     )
     @ObservationIgnored private var started = false
 
@@ -121,6 +123,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         talkCredentialVerifier: any TalkCredentialVerifying,
         talkVerificationExpirySleeper: any TalkVerificationExpirySleeping,
         talkGenerator: TalkGenerationRouter,
+        incidentReporter: any DiagnosticIncidentReporting = NullDiagnosticIncidentReporter(),
         shortcutMonitorFactory: @escaping ShortcutMonitorFactory
     ) {
         self.defaults = defaults
@@ -135,6 +138,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         self.talkCredentialStore = talkCredentialStore
         self.talkCredentialVerifier = talkCredentialVerifier
         self.talkVerificationExpirySleeper = talkVerificationExpirySleeper
+        self.incidentReporter = incidentReporter
         self.shortcutMonitorFactory = shortcutMonitorFactory
         let provider = TalkProviderSelection(
             rawValue: defaults.string(forKey: Keys.talkProvider) ?? ""
@@ -781,6 +785,21 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentGuidanceCaption(failure.message, mode: .error)
     }
 
+    public func presentMalformedGuidanceFixtureForTesting() {
+        let failure = GuideFailure(
+            stage: .guidance,
+            code: .guidancePlanMalformed,
+            provider: .local,
+            message: "The local guide returned malformed structured guidance.",
+            recovery: "Try the question again. SERPy did not present incomplete steps."
+        )
+        incidentReporter.report(DiagnosticIncident(failure: failure))
+        guidancePhase = .failed(failure)
+        statusMessage = failure.message
+        recoveryMessage = failure.recovery
+        presentGuidanceCaption(failure.message, mode: .error, autoDismiss: false)
+    }
+
     public func cancelDictation() {
         guard phase.isActive else { return }
         transcriber.cancel()
@@ -1203,7 +1222,11 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         scheduleReset(after: hasRecoverableTranscript ? 12 : 4)
     }
 
-    private func presentGuidanceCaption(_ text: String, mode: CompanionMode) {
+    private func presentGuidanceCaption(
+        _ text: String,
+        mode: CompanionMode,
+        autoDismiss: Bool = true
+    ) {
         presentation.mode = mode
         if mode == .success {
             presentation.responseText = text
@@ -1214,7 +1237,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.caption = text
         applyCompanionVisibility()
         companionController.refresh()
-        guard mode != .success else { return }
+        guard mode != .success, autoDismiss else { return }
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))
             guard let self, !guidancePhase.isActive else { return }

@@ -18,19 +18,34 @@ public struct SettingsView: View {
     }
 
     public var body: some View {
-        TabView(selection: $selectedTab) {
-            setupForm
-                .tabItem { Label("Setup", systemImage: "checklist") }
-                .tag(SettingsTab.setup)
-            guidanceForm
-                .tabItem { Label("Guidance", systemImage: "sparkles.rectangle.stack") }
-                .tag(SettingsTab.guidance)
-            historyForm
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-                .tag(SettingsTab.history)
-            privacyForm
-                .tabItem { Label("Privacy", systemImage: "hand.raised") }
-                .tag(SettingsTab.privacy)
+        VStack(spacing: 10) {
+            if case let .failed(failure) = model.guidancePhase {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(failure.message, systemImage: "exclamationmark.triangle.fill")
+                        .font(.headline)
+                    Text(failure.recovery)
+                        .font(.caption)
+                }
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            }
+
+            TabView(selection: $selectedTab) {
+                setupForm
+                    .tabItem { Label("Setup", systemImage: "checklist") }
+                    .tag(SettingsTab.setup)
+                guidanceForm
+                    .tabItem { Label("Guidance", systemImage: "sparkles.rectangle.stack") }
+                    .tag(SettingsTab.guidance)
+                historyForm
+                    .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+                    .tag(SettingsTab.history)
+                privacyForm
+                    .tabItem { Label("Privacy", systemImage: "hand.raised") }
+                    .tag(SettingsTab.privacy)
+            }
         }
         .padding()
         .frame(minWidth: 640, minHeight: 560)

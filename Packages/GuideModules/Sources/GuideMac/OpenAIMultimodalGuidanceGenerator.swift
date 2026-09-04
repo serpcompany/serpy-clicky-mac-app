@@ -253,6 +253,8 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
             else {
                 throw GuideFailure(
                     stage: .guidance,
+                    code: .guidancePlanMalformed,
+                    provider: .openAI,
                     message: "OpenAI Talk returned malformed structured guidance.",
                     recovery: "Try the question again. SERPy did not present an incomplete answer."
                 )
@@ -338,6 +340,8 @@ public struct OpenAIResponsesSSEDecoder: Sendable {
     private static var malformedPlanFailure: GuideFailure {
         GuideFailure(
             stage: .guidance,
+            code: .guidancePlanMalformed,
+            provider: .openAI,
             message: "OpenAI Talk returned a malformed guidance plan.",
             recovery: "Try the question again. SERPy did not present incomplete steps."
         )
