@@ -36,16 +36,27 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   production-capability exclusion contract.
 - Injected `core-tests` and `app-build` failures each exit 86. The self-test
   proves the owned temporary root is removed after either failure.
-- The runner self-test rejects a traversal-shaped override, forces a
-  TERM-ignoring descendant through bounded TERM-to-KILL escalation, interrupts
-  a live owned group, and proves no descendant or run directory survives.
+- The focused-XCUI runner self-test rejects full-suite and outside-evidence
+  invocations, forces TERM-ignoring and leader-exit descendants through bounded
+  TERM-to-KILL escalation, interrupts a live owned group, and proves no
+  descendant or run directory survives.
+- UI session-root tests reject matching-name roots outside the canonical system
+  temporary directory and symlinked parents. Both the parent and direct-child
+  root require a UUID-matched owner token.
+- The actual UI-test model audit is derived from the concrete constructed
+  adapter types. It asserts the exact deterministic type set and rejects any
+  production Keychain, Sentry, microphone, TCC, network, global-shortcut, or
+  persistent-data adapter.
+- The Last Dictation fixture persists into the session's ephemeral JSON store;
+  its relaunch test removes the seed argument and proves restoration from that
+  store.
 
 ## Local results
 
 | Check | Result | Output retention | Cleanup |
 | --- | --- | --- | --- |
 | `scripts/test-headless-check.sh` | Green | none | Green |
-| `scripts/test-golden-ui-runner.sh` | Green; timeout fixture only, no app launch | none | Green |
+| `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green after real-app retarget; production app and XCUI bundle compiled only | none | Green |
 | `scripts/run-headless-check.sh core-tests` | Green after real-app retarget; complete package suite passed | none | Green |
 

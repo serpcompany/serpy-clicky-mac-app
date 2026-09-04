@@ -7,6 +7,8 @@ class GoldenUITestCase: XCTestCase {
     private let productBundleIdentifier = "com.serpcompany.guidecompanion.internal"
     private var preexistingProcessIDs: Set<pid_t> = []
     private(set) var sessionRoot: URL!
+    private var sessionParent: URL!
+    private var parentOwnerURL: URL!
     private var sessionID = ""
 
     func launch(
@@ -22,10 +24,15 @@ class GoldenUITestCase: XCTestCase {
         self.application = application
         if sessionRoot == nil {
             sessionID = UUID().uuidString
-            sessionRoot = FileManager.default.temporaryDirectory
+            sessionParent = FileManager.default.temporaryDirectory
+                .standardizedFileURL
+                .resolvingSymlinksInPath()
+            sessionRoot = sessionParent
                 .appendingPathComponent("serpy-real-ui-\(sessionID)")
+            parentOwnerURL = sessionParent.appendingPathComponent(".serpy-real-ui-parent-\(sessionID)")
             do {
                 try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
+                try sessionID.write(to: parentOwnerURL, atomically: true, encoding: .utf8)
                 try sessionID.write(
                     to: sessionRoot.appendingPathComponent(".serpy-real-ui-owner"),
                     atomically: true,
@@ -44,7 +51,9 @@ class GoldenUITestCase: XCTestCase {
             ).map(\.processIdentifier))
             XCTAssertEqual(remaining, self.preexistingProcessIDs)
             try? FileManager.default.removeItem(at: self.sessionRoot)
+            try? FileManager.default.removeItem(at: self.parentOwnerURL)
             XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionRoot.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: self.parentOwnerURL.path))
         }
         application.launchArguments = [
             "--ui-testing",
@@ -62,6 +71,7 @@ class GoldenUITestCase: XCTestCase {
             "SERPY_STORAGE_MODE": "memory",
             "SERPY_TEST_SESSION_ID": sessionID,
             "SERPY_TEST_ROOT": sessionRoot.path,
+            "SERPY_TEST_PARENT": sessionParent.path,
         ]
         application.launch()
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))

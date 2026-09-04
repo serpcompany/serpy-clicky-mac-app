@@ -51,6 +51,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertTrue(application.buttons["Delete"].exists)
         application.terminate()
         XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
+        application.launchArguments.removeAll { $0.hasPrefix("--recovery-variant=") }
         application.launch()
         XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
         tap("History")
@@ -71,14 +72,15 @@ final class GoldenDictationUITests: GoldenUITestCase {
         XCTAssertFalse(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 1))
     }
 
-    func test_GT_UF05_002_realRecoveryUIShowsUnconfirmedAndInterruptedStates() {
-        for variant in ["unconfirmed", "interrupted"] {
-            launch(flow: "UF-05", recoveryVariant: variant)
-            tap("History")
-            let label = variant == "interrupted" ? "Pending" : "Unconfirmed"
-            XCTAssertTrue(application.staticTexts[label].waitForExistence(timeout: 5))
-            application.terminate()
-            XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
-        }
+    func test_GT_UF05_002_realRecoveryUIShowsUnconfirmedState() {
+        launch(flow: "UF-05", recoveryVariant: "unconfirmed")
+        tap("History")
+        XCTAssertTrue(application.staticTexts["Unconfirmed"].waitForExistence(timeout: 5))
+    }
+
+    func test_GT_UF05_003_realRecoveryUIShowsInterruptedState() {
+        launch(flow: "UF-05", recoveryVariant: "interrupted")
+        tap("History")
+        XCTAssertTrue(application.staticTexts["Pending"].waitForExistence(timeout: 5))
     }
 }
