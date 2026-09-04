@@ -22,8 +22,8 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   capability contract existed.
 - `GoldenUserFlowHarnessTests` failed to compile before the observable flow
   fixture existed.
-- `SERPY_INJECT_FAILURE=core-tests` exits 86. The self-test proves the owned
-  temporary root is removed on that failure.
+- Injected `core-tests` and `app-build` failures each exit 86. The self-test
+  proves the owned temporary root is removed after either failure.
 
 ## Local results
 

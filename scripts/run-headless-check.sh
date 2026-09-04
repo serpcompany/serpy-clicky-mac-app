@@ -23,6 +23,38 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM HUP
 
+kill_owned_tree() {
+  local owned_pid=$1
+  local child
+  for child in $(pgrep -P "$owned_pid" 2>/dev/null || true); do
+    kill_owned_tree "$child"
+  done
+  kill -TERM "$owned_pid" 2>/dev/null || true
+}
+
+run_bounded() {
+  local started_at=$SECONDS
+  "$@" &
+  local owned_pid=$!
+  while kill -0 "$owned_pid" 2>/dev/null; do
+    sleep 2
+    local used_kib=$(du -sk "$run_root" | awk '{print $1}')
+    if (( used_kib > 8388608 )); then
+      print -u2 "disk budget exceeded: ${used_kib} KiB"
+      kill_owned_tree "$owned_pid"
+      wait "$owned_pid" 2>/dev/null || true
+      return 75
+    fi
+    if (( SECONDS - started_at > 1800 )); then
+      print -u2 "wall-clock budget exceeded: 1800 seconds"
+      kill_owned_tree "$owned_pid"
+      wait "$owned_pid" 2>/dev/null || true
+      return 75
+    fi
+  done
+  wait "$owned_pid"
+}
+
 if [[ ${SERPY_INJECT_FAILURE:-} == "$check_name" || (${SERPY_INJECT_FAILURE:-} == all && "$check_name" == all) ]]; then
   print -u2 "deliberate injected failure: $check_name"
   exit 86
@@ -60,9 +92,9 @@ run_app_build() {
 }
 
 case "$check_name" in
-  core-tests) run_core_tests ;;
-  app-build) run_app_build ;;
-  all) run_core_tests; run_app_build ;;
+  core-tests) run_bounded run_core_tests ;;
+  app-build) run_bounded run_app_build ;;
+  all) run_bounded run_core_tests; run_bounded run_app_build ;;
 esac
 
 used_kib=$(du -sk "$run_root" | awk '{print $1}')
