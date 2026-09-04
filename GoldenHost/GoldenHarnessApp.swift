@@ -1,3 +1,4 @@
+import Foundation
 import GuideTestSupport
 import SwiftUI
 
@@ -29,7 +30,26 @@ private struct GoldenHarnessView: View {
             .first(where: { $0.hasPrefix("--golden-flow=") })?
             .dropFirst("--golden-flow=".count)
         let flow = rawFlow.flatMap { GoldenFlowID(rawValue: String($0)) } ?? .lifecycle
-        _harness = State(initialValue: GoldenUserFlowHarness(flow: flow))
+        let rawPhase = arguments
+            .first(where: { $0.hasPrefix("--golden-phase=") })?
+            .dropFirst("--golden-phase=".count)
+        let phase = rawPhase.flatMap { GoldenHarnessPhase(rawValue: String($0)) }
+        let recoveryWasRestored: Bool
+        if flow == .recovery,
+           let root = ProcessInfo.processInfo.environment["SERPY_TEST_ROOT"] {
+            let marker = URL(fileURLWithPath: root).appendingPathComponent("last-dictation.fixture")
+            recoveryWasRestored = FileManager.default.fileExists(atPath: marker.path)
+            if !recoveryWasRestored {
+                try? Data("bounded fixture".utf8).write(to: marker, options: .atomic)
+            }
+        } else {
+            recoveryWasRestored = false
+        }
+        _harness = State(initialValue: GoldenUserFlowHarness(
+            flow: flow,
+            initialPhase: phase,
+            recoveryWasRestored: recoveryWasRestored
+        ))
     }
 
     var body: some View {
@@ -59,10 +79,15 @@ private struct GoldenHarnessView: View {
             controls
             Text("network=\(harness.observableState.networkRequestCount) keychain=\(harness.observableState.credentialStorage.rawValue)")
                 .accessibilityIdentifier("golden.safety")
+            Text("windows=\(harness.observableState.windowCount) overlays=\(harness.observableState.overlayCount) running=\(harness.observableState.applicationRunning)")
+                .accessibilityIdentifier("golden.lifecycle")
+            Text(harness.observableState.recoveryDisposition)
+                .accessibilityIdentifier("golden.recovery.disposition")
         }
         .padding(24)
         .frame(minWidth: 520, minHeight: 300)
         .accessibilityIdentifier("golden.harness")
+        .onExitCommand { try? harness.apply(.cancel) }
     }
 
     @ViewBuilder
@@ -74,6 +99,7 @@ private struct GoldenHarnessView: View {
         case .lifecycle:
             actionButton("Close Settings fixture", .closeSettings)
             actionButton("Reopen Settings fixture", .reopenSettings)
+            actionButton("Quit fixture", .quit)
         case .dictation:
             actionButton("Start Dictation fixture", .start)
             actionButton("Receive Partial fixture", .receivePartial("alpha beta"))
@@ -90,7 +116,11 @@ private struct GoldenHarnessView: View {
             actionButton("Select OpenAI fixture", .selectProvider)
             actionButton("Accept Disclosure fixture", .acceptDisclosure)
             actionButton("Verify In-Memory Credential", .verifyFixtureCredential)
-        case .recovery, .diagnostics:
+        case .recovery:
+            actionButton("Copy recovery fixture", .copyRecovery)
+            actionButton("Retry recovery fixture", .retryRecovery)
+            actionButton("Delete recovery fixture", .deleteRecovery)
+        case .diagnostics:
             EmptyView()
         }
     }

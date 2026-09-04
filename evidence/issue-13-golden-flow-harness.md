@@ -9,6 +9,10 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 - The production app is not the XCUI test host.
 - `GuideCompanionGoldenHost` imports only `GuideTestSupport`, whose sole
   dependency is `GuideCore`, and has a distinct test-only bundle identifier.
+- The fixture driver delegates permission, lifecycle, Dictation phase,
+  walkthrough progression, Talk authorization, and diagnostic classification
+  decisions to the production `GuideCore` policies/state machines. It does not
+  carry a second copy of those decisions.
 - `AppRuntimeMode.uiTest` admits only deterministic fixtures and ephemeral
   storage; microphone, permission requests, Screen Recording, production
   Keychain, persistent user data, Sentry transport, network providers, and

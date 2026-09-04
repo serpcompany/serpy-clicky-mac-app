@@ -6,7 +6,7 @@ class GoldenUITestCase: XCTestCase {
     private(set) var application: XCUIApplication!
     private let goldenBundleIdentifier = "com.serpcompany.guidecompanion.internal.golden-host"
 
-    func launch(flow: String) {
+    func launch(flow: String, phase: String? = nil) {
         let application = XCUIApplication()
         self.application = application
         let sessionID = UUID().uuidString
@@ -25,6 +25,7 @@ class GoldenUITestCase: XCTestCase {
             XCTAssertFalse(FileManager.default.fileExists(atPath: sessionRoot.path))
         }
         application.launchArguments = ["--ui-testing", "--golden-flow=\(flow)"]
+        if let phase { application.launchArguments.append("--golden-phase=\(phase)") }
         application.launchEnvironment = [
             "SENTRY_DSN": "",
             "SENTRY_ENVIRONMENT": "ui-test",

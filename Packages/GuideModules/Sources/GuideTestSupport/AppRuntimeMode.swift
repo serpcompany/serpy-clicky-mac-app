@@ -12,29 +12,10 @@ public enum AppRuntimeCapability: String, CaseIterable, Hashable, Sendable {
 }
 
 public enum AppRuntimeMode: Equatable, Sendable {
-    case production
     case uiTest
 
-    public static func resolve(arguments: [String]) -> Self {
-        arguments.contains("--ui-testing") ? .uiTest : .production
-    }
-
     public var capabilities: Set<AppRuntimeCapability> {
-        switch self {
-        case .production:
-            return [
-                .globalShortcuts,
-                .microphone,
-                .networkProvider,
-                .permissionRequests,
-                .persistentUserData,
-                .productionKeychain,
-                .screenRecording,
-                .sentryTransport,
-            ]
-        case .uiTest:
-            return [.deterministicFixtures, .ephemeralStorage]
-        }
+        [.deterministicFixtures, .ephemeralStorage]
     }
 }
 
@@ -44,10 +25,9 @@ public enum GoldenHostRuntimeError: Error, Equatable, Sendable {
 
 public enum GoldenHostRuntimeContract {
     public static func resolve(arguments: [String]) throws -> AppRuntimeMode {
-        let mode = AppRuntimeMode.resolve(arguments: arguments)
-        guard mode == .uiTest else {
+        guard arguments.contains("--ui-testing") else {
             throw GoldenHostRuntimeError.uiTestingArgumentRequired
         }
-        return mode
+        return .uiTest
     }
 }

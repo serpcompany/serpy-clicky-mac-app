@@ -4,8 +4,8 @@ import Testing
 @Suite("Golden runtime composition")
 struct GoldenRuntimeCompositionTests {
     @Test("GT-UF00-001 UI runtime is selected before composition")
-    func uiRuntimeSelection() {
-        let runtime = try? GoldenHostRuntimeContract.resolve(arguments: ["serpy", "--ui-testing"])
+    func uiRuntimeSelection() throws {
+        let runtime = try GoldenHostRuntimeContract.resolve(arguments: ["serpy", "--ui-testing"])
 
         #expect(runtime == .uiTest)
         #expect(runtime.capabilities == [.deterministicFixtures, .ephemeralStorage])
@@ -34,10 +34,4 @@ struct GoldenRuntimeCompositionTests {
         #expect(AppRuntimeMode.uiTest.capabilities.isDisjoint(with: forbidden))
     }
 
-    @Test("GT-UF00-003 Production runtime is the default")
-    func productionIsDefault() {
-        #expect(AppRuntimeMode.resolve(arguments: ["serpy"]) == .production)
-        #expect(AppRuntimeMode.production.capabilities.contains(.microphone))
-        #expect(AppRuntimeMode.production.capabilities.contains(.productionKeychain))
-    }
 }

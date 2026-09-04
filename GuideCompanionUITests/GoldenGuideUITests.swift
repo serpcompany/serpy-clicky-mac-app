@@ -27,11 +27,23 @@ final class GoldenGuideUITests: GoldenUITestCase {
     }
 
     func test_GT_UF10_001_cancelSuppressesLateGuideOutput() {
-        launch(flow: "UF-10")
-        tap("Cancel")
+        launch(flow: "UF-10", phase: "listening")
+        application.typeKey(.escape, modifierFlags: [])
         tap("Deliver Late Result fixture")
         expectPhase("cancelled")
         XCTAssertFalse(application.staticTexts["must be ignored"].exists)
+    }
+
+    func test_GT_UF10_002_escapeCancelsCapture() { assertGuideEscape(phase: "capturing") }
+    func test_GT_UF10_003_escapeCancelsThinking() { assertGuideEscape(phase: "thinking") }
+    func test_GT_UF10_004_escapeCancelsSpeaking() { assertGuideEscape(phase: "speaking") }
+    func test_GT_UF10_005_escapeCancelsFollowUp() { assertGuideEscape(phase: "followUpReady") }
+
+    private func assertGuideEscape(phase: String) {
+        launch(flow: "UF-10", phase: phase)
+        application.typeKey(.escape, modifierFlags: [])
+        expectPhase("cancelled")
+        XCTAssertEqual(application.staticTexts["golden.lifecycle"].label, "windows=1 overlays=0 running=true")
     }
 
     func test_GT_UF11_001_openAITalkUsesOnlyInMemoryCredentialAndFixtureResponse() {
@@ -51,7 +63,10 @@ final class GoldenGuideUITests: GoldenUITestCase {
             application.staticTexts["golden.failure.cause"].label,
             "The local guide returned malformed structured guidance."
         )
-        XCTAssertEqual(application.staticTexts["golden.failure.recovery"].label, "Try Again")
+        XCTAssertEqual(
+            application.staticTexts["golden.failure.recovery"].label,
+            "Try the question again. SERPy did not present incomplete steps."
+        )
         XCTAssertEqual(application.staticTexts["golden.safety"].label, "network=0 keychain=none")
     }
 }

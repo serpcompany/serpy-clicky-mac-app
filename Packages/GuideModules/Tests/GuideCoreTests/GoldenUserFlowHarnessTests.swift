@@ -56,11 +56,18 @@ struct GoldenUserFlowHarnessTests {
     }
 
     @Test("GT-UF05-001 Recovery exposes Copy Retry Delete for bounded Last Dictation")
-    func recoveryJourney() {
-        let harness = GoldenUserFlowHarness(flow: .recovery)
+    func recoveryJourney() throws {
+        var harness = GoldenUserFlowHarness(flow: .recovery)
         #expect(harness.phase == .recoveryAvailable)
         #expect(harness.observableState.availableActions == ["Copy", "Retry", "Delete"])
         #expect(harness.observableState.transcriptPreserved)
+        try harness.apply(.copyRecovery)
+        #expect(harness.observableState.recoveryDisposition == "copied")
+        try harness.apply(.retryRecovery)
+        #expect(harness.observableState.recoveryDisposition == "retryRequested")
+        try harness.apply(.deleteRecovery)
+        #expect(harness.observableState.recoveryDisposition == "deleted")
+        #expect(!harness.observableState.transcriptPreserved)
     }
 
     @Test("GT-UF08-001 Guide question reaches readable follow-up-ready answer")
@@ -120,9 +127,9 @@ struct GoldenUserFlowHarnessTests {
     func diagnosticJourney() {
         let harness = GoldenUserFlowHarness(flow: .diagnostics)
         #expect(harness.phase == .handledFailure)
-        #expect(harness.observableState.failureStage == "generation")
+        #expect(harness.observableState.failureStage == "guidance")
         #expect(harness.observableState.failureCause == "The local guide returned malformed structured guidance.")
-        #expect(harness.observableState.recoveryAction == "Try Again")
+        #expect(harness.observableState.recoveryAction == "Try the question again. SERPy did not present incomplete steps.")
         #expect(harness.observableState.incidentCodes == ["guidance.plan.malformed"])
         #expect(harness.observableState.networkRequestCount == 0)
     }
