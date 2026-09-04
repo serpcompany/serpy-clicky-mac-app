@@ -61,6 +61,10 @@ because that bypasses its bounds and cleanup. The run may briefly take
 foreground control.
 
 Its adversarial no-app self-test is `scripts/test-golden-ui-runner.sh`.
+The bounded runner owns one canonical `serpy-local-xcui.*` directory directly
+under `/private/tmp`. XCTest and the app share that exact parent using separate
+run and session owner tokens; neither process may substitute its own `TMPDIR`.
+Invalid startup configuration exits immediately with an explicit error.
 
 This lane launches the real serpy application target in `--ui-testing` mode.
 It must not open TextEdit, Chrome, System Settings, or another external app; access real

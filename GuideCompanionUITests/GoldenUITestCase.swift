@@ -8,7 +8,7 @@ class GoldenUITestCase: XCTestCase {
     private var preexistingProcessIDs: Set<pid_t> = []
     private(set) var sessionRoot: URL!
     private var sessionParent: URL!
-    private var parentOwnerURL: URL!
+    private var runToken = ""
     private var sessionID = ""
 
     func launch(
@@ -23,16 +23,18 @@ class GoldenUITestCase: XCTestCase {
         let application = XCUIApplication()
         self.application = application
         if sessionRoot == nil {
+            guard let rawParent = ProcessInfo.processInfo.environment["SERPY_XCUI_PARENT"],
+                  let suppliedRunToken = ProcessInfo.processInfo.environment["SERPY_XCUI_RUN_TOKEN"] else {
+                XCTFail("bounded UI runner did not provide the shared session parent and owner token")
+                return
+            }
             sessionID = UUID().uuidString
-            sessionParent = FileManager.default.temporaryDirectory
-                .standardizedFileURL
-                .resolvingSymlinksInPath()
+            runToken = suppliedRunToken
+            sessionParent = URL(fileURLWithPath: rawParent, isDirectory: true)
             sessionRoot = sessionParent
                 .appendingPathComponent("serpy-real-ui-\(sessionID)")
-            parentOwnerURL = sessionParent.appendingPathComponent(".serpy-real-ui-parent-\(sessionID)")
             do {
                 try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
-                try sessionID.write(to: parentOwnerURL, atomically: true, encoding: .utf8)
                 try sessionID.write(
                     to: sessionRoot.appendingPathComponent(".serpy-real-ui-owner"),
                     atomically: true,
@@ -51,9 +53,7 @@ class GoldenUITestCase: XCTestCase {
             ).map(\.processIdentifier))
             XCTAssertEqual(remaining, self.preexistingProcessIDs)
             try? FileManager.default.removeItem(at: self.sessionRoot)
-            try? FileManager.default.removeItem(at: self.parentOwnerURL)
             XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionRoot.path))
-            XCTAssertFalse(FileManager.default.fileExists(atPath: self.parentOwnerURL.path))
         }
         application.launchArguments = [
             "--ui-testing",
@@ -72,6 +72,7 @@ class GoldenUITestCase: XCTestCase {
             "SERPY_TEST_SESSION_ID": sessionID,
             "SERPY_TEST_ROOT": sessionRoot.path,
             "SERPY_TEST_PARENT": sessionParent.path,
+            "SERPY_XCUI_RUN_TOKEN": runToken,
         ]
         application.launch()
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))

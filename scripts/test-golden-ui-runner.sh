@@ -6,7 +6,7 @@ assert_clean() {
   local result=$2
   [[ ! -e "$result" ]] || { print -u2 "UI runner fixture wrote a result"; exit 1; }
   ! pgrep -f "[s]erpy-ui-runner-$marker" >/dev/null || { print -u2 "UI runner descendant survived"; exit 1; }
-  test -z "$(find "${TMPDIR:-/tmp}" -maxdepth 1 -type d -name 'serpy-local-xcui.*' -print -quit)"
+  test -z "$(find /private/tmp -maxdepth 1 -type d -name 'serpy-local-xcui.*' -print -quit)"
 }
 
 for fixture in ignore-term leader-exits; do
@@ -20,6 +20,16 @@ for fixture in ignore-term leader-exits; do
   [[ $run_status -eq 75 ]] || { print -u2 "$fixture fixture returned $run_status"; exit 1; }
   assert_clean "$marker" "$result"
 done
+
+marker=$(uuidgen)
+result="evidence/issue-13-runner-fixture-$marker.xcresult"
+set +e
+SERPY_UI_RUNNER_FIXTURE=command-fails SERPY_TEST_SESSION_ID=$marker \
+  scripts/run-golden-ui-test.sh focused GuideCompanionUITests/Fixture/never "$result" >/dev/null 2>&1
+command_status=$?
+set -e
+[[ $command_status -eq 65 ]] || { print -u2 "nonzero command fixture returned $command_status"; exit 1; }
+assert_clean "$marker" "$result"
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"
@@ -47,4 +57,4 @@ set -e
 [[ $full_status -eq 64 ]] || { print -u2 "local full-suite mode was not rejected"; exit 1; }
 [[ $path_status -eq 64 ]] || { print -u2 "outside result path was not rejected"; exit 1; }
 
-print "golden UI runner rejection, timeout, interrupt, descendant, and cleanup: PASS"
+print "golden UI runner rejection, nonzero exit, timeout, interrupt, descendant, and cleanup: PASS"

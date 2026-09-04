@@ -38,11 +38,13 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   proves the owned temporary root is removed after either failure.
 - The focused-XCUI runner self-test rejects full-suite and outside-evidence
   invocations, forces TERM-ignoring and leader-exit descendants through bounded
-  TERM-to-KILL escalation, interrupts a live owned group, and proves no
-  descendant or run directory survives.
-- UI session-root tests reject matching-name roots outside the canonical system
-  temporary directory and symlinked parents. Both the parent and direct-child
-  root require a UUID-matched owner token.
+  TERM-to-KILL escalation, interrupts a live owned group, and runs a command
+  that creates build-shaped output before exiting 65. It proves the original
+  status is retained and no descendant or run directory survives.
+- UI session-root tests use a bounded-runner-owned canonical `/private/tmp`
+  parent shared across the XCTest and app processes. They reject matching-name
+  roots elsewhere and symlinked parents; independent run and session UUID
+  tokens bind the parent and direct-child root.
 - Debug UI-test composition is owned by the App target, derives its audit from
   concrete adapter instances accepted by the deterministic-adapter factory,
   and is guarded by the model's runtime audit precondition. No fixture or
@@ -68,7 +70,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green; 100 XCTest, 74 Swift Testing cases, and 2 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after shared-root correction; 100 XCTest, 75 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 
@@ -78,11 +80,19 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   `evidence/issue-13-local-UF09.xcresult` (generated, ignored, not committed).
   The curated Xcode report screenshot is
   `evidence/issue-13-local-UF09-xcode-report.png`.
-- The first real-app UF-09 attempt is retained at
+- The earlier real-app UF-09 attempt is retained at
   `evidence/issue-13-real-app-UF09.xcresult` (generated and ignored). XCTest
   connected the runner, then macOS canceled LocalAuthentication while enabling
   UI automation. No test method or app fixture executed. The owner must approve
   that OS authentication on the next explicitly announced run.
+- The owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-approved.xcresult` (generated and ignored).
+  It did not fail LocalAuthentication: the real app launched as PID 99241 and
+  then crashed in `UITestSessionRootPolicy.validate` because XCTest and the app
+  had different process-specific temporary directories. XCTest timed out after
+  one minute before any flow assertion. The cross-process root contract is now
+  headlessly regression-tested; executed UI proof remains red until a new
+  explicitly authorized run.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

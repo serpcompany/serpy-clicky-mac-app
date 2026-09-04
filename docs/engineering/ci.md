@@ -10,7 +10,7 @@ result proves. The canonical user outcomes remain in
 | --- | --- | --- | --- |
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Workflow committed; requires a PR or `main` push to produce the first remote report |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Workflow committed; requires a PR or `main` push to produce the first remote report |
-| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Real-app source compiled; execution blocked before the test method by canceled macOS automation authentication |
+| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Real app launched in the latest retained run, but its cross-process session-root validation failed before flow assertions; regression fixed headlessly, rerun pending |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Not configured; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 

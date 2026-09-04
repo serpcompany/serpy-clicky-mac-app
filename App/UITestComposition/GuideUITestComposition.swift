@@ -6,9 +6,9 @@ import GuideUI
 
 @MainActor
 public enum GuideUITestComposition {
-    public static func makeModel(arguments: [String], environment: [String: String] = ProcessInfo.processInfo.environment) -> GuideAppModel {
+    public static func makeModel(arguments: [String], environment: [String: String] = ProcessInfo.processInfo.environment) throws -> GuideAppModel {
         precondition(AppRuntimeMode.resolve(arguments: arguments) == .uiTest)
-        let sessionRoot = validatedSessionRoot(environment: environment)
+        let sessionRoot = try UITestSessionRootPolicy.validate(environment: environment)
         let flow = arguments.first(where: { $0.hasPrefix("--golden-flow=") }) ?? ""
         let preferences = UITestPreferences()
         let clipboard = UITestClipboardService(sessionRoot: sessionRoot)
@@ -117,8 +117,4 @@ public enum GuideUITestComposition {
         )
     }
 
-    private static func validatedSessionRoot(environment: [String: String]) -> URL {
-        do { return try UITestSessionRootPolicy.validate(environment: environment) }
-        catch { preconditionFailure("UI-test session root is not owned by this run: \(error)") }
-    }
 }

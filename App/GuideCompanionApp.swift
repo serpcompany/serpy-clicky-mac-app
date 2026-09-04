@@ -1,4 +1,6 @@
 import AppKit
+import Darwin
+import Foundation
 import GuideCore
 import GuideMac
 import GuideUI
@@ -37,7 +39,7 @@ private enum GuideAppComposition {
         let configured: GuideAppModel
 #if DEBUG
         configured = mode == .uiTest
-            ? GuideUITestComposition.makeModel(arguments: CommandLine.arguments)
+            ? makeUITestModelOrExit()
             : makeProductionModel()
 #else
         precondition(mode == .production, "UI-test composition is unavailable in Release builds")
@@ -46,6 +48,18 @@ private enum GuideAppComposition {
         model = configured
         return configured
     }
+
+#if DEBUG
+    private static func makeUITestModelOrExit() -> GuideAppModel {
+        do {
+            return try GuideUITestComposition.makeModel(arguments: CommandLine.arguments)
+        } catch {
+            let message = "serpy UI-test startup rejected: session root is not owned by this run (\(error))\n"
+            FileHandle.standardError.write(Data(message.utf8))
+            Darwin.exit(EX_CONFIG)
+        }
+    }
+#endif
 
     private static func makeProductionModel() -> GuideAppModel {
         let local = LocalGuidanceService()

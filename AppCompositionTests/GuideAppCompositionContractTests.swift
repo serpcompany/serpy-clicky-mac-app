@@ -11,7 +11,7 @@ final class GuideAppCompositionContractTests: XCTestCase {
         let owned = try makeOwnedSessionRoot()
         defer { owned.remove() }
 
-        let model = GuideUITestComposition.makeModel(
+        let model = try GuideUITestComposition.makeModel(
             arguments: ["serpy", "--ui-testing", "--golden-flow=UF-09"],
             environment: owned.environment
         )
@@ -55,6 +55,15 @@ final class GuideAppCompositionContractTests: XCTestCase {
         XCTAssertTrue(Set(model.runtimeCompositionAudit.identities.values).isDisjoint(with: productionDenylist))
     }
 
+    func testInvalidSharedRootFailsBeforeConstructingTheModel() {
+        XCTAssertThrowsError(try GuideUITestComposition.makeModel(
+            arguments: ["serpy", "--ui-testing", "--golden-flow=UF-09"],
+            environment: [:]
+        )) { error in
+            XCTAssertEqual(error as? UITestSessionRootError, .invalidIdentity)
+        }
+    }
+
     func testInjectedProductionCredentialAdapterFailsTheExactAllowlist() {
         let safe = ContractFixtureAdapter()
         let safeIdentity = RuntimeAdapterIdentity(ContractFixtureAdapter.self)
@@ -79,23 +88,28 @@ final class GuideAppCompositionContractTests: XCTestCase {
 
     private func makeOwnedSessionRoot() throws -> OwnedSessionRoot {
         let sessionID = UUID().uuidString
-        let parent = FileManager.default.temporaryDirectory
-            .standardizedFileURL
-            .resolvingSymlinksInPath()
+        let runToken = UUID().uuidString
+        let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        let parent = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
+            .appendingPathComponent("serpy-local-xcui.\(suffix)")
         let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
-        let parentOwner = parent.appendingPathComponent(".serpy-real-ui-parent-\(sessionID)")
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
+        try runToken.write(
+            to: parent.appendingPathComponent(".serpy-local-xcui-owner"),
+            atomically: true,
+            encoding: .utf8
+        )
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        try sessionID.write(to: parentOwner, atomically: true, encoding: .utf8)
         try sessionID.write(
             to: root.appendingPathComponent(".serpy-real-ui-owner"),
             atomically: true,
             encoding: .utf8
         )
         return OwnedSessionRoot(
-            root: root,
-            parentOwner: parentOwner,
+            parent: parent,
             environment: [
                 "SERPY_TEST_SESSION_ID": sessionID,
+                "SERPY_XCUI_RUN_TOKEN": runToken,
                 "SERPY_TEST_ROOT": root.path,
                 "SERPY_TEST_PARENT": parent.path,
             ]
@@ -106,12 +120,10 @@ final class GuideAppCompositionContractTests: XCTestCase {
 private final class ContractFixtureAdapter: DeterministicUITestAdapter {}
 
 private struct OwnedSessionRoot {
-    let root: URL
-    let parentOwner: URL
+    let parent: URL
     let environment: [String: String]
 
     func remove() {
-        try? FileManager.default.removeItem(at: root)
-        try? FileManager.default.removeItem(at: parentOwner)
+        try? FileManager.default.removeItem(at: parent)
     }
 }

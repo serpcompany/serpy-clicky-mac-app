@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 public enum AppRuntimeCapability: String, Hashable, Sendable {
     case actualAppLifecycle
@@ -25,20 +26,30 @@ public enum UITestSessionRootPolicy {
     public static func validate(environment: [String: String]) throws -> URL {
         guard let sessionID = environment["SERPY_TEST_SESSION_ID"],
               UUID(uuidString: sessionID) != nil,
+              let runToken = environment["SERPY_XCUI_RUN_TOKEN"],
+              UUID(uuidString: runToken) != nil,
               let rawRoot = environment["SERPY_TEST_ROOT"],
               let rawParent = environment["SERPY_TEST_PARENT"] else {
             throw UITestSessionRootError.invalidIdentity
         }
-        let supplied = URL(fileURLWithPath: rawRoot).standardizedFileURL
-        let canonicalRoot = supplied.resolvingSymlinksInPath()
-        let suppliedParent = URL(fileURLWithPath: rawParent).standardizedFileURL
-        let canonicalParent = suppliedParent.resolvingSymlinksInPath()
-        let systemTemporaryDirectory = FileManager.default.temporaryDirectory
-            .standardizedFileURL
-            .resolvingSymlinksInPath()
+        let supplied = URL(fileURLWithPath: rawRoot)
+        let suppliedParent = URL(fileURLWithPath: rawParent)
+        guard let canonicalRoot = canonicalExistingURL(rawRoot),
+              let canonicalParent = canonicalExistingURL(rawParent) else {
+            throw UITestSessionRootError.invalidLocation
+        }
+        // `/tmp` is a symlink on macOS. Require the shared physical path
+        // selected by the bounded runner instead of Foundation's
+        // process-sensitive temporary-directory normalization.
+        let sharedTemporaryDirectory = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
+        let parentName = canonicalParent.lastPathComponent
+        let parentSuffix = parentName.dropFirst("serpy-local-xcui.".count)
         guard canonicalRoot.lastPathComponent == "serpy-real-ui-\(sessionID)",
               canonicalRoot.deletingLastPathComponent() == canonicalParent,
-              canonicalParent == systemTemporaryDirectory,
+              canonicalParent.deletingLastPathComponent() == sharedTemporaryDirectory,
+              parentName.hasPrefix("serpy-local-xcui."),
+              !parentSuffix.isEmpty,
+              parentSuffix.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
               supplied.path == canonicalRoot.path,
               suppliedParent.path == canonicalParent.path,
               (try? supplied.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
@@ -46,13 +57,19 @@ public enum UITestSessionRootPolicy {
             throw UITestSessionRootError.invalidLocation
         }
         let ownerURL = canonicalRoot.appendingPathComponent(".serpy-real-ui-owner")
-        let parentOwnerURL = canonicalParent.appendingPathComponent(".serpy-real-ui-parent-\(sessionID)")
+        let parentOwnerURL = canonicalParent.appendingPathComponent(".serpy-local-xcui-owner")
         guard let owner = try? String(contentsOf: ownerURL, encoding: .utf8), owner == sessionID,
               let parentOwner = try? String(contentsOf: parentOwnerURL, encoding: .utf8),
-              parentOwner == sessionID else {
+              parentOwner == runToken else {
             throw UITestSessionRootError.missingOwnership
         }
         return canonicalRoot
+    }
+
+    private static func canonicalExistingURL(_ path: String) -> URL? {
+        guard let resolved = Darwin.realpath(path, nil) else { return nil }
+        defer { Darwin.free(resolved) }
+        return URL(fileURLWithPath: String(cString: resolved))
     }
 }
 

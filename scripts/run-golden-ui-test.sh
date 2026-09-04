@@ -20,8 +20,10 @@ esac
   print -u2 "a serpy or XCUI process is already running"; exit 75
 }
 
-temp_parent=$(cd "${TMPDIR:-/tmp}" && pwd -P)
+temp_parent=$(cd /private/tmp && pwd -P)
 run_root=$(mktemp -d "$temp_parent/serpy-local-xcui.XXXXXX")
+run_token=$(uuidgen)
+/usr/bin/printf '%s' "$run_token" > "$run_root/.serpy-local-xcui-owner"
 owned_pgid=""
 owned_leader=""
 launch_services=/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister
@@ -54,15 +56,25 @@ terminate_owned_group() {
 }
 
 cleanup() {
+  local original_status=${1:-0}
+  trap - EXIT
   terminate_owned_group || true
   local app
   for app in "$run_root/DerivedData/Build/Products/Debug/SERPy.app" "$run_root/DerivedData/Build/Products/Debug/GuideCompanionUITests-Runner.app"; do
     [[ -d "$app" ]] && "$launch_services" -u "$app" 2>/dev/null || true
   done
-  find "$run_root" -depth -delete 2>/dev/null || true
-  rmdir "$run_root" 2>/dev/null || true
+  for _ in {1..3}; do
+    find "$run_root" -depth -delete 2>/dev/null || true
+    [[ ! -e "$run_root" ]] && break
+    sleep 0.2
+  done
+  if [[ -e "$run_root" ]]; then
+    print -u2 "owned UI run root survived teardown: $run_root"
+    exit 74
+  fi
+  exit "$original_status"
 }
-trap cleanup EXIT
+trap 'cleanup $?' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 
@@ -122,5 +134,10 @@ if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == leader-exits ]]; then
   if run_bounded /bin/zsh -c '(trap "" TERM; while true; do sleep 1; done) & exit 0' "serpy-ui-runner-$fixture_marker"; then exit 0; else exit $?; fi
 fi
 
-ui_command=(xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
+if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails ]]; then
+  fixture_marker=${SERPY_TEST_SESSION_ID:-missing-session}
+  if run_bounded /bin/zsh -c '/bin/mkdir -p "$1/DerivedData/Build/Products/Debug"; /usr/bin/mkfile -n 64m "$1/DerivedData/Build/Products/Debug/nonzero.fixture"; exit 65' "serpy-ui-runner-$fixture_marker" "$run_root"; then exit 0; else exit $?; fi
+fi
+
+ui_command=(/usr/bin/env SERPY_XCUI_PARENT="$run_root" SERPY_XCUI_RUN_TOKEN="$run_token" xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
 run_bounded "${ui_command[@]}"
