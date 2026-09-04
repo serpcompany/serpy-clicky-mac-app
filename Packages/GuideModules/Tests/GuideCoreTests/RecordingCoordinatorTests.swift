@@ -16,7 +16,7 @@ struct RecordingCoordinatorTests {
         )
         coordinator.onStateChange = { order.values.append("state:\(coordinator.phase)") }
 
-        coordinator.start(saveAudio: false)
+        coordinator.start(retainAudioInHistory: false)
 
         #expect(Array(order.values.prefix(2)) == ["state:preparing", "capture"])
         coordinator.cancel()
@@ -36,7 +36,7 @@ struct RecordingCoordinatorTests {
             history: store
         )
 
-        coordinator.start(saveAudio: false)
+        coordinator.start(retainAudioInHistory: false)
         await coordinator.waitUntilSettled()
         #expect(coordinator.phase == .recording)
 
@@ -59,8 +59,10 @@ struct RecordingCoordinatorTests {
             history: CoordinatorStore(events: events)
         )
 
-        coordinator.start(saveAudio: false)
+        coordinator.start(retainAudioInHistory: false)
         await coordinator.waitUntilSettled()
+        session.emitPartial("cancelled partial must disappear")
+        #expect(coordinator.partialTranscript == "cancelled partial must disappear")
         coordinator.finish()
         await session.waitUntilStopStarted()
         coordinator.cancel()
@@ -68,8 +70,36 @@ struct RecordingCoordinatorTests {
         for _ in 0..<20 { await Task.yield() }
 
         #expect(coordinator.phase == .cancelled)
+        #expect(coordinator.partialTranscript.isEmpty)
+        #expect(coordinator.transcriptHistory.isEmpty)
         #expect(await events.snapshot().isEmpty)
         #expect(session.cancelCount == 1)
+    }
+
+    @Test("cancellation while insertion is pending prevents target mutation")
+    func cancellationDuringInsertionPreventsMutation() async {
+        let events = EventLog()
+        let inserter = BlockingCoordinatorInserter()
+        let coordinator = RecordingCoordinator(
+            session: CoordinatorSession(text: "must not appear"),
+            targetReader: CoordinatorTargetReader(),
+            inserter: inserter,
+            history: CoordinatorStore(events: events)
+        )
+
+        coordinator.start(retainAudioInHistory: false)
+        await coordinator.waitUntilSettled()
+        coordinator.finish()
+        await inserter.waitUntilStarted()
+        #expect(coordinator.phase == .inserting)
+
+        coordinator.cancel()
+        inserter.completePendingInsertion()
+        for _ in 0..<20 { await Task.yield() }
+
+        #expect(coordinator.phase == .cancelled)
+        #expect(inserter.cancelCount == 1)
+        #expect(inserter.mutatedTargets.isEmpty)
     }
 
     @Test("checkpoint failure is visible and prevents persistence and insertion")
@@ -88,7 +118,7 @@ struct RecordingCoordinatorTests {
             history: CoordinatorStore(events: events)
         )
 
-        coordinator.start(saveAudio: false)
+        coordinator.start(retainAudioInHistory: false)
         await coordinator.waitUntilSettled()
         coordinator.finish()
         await coordinator.waitUntilSettled()
@@ -108,7 +138,7 @@ struct RecordingCoordinatorTests {
             history: CoordinatorStore(events: events)
         )
 
-        coordinator.start(saveAudio: false)
+        coordinator.start(retainAudioInHistory: false)
         await coordinator.waitUntilSettled()
         coordinator.finish()
         await coordinator.waitUntilSettled()
@@ -133,7 +163,10 @@ struct RecordingCoordinatorTests {
             history: CoordinatorStore(events: events)
         )
 
-        coordinator.recoverInterruptedSession(retainInHistory: false, saveAudio: false)
+        coordinator.recoverInterruptedSession(
+            retainInHistory: false,
+            retainAudioInHistory: false
+        )
         await coordinator.waitUntilSettled()
 
         #expect(coordinator.phase == .idle)
@@ -141,6 +174,44 @@ struct RecordingCoordinatorTests {
         #expect(coordinator.transcriptHistory.first?.deliveryState == .pending)
         #expect(await events.snapshot() == ["preserve"])
         #expect(session.discardedAudioURLs == [recoveryURL])
+    }
+
+    @Test("all interrupted checkpoints recover even when history already exists")
+    func recoversEveryCheckpointAlongsideExistingHistory() async {
+        let events = EventLog()
+        let firstURL = URL(fileURLWithPath: "/synthetic/first.caf")
+        let secondURL = URL(fileURLWithPath: "/synthetic/second.caf")
+        let existing = TranscriptHistoryEntry(
+            text: "existing history",
+            retainedInHistory: true,
+            expiresAt: .distantFuture
+        )
+        let session = CoordinatorSession(
+            text: "unused",
+            recoveryResults: [
+                .init(transcript: "first recovered", temporaryAudioURL: firstURL),
+                .init(transcript: "second recovered", temporaryAudioURL: secondURL)
+            ]
+        )
+        let store = CoordinatorStore(events: events, initialEntries: [existing])
+        let coordinator = RecordingCoordinator(
+            session: session,
+            targetReader: CoordinatorTargetReader(),
+            inserter: CoordinatorInserter(events: events),
+            history: store
+        )
+
+        coordinator.recoverInterruptedSession(
+            retainInHistory: true,
+            retainAudioInHistory: false
+        )
+        await coordinator.waitUntilSettled()
+
+        #expect(coordinator.transcriptHistory.map(\.text) == [
+            "first recovered\nsecond recovered",
+            "existing history"
+        ])
+        #expect(session.discardedAudioURLs == [firstURL, secondURL])
     }
 }
 
@@ -160,28 +231,31 @@ private final class CoordinatorSession: DictationSessioning {
     var onPartial: (@MainActor @Sendable (String) -> Void)?
     let text: String
     let stopError: Error?
-    let recoveryResult: SpeechTranscriptionResult?
+    let recoveryResults: [SpeechTranscriptionResult]
     private(set) var discardedAudioURLs: [URL] = []
 
     init(
         text: String,
         stopError: Error? = nil,
-        recoveryResult: SpeechTranscriptionResult? = nil
+        recoveryResult: SpeechTranscriptionResult? = nil,
+        recoveryResults: [SpeechTranscriptionResult] = []
     ) {
         self.text = text
         self.stopError = stopError
-        self.recoveryResult = recoveryResult
+        self.recoveryResults = recoveryResult.map { [$0] } ?? recoveryResults
     }
     var isOnDeviceAvailable: Bool { true }
     var availabilityDescription: String { "available" }
-    func start(saveAudio: Bool) async throws {}
+    func start(retainAudioInHistory: Bool) async throws {}
     func stop() async throws -> SpeechTranscriptionResult {
         if let stopError { throw stopError }
         return SpeechTranscriptionResult(transcript: text, temporaryAudioURL: nil)
     }
-    func cancel() {}
-    func recoverInterruptedAudio() async throws -> SpeechTranscriptionResult? { recoveryResult }
-    func discardTemporaryAudio(at url: URL) { discardedAudioURLs.append(url) }
+    func cancel() throws {}
+    func recoverInterruptedAudio() async throws -> [SpeechTranscriptionResult] {
+        recoveryResults
+    }
+    func discardTemporaryAudio(at url: URL) throws { discardedAudioURLs.append(url) }
 }
 
 @MainActor
@@ -219,6 +293,40 @@ private final class CoordinatorInserter: TextInserting {
 }
 
 @MainActor
+private final class BlockingCoordinatorInserter: TextInserting {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var started = false
+    private(set) var cancelled = false
+    private(set) var cancelCount = 0
+    private(set) var mutatedTargets: [String] = []
+
+    func insert(_ text: String, into target: CoordinatorTarget) async throws -> TextInsertionMethod {
+        started = true
+        await withCheckedContinuation { continuation = $0 }
+        try Task.checkCancellation()
+        guard !cancelled else { throw CancellationError() }
+        mutatedTargets.append(text)
+        return .accessibility
+    }
+
+    func cancel() {
+        cancelCount += 1
+        cancelled = true
+        continuation?.resume()
+        continuation = nil
+    }
+
+    func waitUntilStarted() async {
+        while !started { await Task.yield() }
+    }
+
+    func completePendingInsertion() {
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
+@MainActor
 private final class BlockingCoordinatorSession: DictationSessioning {
     var onPartial: (@MainActor @Sendable (String) -> Void)?
     private var continuation: CheckedContinuation<SpeechTranscriptionResult, Never>?
@@ -227,12 +335,13 @@ private final class BlockingCoordinatorSession: DictationSessioning {
     var isOnDeviceAvailable: Bool { true }
     var availabilityDescription: String { "available" }
 
-    func start(saveAudio: Bool) async throws {}
+    func start(retainAudioInHistory: Bool) async throws {}
     func stop() async throws -> SpeechTranscriptionResult {
         stopStarted = true
         return await withCheckedContinuation { continuation = $0 }
     }
-    func cancel() { cancelCount += 1 }
+    func cancel() throws { cancelCount += 1 }
+    func discardTemporaryAudio(at url: URL) throws {}
     func waitUntilStopStarted() async {
         while !stopStarted { await Task.yield() }
     }
@@ -240,13 +349,21 @@ private final class BlockingCoordinatorSession: DictationSessioning {
         continuation?.resume(returning: .init(transcript: text, temporaryAudioURL: nil))
         continuation = nil
     }
+    func emitPartial(_ text: String) { onPartial?(text) }
 }
 
 private actor CoordinatorStore: LastDictationStoring {
     let events: EventLog
-    private var entry: TranscriptHistoryEntry?
+    private var entries: [TranscriptHistoryEntry]
 
-    init(events: EventLog) { self.events = events }
+    init(events: EventLog, initialEntries: [TranscriptHistoryEntry] = []) {
+        self.events = events
+        entries = initialEntries
+    }
+
+    func load() async throws -> [TranscriptHistoryEntry] {
+        entries
+    }
 
     func preserve(
         text: String,
@@ -261,7 +378,11 @@ private actor CoordinatorStore: LastDictationStoring {
             retainedInHistory: retainInHistory,
             expiresAt: .distantFuture
         )
-        self.entry = entry
+        if retainInHistory {
+            entries.insert(entry, at: 0)
+        } else {
+            entries = [entry]
+        }
         return entry
     }
 
@@ -272,9 +393,8 @@ private actor CoordinatorStore: LastDictationStoring {
         targetBundleIdentifier: String?
     ) async throws -> [TranscriptHistoryEntry] {
         await events.append("delivery:\(state.rawValue)")
-        guard var entry else { return [] }
-        entry.deliveryState = state
-        self.entry = entry
-        return [entry]
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return entries }
+        entries[index].deliveryState = state
+        return entries
     }
 }

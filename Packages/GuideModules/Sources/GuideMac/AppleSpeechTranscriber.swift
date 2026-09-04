@@ -1,7 +1,13 @@
 import AVFoundation
 import Foundation
 import GuideCore
+import OSLog
 import Speech
+
+private let speechCleanupLogger = Logger(
+    subsystem: "com.serpcompany.guidecompanion.internal",
+    category: "speech-cleanup"
+)
 
 private final class SpeechAudioSink: @unchecked Sendable {
     private let request: SFSpeechAudioBufferRecognitionRequest
@@ -259,7 +265,11 @@ public final class AppleSpeechTranscriber {
         partialHandler = nil
         completionGate.reset()
         if discardAudio, let temporaryAudioURL {
-            try? FileManager.default.removeItem(at: temporaryAudioURL)
+            do {
+                try FileManager.default.removeItem(at: temporaryAudioURL)
+            } catch {
+                speechCleanupLogger.error("Temporary speech audio deletion failed")
+            }
         }
         temporaryAudioURL = nil
     }

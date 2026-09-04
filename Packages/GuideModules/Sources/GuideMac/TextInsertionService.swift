@@ -60,7 +60,13 @@ public enum TextValueReplacement {
 
 @MainActor
 public final class TextInsertionService: FocusedTextTargetReading, TextInserting {
+    private var cancellationGeneration: UInt64 = 0
+
     public init() {}
+
+    public func cancel() {
+        cancellationGeneration &+= 1
+    }
 
     public func captureFocusedTarget() throws -> FocusedTextTarget {
         let frontmostApplication = NSWorkspace.shared.frontmostApplication
@@ -117,13 +123,17 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
     }
 
     public func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
+        let generation = cancellationGeneration
+        try validateInsertion(generation)
         guard !text.isEmpty else {
             throw insertionFailure("The transcript was empty.", recovery: "Try dictating again.")
         }
 
         do {
-            let confirmed = try await paste(text, into: target)
+            let confirmed = try await paste(text, into: target, generation: generation)
             return confirmed ? .paste : .pasteUnconfirmed
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             insertionLogger.notice("Session paste did not verify; trying Accessibility fallbacks")
         }
@@ -136,11 +146,12 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
                 recovery: "The transcript is saved in SERPy. Focus a text field and use Retry or Copy."
             )
         }
+        try validateInsertion(generation)
 
-        if let selectedTextMethod = await replaceSelectedText(text, on: element) {
+        if let selectedTextMethod = try await replaceSelectedText(text, on: element, generation: generation) {
             return selectedTextMethod
         }
-        if let replacementMethod = try await replaceAccessibilityValue(text, on: element) {
+        if let replacementMethod = try await replaceAccessibilityValue(text, on: element, generation: generation) {
             return replacementMethod
         }
 
@@ -171,8 +182,10 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
 
     private func replaceSelectedText(
         _ text: String,
-        on element: AXUIElement
-    ) async -> TextInsertionMethod? {
+        on element: AXUIElement,
+        generation: UInt64
+    ) async throws -> TextInsertionMethod? {
+        try validateInsertion(generation)
         let valueBefore = stringValue(of: element)
         let result = AXUIElementSetAttributeValue(
             element,
@@ -182,6 +195,7 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
         insertionLogger.notice("AX selected-text write result=\(result.rawValue)")
         guard result == .success else { return nil }
         try? await Task.sleep(for: .milliseconds(120))
+        try validateInsertion(generation)
         guard let valueBefore,
               let valueAfter = stringValue(of: element),
               valueAfter != valueBefore else {
@@ -193,8 +207,10 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
 
     private func replaceAccessibilityValue(
         _ text: String,
-        on element: AXUIElement
+        on element: AXUIElement,
+        generation: UInt64
     ) async throws -> TextInsertionMethod? {
+        try validateInsertion(generation)
         guard let existing = stringValue(of: element),
               let selectedRange = selectedTextRange(of: element) else {
             return nil
@@ -221,6 +237,7 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
         }
         insertionLogger.notice("AX value replacement succeeded")
         try? await Task.sleep(for: .milliseconds(120))
+        try validateInsertion(generation)
         guard stringValue(of: element) == replacement.value else {
             insertionLogger.notice("AX value replacement returned success without an observable change")
             return nil
@@ -267,7 +284,12 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
         return range
     }
 
-    private func paste(_ text: String, into target: FocusedTextTarget) async throws -> Bool {
+    private func paste(
+        _ text: String,
+        into target: FocusedTextTarget,
+        generation: UInt64
+    ) async throws -> Bool {
+        try validateInsertion(generation)
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
             throw insertionFailure(
                 "The destination app changed before insertion.",
@@ -286,39 +308,36 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
             )
         }
         let injectedChangeCount = pasteboard.changeCount
+        defer {
+            _ = snapshot.restoreIfUnchanged(
+                to: pasteboard,
+                expectedChangeCount: injectedChangeCount
+            )
+        }
+        try validateInsertion(generation)
 
         guard let source = CGEventSource(stateID: .combinedSessionState),
-              let commandDown = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_Command), keyDown: true),
               let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false),
-              let commandUp = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(kVK_Command), keyDown: false) else {
-            _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
             throw insertionFailure(
                 "The paste keystroke could not be created.",
                 recovery: "Copy the transcript and paste it manually."
             )
         }
 
-        commandDown.flags = .maskCommand
         keyDown.flags = .maskCommand
         keyUp.flags = .maskCommand
-        commandDown.post(tap: .cghidEventTap)
-        try await Task.sleep(for: .milliseconds(15))
         keyDown.post(tap: .cghidEventTap)
-        try await Task.sleep(for: .milliseconds(15))
         keyUp.post(tap: .cghidEventTap)
-        try await Task.sleep(for: .milliseconds(15))
-        commandUp.post(tap: .cghidEventTap)
 
         try await Task.sleep(for: .milliseconds(550))
+        try validateInsertion(generation)
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
-            _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
             throw insertionFailure(
                 "The destination app changed during insertion.",
                 recovery: "Your transcript is preserved. Focus the intended field and use Retry."
             )
         }
-        _ = snapshot.restoreIfUnchanged(to: pasteboard, expectedChangeCount: injectedChangeCount)
         guard let valueBeforePaste,
               let element = target.element,
               let valueAfterPaste = stringValue(of: element) else {
@@ -329,6 +348,11 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
         // unchanged AX value cannot prove that paste failed, so keep the
         // delivery recoverable and report it as unconfirmed.
         return valueAfterPaste != valueBeforePaste
+    }
+
+    private func validateInsertion(_ generation: UInt64) throws {
+        try Task.checkCancellation()
+        guard generation == cancellationGeneration else { throw CancellationError() }
     }
 
     private func insertionFailure(_ message: String, recovery: String) -> GuideFailure {

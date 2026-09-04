@@ -10,9 +10,10 @@
 - Upstream path: `OpenSuperWhisper/AudioRecorder.swift`
 - Upstream symbols: `AudioRecorder.stopTailDuration`, `stopRecording`, and the
   delayed stop closure at lines 215–249.
-- Downstream path: `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift`
-- Downstream symbols: `SpeechAnalyzerDictationBackend.stop` and
-  `stopTailTask`.
+- Downstream paths: `Packages/GuideModules/Sources/GuideCore/StreamingTranscription.swift`
+  and `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift`.
+- Downstream symbols: `DictationStopTail.wait/cancel` and
+  `DurableDictationSession.stop/cancel`.
 - Pinned source: <https://github.com/Starmel/OpenSuperWhisper/blob/bef6bc0421d0c010e8f2fb4288c0d74978c8b964/OpenSuperWhisper/AudioRecorder.swift#L215-L249>
 
 ## Serpy-specific modifications

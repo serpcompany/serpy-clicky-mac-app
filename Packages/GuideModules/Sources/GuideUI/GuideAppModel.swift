@@ -416,14 +416,12 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         started = true
         refreshPermissions()
         await loadTranscriptHistory()
-        if transcriptHistory.isEmpty {
-            recordingCoordinator.recoverInterruptedSession(
-                retainInHistory: historyEnabled,
-                saveAudio: historyEnabled && saveAudioHistory
-            )
-            await recordingCoordinator.waitUntilSettled()
-            synchronizeDictationState()
-        }
+        recordingCoordinator.recoverInterruptedSession(
+            retainInHistory: historyEnabled,
+            retainAudioInHistory: historyEnabled && saveAudioHistory
+        )
+        await recordingCoordinator.waitUntilSettled()
+        synchronizeDictationState()
 
         let service = makeShortcutService(
             dictationConfiguration: dictationShortcut,
@@ -1050,7 +1048,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.mode = .working
         presentation.caption = "Preparing…"
         companionController.refresh()
-        recordingCoordinator.start(saveAudio: historyEnabled && saveAudioHistory)
+        recordingCoordinator.start(retainAudioInHistory: historyEnabled && saveAudioHistory)
         synchronizeDictationState()
     }
 
@@ -1096,9 +1094,9 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         if !recordingCoordinator.transcriptHistory.isEmpty {
             transcriptHistory = recordingCoordinator.transcriptHistory
             historyStatusMessage = historySummary
-        }
-        if !partialTranscript.isEmpty {
-            transcriptRecovery.preserve(partialTranscript)
+            if let latest = transcriptHistory.first {
+                transcriptRecovery = EphemeralTranscriptRecovery(transcript: latest.text)
+            }
         }
 
         switch phase {

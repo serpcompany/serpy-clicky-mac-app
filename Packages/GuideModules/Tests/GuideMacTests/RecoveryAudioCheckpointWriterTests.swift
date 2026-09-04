@@ -51,12 +51,12 @@ struct RecoveryAudioCheckpointWriterTests {
 
         writer.append(buffer)
 
-        let recoverable = RecoverableAudioCheckpointWriter.recoverableAudioURLs(in: directory)
+        let recoverable = try RecoverableAudioCheckpointWriter.recoverableAudioURLs(in: directory)
         #expect(recoverable.count == 1)
         #expect(recoverable[0].lastPathComponent.hasPrefix("active-"))
 
-        writer.cancel()
-        #expect(RecoverableAudioCheckpointWriter.recoverableAudioURLs(in: directory).isEmpty)
+        try writer.cancel()
+        #expect(try RecoverableAudioCheckpointWriter.recoverableAudioURLs(in: directory).isEmpty)
     }
 }
 
@@ -69,12 +69,12 @@ private final class CountingCheckpointSink: AudioCheckpointSink, @unchecked Send
         checkpointedDuration += Double(buffer.frameLength) / buffer.format.sampleRate
     }
     func finish() throws -> URL? { nil }
-    func cancel() {}
+    func cancel() throws {}
 }
 
 private final class FailingCheckpointSink: AudioCheckpointSink, @unchecked Sendable {
     struct WriteFailure: Error {}
     func append(_ buffer: AVAudioPCMBuffer) throws { throw WriteFailure() }
     func finish() throws -> URL? { nil }
-    func cancel() {}
+    func cancel() throws {}
 }

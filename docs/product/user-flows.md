@@ -113,7 +113,10 @@ Ordinary dictation remains local.
 installed TextEdit/Notes/browser/Slack/editor compatibility rows; offline run.
 
 **Traceability:** [Issue #1](https://github.com/serpcompany/serpy-clicky-mac-app/issues/1),
-Acceptance A4–A12.
+[Issue #12](https://github.com/serpcompany/serpy-clicky-mac-app/issues/12),
+Acceptance A4–A12. Issue #12 adds durable multi-minute audio checkpoints,
+sub-minute recognition rollover on macOS 14–25, streaming finalized-prefix
+accumulation on macOS 26, and recovery before insertion.
 
 ## UF-04 — Cancel dictation safely
 
@@ -126,7 +129,8 @@ clears, nothing is inserted, and a late callback cannot alter the target.
 timing with a real focused target.
 
 **Traceability:** Acceptance A7 and the cancellation requirements in
-[Issue #7](https://github.com/serpcompany/serpy-clicky-mac-app/issues/7).
+[Issue #7](https://github.com/serpcompany/serpy-clicky-mac-app/issues/7) and
+[Issue #12](https://github.com/serpcompany/serpy-clicky-mac-app/issues/12).
 
 ## UF-05 — Recover failed or uncertain dictation
 
@@ -148,6 +152,7 @@ history and audio history are separate opt-ins, with audio off by default.
 to default on for fresh installs. That policy change is outside Version 1.
 
 **Traceability:** [Issue #5](https://github.com/serpcompany/serpy-clicky-mac-app/issues/5),
+[Issue #12](https://github.com/serpcompany/serpy-clicky-mac-app/issues/12),
 ADR 0005, A10–A12, D4, D7.
 
 ## UF-06 — Follow the selected keyboard language

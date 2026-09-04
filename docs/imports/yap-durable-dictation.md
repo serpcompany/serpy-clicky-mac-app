@@ -11,12 +11,12 @@
 | --- | --- | --- |
 | `Sources/Coordinator/RecordingCoordinator.swift` | `RecordingCoordinator`, injected `DictationSessioning`, target capture before product UI, owned start/stop phases | `Packages/GuideModules/Sources/GuideCore/RecordingCoordinator.swift` |
 | `Sources/Services/DictationSession.swift` | `DictationSessioning`, `DictationSession`, microphone-first startup, early-buffer relay | `Packages/GuideModules/Sources/GuideCore/StreamingTranscription.swift`; `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` |
-| `Sources/Services/StreamingTranscriber.swift` | `StreamingTranscriber` interface | `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` |
-| `Sources/Services/TranscriptionService.swift` | `SpeechAnalyzer`, `SpeechTranscriber`, finalized-prefix plus volatile-suffix accumulation | `Packages/GuideModules/Sources/GuideCore/StreamingTranscription.swift`; `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` |
-| `Sources/Services/AudioBufferRelay.swift` | lock-protected bounded early-buffer relay | `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` (`YapAudioBufferRelay`) |
-| `Sources/Services/AudioCaptureService.swift` | fresh AVAudioEngine graph after input-device configuration changes | `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` (`YapAudioCaptureService`) |
-| `Sources/Services/BufferConverter.swift` | AVAudioConverter lifecycle and single-consumption input block | `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` (`YapBufferConverter`) |
-| `Sources/Services/SpeechLocale.swift` | deterministic exact, language-region, then language-only locale matching | `Packages/GuideModules/Sources/GuideMac/DurableDictationSession.swift` |
+| `Sources/Services/StreamingTranscriber.swift` | `StreamingTranscriber` interface | `Packages/GuideModules/Sources/GuideMac/StreamingTranscribers.swift` |
+| `Sources/Services/TranscriptionService.swift` | `SpeechAnalyzer`, `SpeechTranscriber`, finalized-prefix plus volatile-suffix accumulation | `Packages/GuideModules/Sources/GuideCore/StreamingTranscription.swift`; `Packages/GuideModules/Sources/GuideMac/StreamingTranscribers.swift` |
+| `Sources/Services/AudioBufferRelay.swift` | lock-protected bounded early-buffer relay | `Packages/GuideModules/Sources/GuideMac/AudioBufferRelay.swift` (`AudioBufferRelay`) |
+| `Sources/Services/AudioCaptureService.swift` | fresh AVAudioEngine graph after input-device configuration changes | `Packages/GuideModules/Sources/GuideMac/AudioCaptureService.swift` (`YapAudioCaptureService`) |
+| `Sources/Services/BufferConverter.swift` | AVAudioConverter lifecycle and single-consumption input block | `Packages/GuideModules/Sources/GuideMac/StreamingTranscribers.swift` (`BufferConverter`) |
+| `Sources/Services/SpeechLocale.swift` | deterministic exact, language-region, then language-only locale matching | `Packages/GuideModules/Sources/GuideMac/StreamingTranscribers.swift` |
 | `Tests/RecordingCoordinatorTests.swift` | injected behavior-test structure, original-target capture, cancel-without-insert | `Packages/GuideModules/Tests/GuideCoreTests/RecordingCoordinatorTests.swift` |
 
 Pinned source: <https://github.com/FrigadeHQ/yap/tree/5f06bb1aa889abaa064b09a9bf33aff984dc1583>
@@ -40,8 +40,10 @@ Pinned source: <https://github.com/FrigadeHQ/yap/tree/5f06bb1aa889abaa064b09a9bf
 - Use only already-installed Apple Speech assets during Dictation. Yap's asset
   download/install behavior was removed so automated or ordinary activation
   cannot begin an undocumented download.
-- Keep the existing Apple on-device `SFSpeechRecognizer` implementation as the
-  fallback below macOS 26.
+- On macOS 14–25, transcribe the durable checkpoint through sequential
+  sub-minute on-device `SFSpeechURLRecognitionRequest` chunks. This serpy-only
+  glue prevents the donor's macOS 26 requirement from leaving supported older
+  systems on the previous one-request limit.
 - Omitted dictionary, filler removal, model cleanup, history UI, sounds, HUD,
   settings, secure-input UI, and product identity.
 
@@ -58,10 +60,15 @@ release configuration, or update feed was retained.
   ordered sentinels spanning the one-minute boundary.
 - `RecordingCoordinatorTests`: immediate preparing acknowledgement,
   preserve-before-delivery ordering, checkpoint failure, cancellation/late
-  output suppression, truthful unconfirmed recovery, and interrupted-audio
-  recovery without insertion.
+  output suppression including pending insertion, truthful unconfirmed
+  recovery, and all interrupted-audio recovery without insertion.
 - `RecoveryAudioCheckpointWriterTests`: every-buffer checkpoint frequency,
   explicit write failure, and discoverable/cancellable interrupted audio.
+- `DurableDictationSessionTests`: 130 seconds of real PCM with encoded sentinel
+  markers, injected recognition/device failures, all-checkpoint recovery,
+  visible deletion failure, and macOS 14–25 sub-minute chunking.
+- `DictationAdapterContractTests`: production conformance to the external
+  capture, session, streaming, target, insertion, and recovery seams.
 
 ## MIT notice
 

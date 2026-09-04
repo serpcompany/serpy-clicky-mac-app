@@ -20,7 +20,7 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
     private var target: Target?
     private var attemptID: UUID?
     private var operationTask: Task<Void, Never>?
-    private var saveAudio = false
+    private var retainAudioInHistory = false
 
     public init(
         session: any DictationSessioning,
@@ -42,7 +42,7 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
     public var isOnDeviceAvailable: Bool { session.isOnDeviceAvailable }
     public var availabilityDescription: String { session.availabilityDescription }
 
-    public func start(saveAudio: Bool) {
+    public func start(retainAudioInHistory: Bool) {
         guard !phase.isActive else { return }
         operationTask?.cancel()
         machine.reset()
@@ -58,14 +58,14 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
 
         let id = UUID()
         attemptID = id
-        self.saveAudio = saveAudio
+        self.retainAudioInHistory = retainAudioInHistory
         partialTranscript = ""
         lastInsertionMethod = nil
         lastFailure = nil
         operationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.start(saveAudio: saveAudio)
+                try await session.start(retainAudioInHistory: retainAudioInHistory)
                 try Task.checkCancellation()
                 guard attemptID == id else { throw CancellationError() }
                 try machine.beginRecording()
@@ -103,12 +103,12 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
                 let entry = try await history.preserve(
                     text: result.transcript,
                     targetBundleIdentifier: target.bundleIdentifier,
-                    temporaryAudioURL: saveAudio ? result.temporaryAudioURL : nil,
+                    temporaryAudioURL: retainAudioInHistory ? result.temporaryAudioURL : nil,
                     retainInHistory: retainInHistory
                 )
                 historyEntry = entry
-                if !saveAudio, let temporaryAudioURL = result.temporaryAudioURL {
-                    session.discardTemporaryAudio(at: temporaryAudioURL)
+                if !retainAudioInHistory, let temporaryAudioURL = result.temporaryAudioURL {
+                    try session.discardTemporaryAudio(at: temporaryAudioURL)
                 }
                 try validateActiveAttempt(id)
 
@@ -152,7 +152,13 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
         attemptID = nil
         operationTask?.cancel()
         operationTask = nil
-        session.cancel()
+        inserter.cancel()
+        do {
+            try session.cancel()
+        } catch {
+            fail(error, defaultStage: .storage)
+            return
+        }
         machine.cancel()
         phase = machine.phase
         target = nil
@@ -167,7 +173,12 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
             attemptID = nil
             operationTask?.cancel()
             operationTask = nil
-            session.cancel()
+            inserter.cancel()
+            do {
+                try session.cancel()
+            } catch {
+                fail(error, defaultStage: .storage)
+            }
             target = nil
         }
     }
@@ -175,26 +186,43 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
     /// Converts a crash-surviving raw-audio checkpoint into a pending Last
     /// Dictation. Recovery never inserts automatically because the original
     /// focused destination cannot be trusted after relaunch.
-    public func recoverInterruptedSession(retainInHistory: Bool, saveAudio: Bool) {
+    public func recoverInterruptedSession(
+        retainInHistory: Bool,
+        retainAudioInHistory: Bool
+    ) {
         guard phase == .idle, operationTask == nil else { return }
         operationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                guard let result = try await session.recoverInterruptedAudio() else {
+                let results = try await session.recoverInterruptedAudio()
+                guard !results.isEmpty else {
+                    operationTask = nil
+                    return
+                }
+                let recoveredText = results
+                    .map(\.transcript)
+                    .filter { !$0.isEmpty }
+                    .joined(separator: "\n")
+                guard !recoveredText.isEmpty else {
                     operationTask = nil
                     return
                 }
                 let entry = try await history.preserve(
-                    text: result.transcript,
+                    text: recoveredText,
                     targetBundleIdentifier: nil,
-                    temporaryAudioURL: saveAudio ? result.temporaryAudioURL : nil,
+                    temporaryAudioURL: retainAudioInHistory && results.count == 1
+                        ? results[0].temporaryAudioURL
+                        : nil,
                     retainInHistory: retainInHistory
                 )
-                if !saveAudio, let temporaryAudioURL = result.temporaryAudioURL {
-                    session.discardTemporaryAudio(at: temporaryAudioURL)
+                for result in results where !retainAudioInHistory || results.count > 1 {
+                    if let temporaryAudioURL = result.temporaryAudioURL {
+                        try session.discardTemporaryAudio(at: temporaryAudioURL)
+                    }
                 }
-                transcriptHistory = [entry]
-                partialTranscript = result.transcript
+                transcriptHistory = try await history.load()
+                if transcriptHistory.isEmpty { transcriptHistory = [entry] }
+                partialTranscript = recoveredText
                 onStateChange?()
             } catch {
                 fail(error, defaultStage: .storage)
@@ -219,7 +247,13 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
     private func cancelAttempt(id: UUID) {
         guard attemptID == id else { return }
         attemptID = nil
-        session.cancel()
+        inserter.cancel()
+        do {
+            try session.cancel()
+        } catch {
+            fail(error, defaultStage: .storage)
+            return
+        }
         machine.cancel()
         phase = machine.phase
         target = nil

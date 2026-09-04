@@ -88,6 +88,28 @@ struct TranscriptHistoryStoreTests {
         #expect(!FileManager.default.fileExists(atPath: audioURL.path))
     }
 
+    @Test("audio deletion failure is reported instead of silently ignored")
+    func reportsAudioDeletionFailure() async throws {
+        let fixture = try Fixture()
+        let temporaryAudio = fixture.directory.appending(path: "missing-before-delete.wav")
+        try Data("audio fixture".utf8).write(to: temporaryAudio)
+        let store = fixture.store()
+        let entry = try await store.preserve(
+            text: "keep recovery truthful",
+            targetBundleIdentifier: nil,
+            temporaryAudioURL: temporaryAudio
+        )
+        let audioFilename = try #require(entry.audioFilename)
+        let archived = fixture.fileURL.deletingLastPathComponent()
+            .appending(path: "Audio")
+            .appending(path: audioFilename)
+        try FileManager.default.removeItem(at: archived)
+
+        await #expect(throws: (any Error).self) {
+            _ = try await store.delete(id: entry.id)
+        }
+    }
+
     @Test("clear removes transcript and audio history")
     func clearsEverything() async throws {
         let fixture = try Fixture()

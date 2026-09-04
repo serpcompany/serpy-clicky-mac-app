@@ -135,7 +135,7 @@ public actor TranscriptHistoryStore: LastDictationStoring {
         document.entries.removeAll(where: { $0.id == id })
         try write(document)
         if let audioFilename = removed?.audioFilename {
-            try? fileManager.removeItem(at: audioDirectoryURL.appending(path: audioFilename))
+            try fileManager.removeItem(at: audioDirectoryURL.appending(path: audioFilename))
         }
         return document.entries
     }
@@ -235,7 +235,7 @@ public actor TranscriptHistoryStore: LastDictationStoring {
             includingPropertiesForKeys: nil,
             options: [.skipsHiddenFiles]
         ) where !referenced.contains(url.lastPathComponent) {
-            try? fileManager.removeItem(at: url)
+            try fileManager.removeItem(at: url)
         }
     }
 }

@@ -56,19 +56,15 @@ public protocol DictationSessioning: AnyObject {
     var onPartial: (@MainActor @Sendable (String) -> Void)? { get set }
     var isOnDeviceAvailable: Bool { get }
     var availabilityDescription: String { get }
-    func start(saveAudio: Bool) async throws
+    func start(retainAudioInHistory: Bool) async throws
     func stop() async throws -> SpeechTranscriptionResult
-    func cancel()
-    func recoverInterruptedAudio() async throws -> SpeechTranscriptionResult?
-    func discardTemporaryAudio(at url: URL)
+    func cancel() throws
+    func recoverInterruptedAudio() async throws -> [SpeechTranscriptionResult]
+    func discardTemporaryAudio(at url: URL) throws
 }
 
 public extension DictationSessioning {
-    func recoverInterruptedAudio() async throws -> SpeechTranscriptionResult? { nil }
-
-    func discardTemporaryAudio(at url: URL) {
-        try? FileManager.default.removeItem(at: url)
-    }
+    func recoverInterruptedAudio() async throws -> [SpeechTranscriptionResult] { [] }
 }
 
 /// The bounded final-word capture interval adapted from OpenSuperWhisper. The
@@ -121,9 +117,16 @@ public enum TextInsertionMethod: String, Equatable, Sendable {
 public protocol TextInserting<FocusedTarget>: AnyObject {
     associatedtype FocusedTarget: FocusedTextTargetRepresenting
     func insert(_ text: String, into target: FocusedTarget) async throws -> TextInsertionMethod
+    func cancel()
+}
+
+public extension TextInserting {
+    func cancel() {}
 }
 
 public protocol LastDictationStoring: Sendable {
+    func load() async throws -> [TranscriptHistoryEntry]
+
     func preserve(
         text: String,
         targetBundleIdentifier: String?,
