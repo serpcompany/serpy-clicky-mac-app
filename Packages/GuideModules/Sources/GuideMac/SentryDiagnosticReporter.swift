@@ -67,6 +67,26 @@ public struct SentryHandledEventScrubber {
             "serpy_schema": "handled-v1"
         ]
         event.user = nil
+        event.error = nil
+        event.startTimestamp = nil
+        event.logger = nil
+        event.serverName = nil
+        if event.releaseName?.hasPrefix("com.serpcompany.guidecompanion.internal@") != true {
+            event.releaseName = nil
+        }
+        if event.dist?.allSatisfy(\.isNumber) != true {
+            event.dist = nil
+        }
+        event.type = nil
+        event.platform = "cocoa"
+        event.level = .error
+        if let sdk = event.sdk,
+           let name = sdk["name"] as? String,
+           let version = sdk["version"] as? String {
+            event.sdk = ["name": name, "version": version]
+        } else {
+            event.sdk = nil
+        }
         event.context = nil
         event.extra = nil
         event.modules = nil

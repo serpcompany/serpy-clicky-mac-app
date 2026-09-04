@@ -58,6 +58,20 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         let event = Event(level: .error)
         event.message = SentryMessage(formatted: "guidance.plan.malformed")
         event.environment = "development"
+        event.error = NSError(domain: secret, code: 1)
+        event.startTimestamp = Date()
+        event.logger = secret
+        event.serverName = secret
+        event.releaseName = secret
+        event.dist = secret
+        event.type = secret
+        event.platform = secret
+        event.level = .fatal
+        event.sdk = [
+            "name": "sentry.cocoa",
+            "version": "9.27.0",
+            "unapproved": secret
+        ]
         event.tags = [
             "serpy_schema": "handled-v1",
             "failure_stage": "guidance",
@@ -90,6 +104,18 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         XCTAssertNil(scrubbed.transaction)
         XCTAssertNil(scrubbed.stacktrace)
         XCTAssertNil(scrubbed.exceptions)
+        XCTAssertNil(scrubbed.error)
+        XCTAssertNil(scrubbed.startTimestamp)
+        XCTAssertNil(scrubbed.logger)
+        XCTAssertNil(scrubbed.serverName)
+        XCTAssertNil(scrubbed.releaseName)
+        XCTAssertNil(scrubbed.dist)
+        XCTAssertNil(scrubbed.type)
+        XCTAssertEqual(scrubbed.platform, "cocoa")
+        XCTAssertEqual(scrubbed.level, .error)
+        XCTAssertEqual(scrubbed.sdk?["name"] as? String, "sentry.cocoa")
+        XCTAssertEqual(scrubbed.sdk?["version"] as? String, "9.27.0")
+        XCTAssertEqual(scrubbed.sdk?.count, 2)
         XCTAssertEqual(scrubbed.message?.formatted, "guidance.plan.malformed")
         XCTAssertEqual(scrubbed.fingerprint, ["guidance.plan.malformed"])
         XCTAssertEqual(scrubbed.tags, [
