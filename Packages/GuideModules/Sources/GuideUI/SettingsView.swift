@@ -46,31 +46,6 @@ public struct SettingsView: View {
                     .tabItem { Label("Privacy", systemImage: "hand.raised") }
                     .tag(SettingsTab.privacy)
             }
-            if model.runtimeMode == .uiTest {
-                Divider()
-                HStack {
-                    Button(model.phase == .recording ? "Stop Dictation Fixture" : "Start Dictation Fixture") {
-                        model.toggleDictationFromMenu()
-                    }
-                    Button("Cancel Dictation Fixture") { model.cancelDictation() }
-                    Button(model.guidancePhase == .listening ? "Finish Guide Fixture" : "Start Guide Fixture") {
-                        model.toggleGuidanceVoice()
-                    }
-                    Button("Cancel Guide Fixture") { model.cancelGuidanceVoice() }
-                    Button("Open Guide Transcript") { model.openGuidanceTranscript() }
-                    Button("Configure OpenAI Fixture") {
-                        model.talkProviderSelection = .openAI
-                        model.talkDisclosureAccepted = true
-                        model.talkCredentialDraft = "fixture-key"
-                        model.saveTalkCredential()
-                        Task { await model.testSavedTalkCredential() }
-                    }
-                }
-                Text(verbatim: "dictation=\(String(describing: model.phase));guide=\(String(describing: model.guidancePhase))")
-                    .accessibilityIdentifier("test.runtime.state")
-                Text(verbatim: model.partialTranscript)
-                    .accessibilityIdentifier("test.partial.transcript")
-            }
         }
         .padding()
         .frame(minWidth: 640, minHeight: 560)
@@ -199,6 +174,7 @@ public struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("talk.provider")
 
                 if model.talkProviderSelection == .openAI {
                     Text("OpenAI Talk sends only the current spoken question, a bounded recent Talk transcript, and screenshot pixels of the exact window locked when this turn starts. SERPy requests store:false. OpenAI processes the request under your API account and normal API charges may apply.")
@@ -208,21 +184,26 @@ public struct SettingsView: View {
                         "I accept this request-scoped transmission on this Mac",
                         isOn: $model.talkDisclosureAccepted
                     )
+                    .accessibilityIdentifier("talk.disclosure")
 
                     SecureField("OpenAI API key", text: $model.talkCredentialDraft)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("talk.credential")
                     HStack {
                         Button("Save to Keychain") { model.saveTalkCredential() }
+                            .accessibilityIdentifier("talk.credential.save")
                             .disabled(
                                 model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                     || model.talkCredentialVerification == .verifying
                             )
                         Button("Verify Provider") { Task { await model.testSavedTalkCredential() } }
+                            .accessibilityIdentifier("talk.credential.verify")
                             .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
                         Button("Delete Key", role: .destructive) { model.deleteTalkCredential() }
                             .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
                     }
                     Text(model.talkCredentialStatus)
+                        .accessibilityIdentifier("talk.credential.status")
                         .font(.caption)
                         .foregroundStyle(model.openAITalkReady ? .green : .secondary)
                         .textSelection(.enabled)

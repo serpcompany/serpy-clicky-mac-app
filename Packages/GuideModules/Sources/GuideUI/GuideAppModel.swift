@@ -1217,7 +1217,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.guideStage = turn.stage
         presentation.caption = turn.statusText
         presentation.contextLabel = turn.context?.compactLabel
-        presentation.responseText = turn.responseText
+        presentation.responseText = GuideAmbientResponseText.resolve(turn)
         presentation.pointCue = turn.pointCue
         presentation.guideTarget = turn.target
         statusMessage = turn.statusText
@@ -1286,5 +1286,16 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         companionController.show()
+    }
+}
+
+struct GuideAmbientResponseText {
+    static func resolve(_ turn: GuideTurnPresentation) -> String {
+        guard turn.stage == .error,
+              let recovery = turn.failure?.recovery,
+              !recovery.isEmpty else { return turn.responseText }
+        return [turn.responseText, recovery]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
     }
 }

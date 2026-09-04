@@ -45,15 +45,15 @@ final class GoldenGuideUITests: GoldenUITestCase {
     }
 
     func test_GT_UF10_002_shortcutCancelClearsAmbientCapture() async {
-        await assertAmbientCancellation(extraArgument: "--block-guide-capture", label: "Reading this screen")
+        await assertAmbientCancellation(extraArgument: "--block-guide-capture", label: "Reading this screen", lateAdapter: "capture")
     }
 
     func test_GT_UF10_003_shortcutCancelClearsAmbientThinking() async {
-        await assertAmbientCancellation(extraArgument: "--block-guide-generation", label: "Thinking locally")
+        await assertAmbientCancellation(extraArgument: "--block-guide-generation", label: "Thinking locally", lateAdapter: "generation")
     }
 
     func test_GT_UF10_004_shortcutCancelClearsAmbientSpeaking() async {
-        await assertAmbientCancellation(extraArgument: "--block-guide-speech", label: "Step 1 of 2")
+        await assertAmbientCancellation(extraArgument: "--block-guide-speech", label: "Step 1 of 2", lateAdapter: "speech")
     }
 
     func test_GT_UF10_005_shortcutCancelClearsAmbientFollowUp() async {
@@ -66,8 +66,21 @@ final class GoldenGuideUITests: GoldenUITestCase {
 
     func test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization() async {
         await launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
-        tap("Configure OpenAI Fixture")
-        XCTAssertTrue(application.staticTexts["Provider verified for 15 minutes. OpenAI Talk may now send an explicitly disclosed turn."].waitForExistence(timeout: 5))
+        tap("Guidance")
+        tap("OpenAI multimodal")
+        let disclosure = application.checkBoxes["talk.disclosure"]
+        XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
+        disclosure.click()
+        let credential = application.secureTextFields["talk.credential"]
+        XCTAssertTrue(credential.waitForExistence(timeout: 5))
+        credential.click()
+        credential.typeText("fixture-key")
+        application.buttons["talk.credential.save"].click()
+        application.buttons["talk.credential.verify"].click()
+        expectValue(
+            identifier: "talk.credential.status",
+            value: "Provider verified for 15 minutes. OpenAI Talk may now send an explicitly disclosed turn."
+        )
         closeSettingsForAmbientGuide()
         askAmbientGuide()
         let requestReceipt = sessionRoot.appendingPathComponent("cloud-request.fixture")
@@ -85,7 +98,10 @@ final class GoldenGuideUITests: GoldenUITestCase {
         await launch(flow: "UF-12")
         closeSettingsForAmbientGuide()
         askAmbientGuide()
-        expectAmbient(labelContains: "The local guide returned malformed structured guidance.", value: "")
+        expectAmbient(
+            labelContains: "The local guide returned malformed structured guidance.",
+            value: "Try the question again. SERPy did not present incomplete steps."
+        )
         let incident = sessionRoot.appendingPathComponent("incident.fixture")
         let reported = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: incident.path) },
@@ -102,20 +118,25 @@ final class GoldenGuideUITests: GoldenUITestCase {
         triggerShortcut("guide-released")
     }
 
-    private func assertAmbientCancellation(extraArgument: String, label: String) async {
+    private func assertAmbientCancellation(extraArgument: String, label: String, lateAdapter: String) async {
         await launch(flow: "UF-10", extraArguments: [extraArgument])
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
         expectAmbient(labelContains: "Open a new window", value: "")
         triggerShortcut("guide-released")
         expectAmbient(labelContains: label)
-        cancelAmbientGuide()
+        cancelAmbientGuide(lateAdapter: lateAdapter)
     }
 
-    private func cancelAmbientGuide() {
+    private func cancelAmbientGuide(lateAdapter: String? = nil) {
         triggerShortcut("cancelled")
         expectAmbient(labelContains: "Cancelled", value: "")
         expectAmbientGone(timeout: 3)
+        if let lateAdapter {
+            writeFixtureSignal("\(lateAdapter).late-release")
+            waitForFixture("\(lateAdapter).late-returned")
+            XCTAssertFalse(application.descendants(matching: .any)["guide.ambient"].exists)
+        }
         XCTAssertFalse(application.windows["SERPy Voice Transcript"].exists)
     }
 }

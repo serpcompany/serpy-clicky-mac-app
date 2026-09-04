@@ -63,11 +63,20 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   headlessly, asserts the exact role-to-concrete-type allowlist and production
   denylist, and proves an injected production Keychain adapter makes the audit
   fail.
-- The App composition contract also drives token-owned press, release, and
-  cancel signals through the deterministic shortcut monitor and asserts that
-  the installed `GlobalShortcutCallbacks` receive them in order. Golden Guide
-  XCUI contains a static guard against transcript-opening arguments and visible
-  Talk/Finish controls.
+- The App composition contract also drives token-owned Dictation press/release,
+  Guide press/release, and cancel signals through the deterministic shortcut
+  monitor and asserts that the installed `GlobalShortcutCallbacks` receive them
+  in order. Golden Guide XCUI contains a static guard against transcript-opening
+  arguments and visible Talk/Finish controls. Shipping GuideUI contains no
+  runtime-mode fixture bar; static source and Release-binary scans reject every
+  former fixture-control string.
+- Golden Dictation now enters through the same token-owned shortcut callback
+  driver as Guide. UF-11 manipulates the real Settings provider, disclosure,
+  credential, save, and verify controls individually; deterministic adapters
+  replace only Keychain and provider I/O. UF-10 releases blocked adapter work
+  after cancellation, waits for a late-return receipt, and proves no ambient
+  output returns. UF-12 asserts the visible recovery action and exact one-report
+  diagnostic receipt.
 - Release excludes every UI-test composition source, rejects `--ui-testing`
   before production construction, and the bounded Release build scans the
   executable for fixture symbols. The headless harness self-test also rejects
@@ -84,7 +93,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning and shortcut callback-driver coverage; 100 XCTest, 83 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, and ambient failure recovery mapping; 100 XCTest, 84 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 

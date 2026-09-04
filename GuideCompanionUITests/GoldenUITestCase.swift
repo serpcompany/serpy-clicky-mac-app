@@ -145,9 +145,19 @@ class GoldenUITestCase: XCTestCase {
     }
 
     func releaseFixture(_ name: String) {
-        XCTAssertNoThrow(try Data().write(
-            to: sessionRoot.appendingPathComponent("\(name).release"),
-            options: .atomic
-        ))
+        writeFixtureSignal("\(name).release")
+    }
+
+    func writeFixtureSignal(_ name: String) {
+        XCTAssertNoThrow(try Data().write(to: sessionRoot.appendingPathComponent(name), options: .atomic))
+    }
+
+    func waitForFixture(_ name: String, timeout: TimeInterval = 5) {
+        let url = sessionRoot.appendingPathComponent(name)
+        let written = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: url.path) },
+            object: nil
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [written], timeout: timeout), .completed)
     }
 }

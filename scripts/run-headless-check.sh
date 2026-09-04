@@ -96,7 +96,20 @@ run_bounded() {
   fi
   while kill -0 -- -"$owned_pgid" 2>/dev/null; do
     sleep 2
-    local used_kib=$(du -sk "$run_root" | awk '{print $1}')
+    local used_kib=""
+    local measurement=""
+    for _ in {1..3}; do
+      measurement=$(/usr/bin/du -sk "$run_root" 2>/dev/null) || measurement=""
+      used_kib=${measurement%%[[:space:]]*}
+      [[ "$used_kib" == <-> ]] && break
+      used_kib=""
+      sleep 0.1
+    done
+    if [[ -z "$used_kib" ]]; then
+      print -u2 "disk usage measurement unavailable after 3 attempts"
+      terminate_owned_group
+      return 75
+    fi
     if (( used_kib > disk_budget_kib )); then
       print -u2 "disk budget exceeded: ${used_kib} KiB"
       terminate_owned_group
@@ -189,8 +202,8 @@ run_app_build() {
     REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
   local release_binary="$run_root/derived-data/Build/Products/Release/SERPy.app/Contents/MacOS/SERPy"
   strings "$release_binary" > "$run_root/release-strings.txt"
-  if /usr/bin/grep -Eq 'GuideUITestComposition|UITestDictationSession|UITestPermissionService|UITestCloudGenerator|UITestIncidentReporter' "$run_root/release-strings.txt"; then
-    print -u2 "Release app contains deterministic UI-test fixture symbols"
+  if /usr/bin/grep -Eq 'GuideUITestComposition|UITestDictationSession|UITestPermissionService|UITestCloudGenerator|UITestIncidentReporter|Start Dictation Fixture|Stop Dictation Fixture|Cancel Dictation Fixture|Start Guide Fixture|Finish Guide Fixture|Cancel Guide Fixture|Open Guide Transcript|Configure OpenAI Fixture|test\.runtime\.state|test\.partial\.transcript' "$run_root/release-strings.txt"; then
+    print -u2 "Release app contains deterministic UI-test fixture symbols or controls"
     return 1
   fi
   run_bounded xcodebuild build-for-testing \

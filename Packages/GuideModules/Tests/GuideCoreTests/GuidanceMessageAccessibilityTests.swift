@@ -14,4 +14,21 @@ struct GuidanceMessageAccessibilityTests {
         #expect(accessibility.label == "Choose New Window.")
         #expect(accessibility.speaker == "serpy")
     }
+
+    @Test("ambient failures expose recovery text without discarding a readable answer")
+    func exposesAmbientFailureRecovery() {
+        let failure = GuideFailure(
+            stage: .guidance,
+            message: "Malformed guidance.",
+            recovery: "Try the question again."
+        )
+        let turn = GuideTurnPresentation(
+            stage: .error,
+            statusText: failure.message,
+            responseText: "Last readable step.",
+            failure: failure
+        )
+
+        #expect(GuideAmbientResponseText.resolve(turn) == "Last readable step.\n\nTry the question again.")
+    }
 }

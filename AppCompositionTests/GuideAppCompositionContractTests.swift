@@ -93,8 +93,8 @@ final class GuideAppCompositionContractTests: XCTestCase {
         let recorder = ShortcutCallbackRecorder()
         let monitor = UITestShortcutMonitor(sessionRoot: owned.root)
         monitor.install(callbacks: GlobalShortcutCallbacks(
-            dictationPressed: {},
-            dictationReleased: {},
+            dictationPressed: { recorder.events.append("dictation-pressed") },
+            dictationReleased: { recorder.events.append("dictation-released") },
             guidePressed: { recorder.events.append("pressed") },
             guideReleased: { recorder.events.append("released") },
             cancelled: { recorder.events.append("cancelled") }
@@ -102,14 +102,17 @@ final class GuideAppCompositionContractTests: XCTestCase {
         try monitor.start()
         defer { monitor.stop() }
 
-        for (index, action) in ["guide-pressed", "guide-released", "cancelled"].enumerated() {
+        let actions = ["dictation-pressed", "dictation-released", "guide-pressed", "guide-released", "cancelled"]
+        for (index, action) in actions.enumerated() {
             let name = "shortcut.00000000-0000-4000-8000-00000000000\(index).\(action).trigger"
             try Data().write(to: owned.root.appendingPathComponent(name), options: .atomic)
         }
-        for _ in 0..<100 where recorder.events.count < 3 {
+        for _ in 0..<100 where recorder.events.count < actions.count {
             try await Task.sleep(for: .milliseconds(25))
         }
-        XCTAssertEqual(recorder.events, ["pressed", "released", "cancelled"])
+        XCTAssertEqual(recorder.events, [
+            "dictation-pressed", "dictation-released", "pressed", "released", "cancelled",
+        ])
     }
 
     private func makeOwnedSessionRoot() throws -> OwnedSessionRoot {

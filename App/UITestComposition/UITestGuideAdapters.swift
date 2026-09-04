@@ -25,7 +25,10 @@ final class UITestScreenContextService: AppScreenContextServicing, Deterministic
         )
     }
     func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
-        if block { try await Task.sleep(for: .seconds(3_600)) }
+        if block {
+            await waitForUITestLateRelease(sessionRoot.appendingPathComponent("capture.late-release"))
+            try Data().write(to: sessionRoot.appendingPathComponent("capture.late-returned"), options: .atomic)
+        }
         if stepwise { try await waitForUITestRelease(sessionRoot.appendingPathComponent("capture.release")) }
         let count = await MainActor.run { captureCount += 1; return captureCount }
         let visible = switch count {
@@ -67,7 +70,10 @@ final class UITestGuideGenerator: GuideTurnGenerating, DeterministicUITestAdapte
     }
     func answer(question: String, context: ScreenContext, conversation: [GuidanceMessage]) async throws -> GuidancePlan {
         if malformed { throw GuideFailure.malformedGuidance(provider: .local) }
-        if block { try await Task.sleep(for: .seconds(3_600)) }
+        if block {
+            await waitForUITestLateRelease(sessionRoot.appendingPathComponent("generation.late-release"))
+            try Data().write(to: sessionRoot.appendingPathComponent("generation.late-returned"), options: .atomic)
+        }
         if stepwise { try await waitForUITestRelease(sessionRoot.appendingPathComponent("generation.release")) }
         return GuidancePlan(
             answer: "Open the File menu, then choose New Window.",
@@ -91,7 +97,10 @@ final class UITestGuideSpeaker: GuideTurnSpeaking, DeterministicUITestAdapter {
         self.sessionRoot = sessionRoot
     }
     func speak(_ text: String) async throws {
-        if block { try await Task.sleep(for: .seconds(3_600)) }
+        if block {
+            await waitForUITestLateRelease(sessionRoot.appendingPathComponent("speech.late-release"))
+            try Data().write(to: sessionRoot.appendingPathComponent("speech.late-returned"), options: .atomic)
+        }
         if stepwise { try await waitForUITestRelease(sessionRoot.appendingPathComponent("speech.release")) }
     }
     func stop() {}
@@ -119,4 +128,14 @@ private func waitForUITestRelease(_ url: URL) async throws {
         message: "The deterministic UI fixture timed out.",
         recovery: "Fix the test driver release signal."
     )
+}
+
+private func waitForUITestLateRelease(_ url: URL) async {
+    while !FileManager.default.fileExists(atPath: url.path) {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.025) {
+                continuation.resume()
+            }
+        }
+    }
 }

@@ -86,6 +86,8 @@ final class UITestIncidentReporter: DiagnosticIncidentReporting, DeterministicUI
 @MainActor
 final class UITestShortcutMonitor: GlobalShortcutMonitoring, DeterministicUITestAdapter {
     private enum Trigger: String, Sendable {
+        case dictationPressed = "dictation-pressed"
+        case dictationReleased = "dictation-released"
         case guidePressed = "guide-pressed"
         case guideReleased = "guide-released"
         case cancelled
@@ -125,6 +127,8 @@ final class UITestShortcutMonitor: GlobalShortcutMonitoring, DeterministicUITest
     private func deliver(_ trigger: Trigger) {
         guard let callbacks else { return }
         switch trigger {
+        case .dictationPressed: callbacks.dictationPressed()
+        case .dictationReleased: callbacks.dictationReleased()
         case .guidePressed: callbacks.guidePressed()
         case .guideReleased: callbacks.guideReleased()
         case .cancelled: callbacks.cancelled()

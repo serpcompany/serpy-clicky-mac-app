@@ -17,12 +17,19 @@ done
 /usr/bin/grep -Fq 'precondition(mode == .production, "UI-test composition is unavailable in Release builds")' App/GuideCompanionApp.swift || {
   print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
 }
+if /usr/bin/grep -REq 'runtimeMode[[:space:]]*==[[:space:]]*\.uiTest|Start Dictation Fixture|Stop Dictation Fixture|Cancel Dictation Fixture|Start Guide Fixture|Finish Guide Fixture|Cancel Guide Fixture|Open Guide Transcript|Configure OpenAI Fixture|test\.runtime\.state|test\.partial\.transcript' Packages/GuideModules/Sources/GuideUI; then
+  print -u2 "shipping GuideUI contains UI-test branches or fixture controls"
+  exit 1
+fi
 if /usr/bin/grep -Eq -- '--open-guide-transcript|openTranscript|tap\("Talk"\)|tap\("Finish Question"\)' GuideCompanionUITests/GoldenGuideUITests.swift; then
   print -u2 "golden Guide tests use the transcript inspector instead of the ambient shortcut journey"
   exit 1
 fi
 /usr/bin/grep -Fq 'triggerShortcut("guide-pressed")' GuideCompanionUITests/GoldenGuideUITests.swift || {
   print -u2 "golden Guide tests do not enter through the shortcut driver"; exit 1
+}
+/usr/bin/grep -Fq 'triggerShortcut("dictation-pressed")' GuideCompanionUITests/GoldenDictationUITests.swift || {
+  print -u2 "golden Dictation tests do not enter through the shortcut driver"; exit 1
 }
 composition_invocation=$(/usr/bin/sed -n '/-scheme GuideCompanionCompositionTests/,/REGISTER_APP_WITH_LAUNCH_SERVICES=NO/p' scripts/run-headless-check.sh)
 print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_ALLOWED=NO' || {
