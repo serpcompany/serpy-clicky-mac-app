@@ -81,6 +81,11 @@ if /usr/bin/grep -Fq 'env SERPY_XCUI_PARENT=' scripts/run-golden-ui-test.sh; the
   print -u2 "runner authorization variables bypass TEST_RUNNER_ propagation"
   exit 1
 fi
+if /usr/bin/grep -Fq 'cd "$container_root" && pwd -P' scripts/run-golden-ui-test.sh; then
+  print -u2 "XCTest cleanup can hang when a container temp root disappears"
+  exit 1
+fi
+/usr/bin/grep -Fq 'canonical_root=$(/bin/realpath "$root" 2>/dev/null) || continue' scripts/run-golden-ui-test.sh
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"
@@ -108,4 +113,4 @@ set -e
 [[ $full_status -eq 64 ]] || { print -u2 "local full-suite mode was not rejected"; exit 1; }
 [[ $path_status -eq 64 ]] || { print -u2 "outside result path was not rejected"; exit 1; }
 
-print "golden UI runner rejection, nonzero exit, timeout, interrupt, descendant, and cleanup: PASS"
+print "golden UI runner rejection, nonzero exit, timeout, interrupt, descendant, disappearing-root, and cleanup: PASS"

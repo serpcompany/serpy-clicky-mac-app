@@ -77,6 +77,9 @@ outer wrapper searches only the current Darwin user temporary directory and
 the two exact serpy XCTest container temporary directories for the
 run-token-derived session name. It deletes the directory only after its owner
 token matches, and treats a surviving or mismatched session as cleanup failure.
+The wrapper canonicalizes those roots with `realpath` without entering them, so
+XCTest removing a container temporary directory concurrently cannot strand the
+cleanup shell while it resolves a now-deleted working directory.
 Disk-budget sampling tolerates a transient package-extraction race by retrying
 three times; persistent measurement failure terminates the owned group instead
 of silently disabling the budget.

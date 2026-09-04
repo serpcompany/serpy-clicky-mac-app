@@ -126,6 +126,24 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
 ## Deliberately red evidence
 
+- The first M3 focused UF-12 attempt is retained locally at
+  `evidence/issue-13-real-app-UF12-m3-run1.xcresult` (generated and ignored).
+  Xcode executed zero tests because this Mac has no Mac Development certificate
+  for team `847HR8U8D9`; both the app and UI-test targets failed signing before
+  launch. The bounded wrapper still removed its build root and XCTest session,
+  and no serpy process survived. At the time, Xcode Settings also had no Apple
+  Account configured. The owner subsequently signed in and automatic
+  provisioning made the Debug/XCUI build launchable.
+- The second M3 focused UF-12 attempt is retained locally at
+  `evidence/issue-13-real-app-UF12-m3-run2.xcresult` (generated and ignored).
+  The signed app and UI runner launched, but macOS timed out while enabling
+  automation mode before the test body. During failure cleanup, XCTest removed
+  its runner-container temporary root while the wrapper had entered that root
+  to canonicalize it, stranding the cleanup shell in `getcwd`. The run was
+  interrupted after the exact stuck process was sampled; its owned 3.5 GiB
+  build root and all serpy/XCUI processes were removed. Cleanup now canonicalizes
+  candidate roots without changing directory, with a regression guard in the
+  adversarial runner test.
 - `GT-UF09-001` was executed once through the focused local Xcode/XCUI lane on
   2026-09-04. It failed after 60 seconds because the golden host did not acquire
   a process ID. The actual local result bundle is

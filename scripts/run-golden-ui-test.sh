@@ -73,13 +73,17 @@ terminate_owned_group() {
 }
 
 approved_xctest_temporary_roots() {
+  local root container_root canonical_root
   local darwin_temp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR)
-  [[ -d "$darwin_temp" ]] && (cd "$darwin_temp" && pwd -P)
-  local container_root
+  local roots=("$darwin_temp")
   for container_root in \
     "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests/Data/tmp" \
     "$HOME/Library/Containers/com.serpcompany.guidecompanion.internal.uitests.xctrunner/Data/tmp"; do
-    [[ -d "$container_root" ]] && (cd "$container_root" && pwd -P)
+    roots+=("$container_root")
+  done
+  for root in "${roots[@]}"; do
+    canonical_root=$(/bin/realpath "$root" 2>/dev/null) || continue
+    [[ -d "$canonical_root" ]] && print -r -- "$canonical_root"
   done
 }
 
