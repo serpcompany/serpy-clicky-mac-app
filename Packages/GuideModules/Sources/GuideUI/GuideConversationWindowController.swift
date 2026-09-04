@@ -110,6 +110,7 @@ public struct GuideConversationView: View {
                             Text(activityLabel)
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("guide.activity")
                             Spacer()
                         }
                         .id("guidance-activity")
@@ -177,6 +178,7 @@ private struct GuidanceMessageRow: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(message.role == .user ? "guide.message.user" : "guide.message.guide")
         .accessibilityLabel(message.role == .user ? "You" : "SERPy")
         .accessibilityValue(message.content)
     }

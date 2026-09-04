@@ -2,32 +2,24 @@ import XCTest
 
 @MainActor
 final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
-    func test_GT_UF01_001_permissionDenialShowsOneRecoveryRoute() {
+    func test_GT_UF01_001_permissionDenialShowsRecoveryAcrossRelaunch() {
         launch(flow: "UF-01")
-        expectPhase("permissionExplanation")
-        tap("Continue")
-        expectPhase("permissionRequestReady")
-        tap("Deny fixture")
-        expectPhase("permissionRecovery")
-        XCTAssertEqual(application.staticTexts["golden.failure.recovery"].label, "Open Settings")
+        tap("Request Microphone")
+        XCTAssertTrue(application.staticTexts["Microphone access was not granted."].waitForExistence(timeout: 5))
         application.terminate()
         XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
         application.launch()
-        XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
-        expectPhase("permissionRecovery")
+        XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.staticTexts["Denied"].waitForExistence(timeout: 5))
     }
 
-    func test_GT_UF02_001_launchesOneHarnessWindowWithoutIdleOverlay() {
+    func test_GT_UF02_001_realSettingsClosesAndReopensAsOneWindow() {
         launch(flow: "UF-02")
-        expectPhase("idle")
-        XCTAssertEqual(application.windows.count, 1)
-        XCTAssertEqual(application.staticTexts["golden.lifecycle"].label, "windows=1 overlays=0 running=true")
-        tap("Close Settings fixture")
-        XCTAssertEqual(application.staticTexts["golden.lifecycle"].label, "windows=0 overlays=0 running=true")
-        tap("Reopen Settings fixture")
-        XCTAssertEqual(application.staticTexts["golden.lifecycle"].label, "windows=1 overlays=0 running=true")
-        tap("Quit fixture")
-        expectPhase("terminated")
-        XCTAssertEqual(application.staticTexts["golden.lifecycle"].label, "windows=0 overlays=0 running=false")
+        XCTAssertEqual(application.windows.matching(identifier: "SERPy Settings").count, 1)
+        application.windows["SERPy Settings"].buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertFalse(application.windows["SERPy Settings"].exists)
+        application.activate()
+        XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
+        XCTAssertEqual(application.windows.matching(identifier: "SERPy Settings").count, 1)
     }
 }

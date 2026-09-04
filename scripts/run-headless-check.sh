@@ -63,7 +63,7 @@ cleanup() {
   local built_app
   for built_app in \
     "$run_root/derived-data/Build/Products/Debug/SERPy.app" \
-    "$run_root/derived-data-golden/Build/Products/Debug/serpyGoldenHost.app"; do
+    "$run_root/derived-data-golden/Build/Products/Debug/SERPy.app"; do
     if [[ -d "$built_app" ]]; then
       "$launch_services" -u "$built_app" 2>/dev/null || true
     fi
@@ -163,7 +163,7 @@ run_app_build() {
     REGISTER_APP_WITH_LAUNCH_SERVICES=NO
   run_bounded xcodebuild build-for-testing \
     -project GuideCompanion.xcodeproj \
-    -scheme GuideCompanionGoldenHost \
+    -scheme GuideCompanion \
     -testPlan GuideCompanionGolden \
     -configuration Debug \
     -derivedDataPath "$run_root/derived-data-golden" \

@@ -28,7 +28,20 @@ private enum GuideAppComposition {
             : NullDiagnosticIncidentReporter()
     }()
 
-    static let model: GuideAppModel = {
+    static private(set) var model: GuideAppModel!
+    static private(set) var runtimeMode: AppRuntimeMode = .production
+
+    static func configure(for mode: AppRuntimeMode) -> GuideAppModel {
+        if let model { return model }
+        runtimeMode = mode
+        let configured = mode == .uiTest
+            ? GuideUITestComposition.makeModel(arguments: CommandLine.arguments)
+            : makeProductionModel()
+        model = configured
+        return configured
+    }
+
+    private static func makeProductionModel() -> GuideAppModel {
         let local = LocalGuidanceService()
         let permissionService = PermissionService()
         let dictationSession = DurableDictationSession()
@@ -41,8 +54,8 @@ private enum GuideAppComposition {
             history: historyStore
         )
         let screenContextService = ScreenContextService()
-        let guidanceTranscriber = AppleSpeechTranscriber()
-        let guidanceSpeaker = LocalSpeechOutputService()
+        let guidanceTranscriber = AppleSpeechGuideTurnTranscriber(transcriber: AppleSpeechTranscriber())
+        let guidanceSpeaker = LocalGuideTurnSpeaker(speaker: LocalSpeechOutputService())
         let credentialStore = KeychainTalkCredentialStore()
         let credentialVerifier = OpenAITalkCredentialVerifier()
         let cloud = OpenAIMultimodalGuidanceGenerator(credentialStore: credentialStore)
@@ -67,39 +80,8 @@ private enum GuideAppComposition {
             incidentReporter: incidentReporter,
             shortcutMonitorFactory: makeShortcutMonitor
         )
-    }()
-    static let settingsWindow = GuideSettingsWindowController(model: model)
-    static var uiTestCoordinator: GuideTurnCoordinator?
-
-    static func runMalformedGuidanceFixture() async {
-        let target = GuideWindowTarget(
-            processIdentifier: Int32(ProcessInfo.processInfo.processIdentifier),
-            windowIdentifier: 1,
-            applicationName: "Fixture App",
-            windowTitle: "Benign Fixture",
-            frame: CGRect(x: 120, y: 120, width: 800, height: 600),
-            displayIdentifier: nil
-        )
-        let overlay = PersistentFixtureOverlay(model: model)
-        let coordinator = GuideTurnCoordinator(
-            capture: MalformedFixtureCapture(target: target),
-            transcription: MalformedFixtureTranscription(),
-            generation: MalformedFixtureGeneration(),
-            speech: MalformedFixtureSpeech(),
-            overlay: overlay,
-            incidentReporter: incidentReporter
-        )
-        uiTestCoordinator = coordinator
-        do {
-            try coordinator.start(target: target)
-            await Task.yield()
-            coordinator.finishListening()
-            await coordinator.waitUntilIdle()
-        } catch {
-            uiTestCoordinator = nil
-        }
     }
-
+    static var settingsWindow = GuideSettingsWindowController(model: GuideAppComposition.model)
     private static func makeShortcutMonitor(
         configuration: GlobalShortcutConfigurationSet,
         callbacks: GlobalShortcutCallbacks
@@ -125,67 +107,15 @@ private enum GuideAppComposition {
     }
 }
 
-private final class MalformedFixtureCapture: GuideTurnContextCapturing, @unchecked Sendable {
-    let target: GuideWindowTarget
-
-    init(target: GuideWindowTarget) {
-        self.target = target
-    }
-
-    @MainActor
-    func snapshotTarget() throws -> GuideWindowTarget { target }
-
-    func capture(_ target: GuideWindowTarget) async throws -> ScreenContext {
-        ScreenContext(
-            applicationName: target.applicationName,
-            windowTitle: target.windowTitle,
-            windowFrame: target.frame,
-            textBlocks: []
-        )
-    }
-}
-
-@MainActor
-private final class MalformedFixtureTranscription: GuideTurnTranscribing {
-    func start(onPartial: @escaping @MainActor @Sendable (String) -> Void) throws {}
-    func stop() async throws -> String { "Benign fixture question" }
-    func cancel() {}
-}
-
-@MainActor
-private final class MalformedFixtureGeneration: GuideTurnGenerating {
-    func answer(
-        question: String,
-        context: ScreenContext,
-        conversation: [GuidanceMessage]
-    ) async throws -> GuidancePlan {
-        throw GuideFailure.malformedGuidance(provider: .local)
-    }
-}
-
-@MainActor
-private final class MalformedFixtureSpeech: GuideTurnSpeaking {
-    func speak(_ text: String) async throws {}
-    func stop() {}
-}
-
-@MainActor
-private final class PersistentFixtureOverlay: GuideTurnOverlayPresenting {
-    let model: GuideAppModel
-
-    init(model: GuideAppModel) {
-        self.model = model
-    }
-
-    func present(_ presentation: GuideTurnPresentation) { model.present(presentation) }
-    func dismissResponse() { model.dismissResponse() }
-    func restoreIdleVisibility(after delay: Duration) {}
-}
-
 @main
 struct GuideCompanionApp: App {
     @NSApplicationDelegateAdaptor(GuideAppDelegate.self) private var appDelegate
-    @State private var model = GuideAppComposition.model
+    @State private var model: GuideAppModel
+
+    init() {
+        let mode = AppRuntimeMode.resolve(arguments: CommandLine.arguments)
+        _model = State(initialValue: GuideAppComposition.configure(for: mode))
+    }
 
     var body: some Scene {
         MenuBarExtra {
@@ -219,10 +149,6 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
             if CommandLine.arguments.contains("--ui-testing"),
                CommandLine.arguments.contains("--open-guide-transcript") {
                 GuideAppComposition.model.openGuidanceTranscript()
-            }
-            if CommandLine.arguments.contains("--ui-testing"),
-               CommandLine.arguments.contains("--guide-fixture=malformed-plan") {
-                await GuideAppComposition.runMalformedGuidanceFixture()
             }
         }
     }

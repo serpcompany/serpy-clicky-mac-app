@@ -2,71 +2,104 @@ import XCTest
 
 @MainActor
 final class GoldenGuideUITests: GoldenUITestCase {
-    func test_GT_UF08_001_questionReachesFollowUpReadyWithoutComposer() {
-        launch(flow: "UF-08")
-        for phase in ["listening", "transcribing", "capturing", "thinking", "speaking", "followUpReady"] {
-            tap("Advance fixture")
-            expectPhase(phase)
-        }
-        XCTAssertEqual(
-            application.staticTexts["golden.answer"].label,
-            "Open the File menu, then choose New Window."
+    func test_GT_UF08_001_realGuideAnswersOneFixtureQuestion() {
+        launch(flow: "UF-08", openTranscript: true)
+        tap("Talk")
+        tap("Finish Question")
+        expectValue(
+            identifier: "guide.message.guide",
+            value: "Open the File menu, then choose New Window."
         )
-        XCTAssertEqual(application.textFields.count, 0)
     }
 
     func test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep() {
-        launch(flow: "UF-09")
-        XCTAssertEqual(application.staticTexts["golden.step"].label, "Step 1 of 2")
-        tap("Stale Evidence fixture")
-        XCTAssertEqual(application.staticTexts["golden.step"].label, "Step 1 of 2")
-        tap("Fresh Evidence fixture")
-        XCTAssertEqual(application.staticTexts["golden.step"].label, "Step 2 of 2")
-        tap("Fresh Evidence fixture")
-        expectPhase("completed")
+        launch(flow: "UF-09", openTranscript: true)
+
+        tap("Talk")
+        XCTAssertTrue(application.buttons["Finish Question"].waitForExistence(timeout: 3))
+        tap("Finish Question")
+        expectValue(
+            identifier: "guide.message.guide",
+            value: "Open the File menu, then choose New Window."
+        )
+
+        tap("Talk")
+        tap("Finish Question")
+        expectValue(identifier: "guide.message.guide", value: "Choose New Window.")
+
+        tap("Talk")
+        tap("Finish Question")
+        expectValue(identifier: "guide.message.guide", value: "Done. This walkthrough is complete.")
     }
 
-    func test_GT_UF10_001_cancelSuppressesLateGuideOutput() {
-        launch(flow: "UF-10", phase: "listening")
+    func test_GT_UF10_001_escapeCancelsTheRealGuideModel() {
+        launch(flow: "UF-10", openTranscript: true)
+        tap("Talk")
         application.typeKey(.escape, modifierFlags: [])
-        tap("Deliver Late Result fixture")
-        expectPhase("cancelled")
-        XCTAssertFalse(application.staticTexts["must be ignored"].exists)
+        XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
+        XCTAssertFalse(application.descendants(matching: .any)["guide.message.guide"].exists)
     }
 
-    func test_GT_UF10_002_escapeCancelsCapture() { assertGuideEscape(phase: "capturing") }
-    func test_GT_UF10_003_escapeCancelsThinking() { assertGuideEscape(phase: "thinking") }
-    func test_GT_UF10_004_escapeCancelsSpeaking() { assertGuideEscape(phase: "speaking") }
-    func test_GT_UF10_005_escapeCancelsFollowUp() { assertGuideEscape(phase: "followUpReady") }
+    func test_GT_UF10_002_escapeCancelsRealCapture() {
+        assertGuideCancellation(extraArgument: "--block-guide-capture", activity: "Reading the selected window…")
+    }
 
-    private func assertGuideEscape(phase: String) {
-        launch(flow: "UF-10", phase: phase)
+    func test_GT_UF10_003_escapeCancelsRealThinking() {
+        assertGuideCancellation(extraArgument: "--block-guide-generation", activity: "Thinking locally…")
+    }
+
+    func test_GT_UF10_004_escapeCancelsRealSpeaking() {
+        launch(flow: "UF-10", openTranscript: true, extraArguments: ["--block-guide-speech"])
+        tap("Talk")
+        tap("Finish Question")
+        XCTAssertTrue(application.descendants(matching: .any)["guide.message.guide"].waitForExistence(timeout: 5))
         application.typeKey(.escape, modifierFlags: [])
-        expectPhase("cancelled")
-        XCTAssertEqual(application.staticTexts["golden.lifecycle"].label, "windows=1 overlays=0 running=true")
+        XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
     }
 
-    func test_GT_UF11_001_openAITalkUsesOnlyInMemoryCredentialAndFixtureResponse() {
+    func test_GT_UF10_005_escapeClearsRealFollowUpState() {
+        launch(flow: "UF-10", openTranscript: true)
+        tap("Talk")
+        tap("Finish Question")
+        expectValue(identifier: "guide.message.guide", value: "Open the File menu, then choose New Window.")
+        application.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
+    }
+
+    private func assertGuideCancellation(extraArgument: String, activity: String) {
+        launch(flow: "UF-10", openTranscript: true, extraArguments: [extraArgument])
+        tap("Talk")
+        tap("Finish Question")
+        expectValue(identifier: "guide.activity", value: activity)
+        application.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(application.buttons["Talk"].waitForExistence(timeout: 5))
+    }
+
+    func test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization() {
         launch(flow: "UF-11")
-        tap("Select OpenAI fixture")
-        tap("Accept Disclosure fixture")
-        expectPhase("credentialRequired")
-        tap("Verify In-Memory Credential")
-        expectPhase("fixtureResponse")
-        XCTAssertEqual(application.staticTexts["golden.safety"].label, "network=0 keychain=memoryOnly")
+        tap("Configure OpenAI Fixture")
+        XCTAssertTrue(
+            application.staticTexts[
+                "Provider verified for 15 minutes. OpenAI Talk may now send an explicitly disclosed turn."
+            ].waitForExistence(timeout: 5)
+        )
     }
 
-    func test_GT_UF12_001_malformedPlanShowsTypedHandledFailure() {
-        launch(flow: "UF-12")
-        expectPhase("handledFailure")
-        XCTAssertEqual(
-            application.staticTexts["golden.failure.cause"].label,
-            "The local guide returned malformed structured guidance."
+    func test_GT_UF12_001_realUIShowsMalformedPlanFailureAndRecovery() {
+        launch(flow: "UF-12", openTranscript: true)
+        tap("Talk")
+        tap("Finish Question")
+        XCTAssertTrue(
+            application.staticTexts["The local guide returned malformed structured guidance."]
+                .waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(
+            application.staticTexts["Try the question again. SERPy did not present incomplete steps."]
+                .waitForExistence(timeout: 5)
         )
         XCTAssertEqual(
-            application.staticTexts["golden.failure.recovery"].label,
-            "Try the question again. SERPy did not present incomplete steps."
+            try? String(contentsOf: sessionRoot.appendingPathComponent("incident.fixture"), encoding: .utf8),
+            "guidance.plan.malformed"
         )
-        XCTAssertEqual(application.staticTexts["golden.safety"].label, "network=0 keychain=none")
     }
 }

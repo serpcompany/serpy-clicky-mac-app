@@ -376,6 +376,7 @@ private struct CompanionBubbleView: View {
             }
         }
         .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier("guide.ambient")
         .accessibilityLabel(accessibilityDescription)
         .accessibilityValue(presentation.responseText.isEmpty ? (presentation.contextLabel ?? "") : presentation.responseText)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)

@@ -32,6 +32,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
     public private(set) var guideShortcut: GlobalModifierChordConfiguration
     public private(set) var talkCredentialAvailable = false
+    public let runtimeMode: AppRuntimeMode
     public private(set) var talkCredentialVerification: TalkCredentialVerificationState = .missing
     public private(set) var talkCredentialStatus = "No OpenAI key saved."
     public var talkCredentialDraft = ""
@@ -65,14 +66,14 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         }
     }
 
-    @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let permissionService: PermissionService
-    @ObservationIgnored private let insertionService: TextInsertionService
-    @ObservationIgnored private let historyStore: TranscriptHistoryStore
-    @ObservationIgnored private let screenContextService: ScreenContextService
+    @ObservationIgnored private let defaults: any AppPreferences
+    @ObservationIgnored private let permissionService: any AppPermissionServicing
+    @ObservationIgnored private let insertionService: any AppTextInsertionServicing
+    @ObservationIgnored private let historyStore: any AppTranscriptHistoryServicing
+    @ObservationIgnored private let screenContextService: any AppScreenContextServicing
     @ObservationIgnored private let localGuidanceService: LocalGuidanceService
-    @ObservationIgnored private let guidanceTranscriber: AppleSpeechTranscriber
-    @ObservationIgnored private let guidanceSpeaker: LocalSpeechOutputService
+    @ObservationIgnored private let guidanceTranscriber: any AppGuideTranscribing
+    @ObservationIgnored private let guidanceSpeaker: any GuideTurnSpeaking
     @ObservationIgnored private let talkCredentialStore: any TalkCredentialStoring
     @ObservationIgnored private let talkCredentialVerifier: any TalkCredentialVerifying
     @ObservationIgnored private let talkVerificationExpirySleeper: any TalkVerificationExpirySleeping
@@ -92,9 +93,9 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var guideResponseDismissalTask: Task<Void, Never>?
     @ObservationIgnored private lazy var guideTurnCoordinator = GuideTurnCoordinator(
         capture: screenContextService,
-        transcription: AppleSpeechGuideTurnTranscriber(transcriber: guidanceTranscriber),
+        transcription: guidanceTranscriber,
         generation: talkGenerator,
-        speech: LocalGuideTurnSpeaker(speaker: guidanceSpeaker),
+        speech: guidanceSpeaker,
         overlay: self,
         incidentReporter: incidentReporter
     )
@@ -115,14 +116,15 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public init(
-        defaults: UserDefaults = .standard,
-        permissionService: PermissionService,
+        defaults: any AppPreferences = UserDefaults.standard,
+        runtimeMode: AppRuntimeMode = .production,
+        permissionService: any AppPermissionServicing,
         recordingCoordinator: RecordingCoordinator<FocusedTextTarget>,
-        insertionService: TextInsertionService,
-        historyStore: TranscriptHistoryStore,
-        screenContextService: ScreenContextService,
-        guidanceTranscriber: AppleSpeechTranscriber,
-        guidanceSpeaker: LocalSpeechOutputService,
+        insertionService: any AppTextInsertionServicing,
+        historyStore: any AppTranscriptHistoryServicing,
+        screenContextService: any AppScreenContextServicing,
+        guidanceTranscriber: any AppGuideTranscribing,
+        guidanceSpeaker: any GuideTurnSpeaking,
         localGuidanceService: LocalGuidanceService,
         talkCredentialStore: any TalkCredentialStoring,
         talkCredentialVerifier: any TalkCredentialVerifying,
@@ -132,6 +134,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         shortcutMonitorFactory: @escaping ShortcutMonitorFactory
     ) {
         self.defaults = defaults
+        self.runtimeMode = runtimeMode
         self.permissionService = permissionService
         self.recordingCoordinator = recordingCoordinator
         self.insertionService = insertionService
@@ -929,7 +932,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                     transcriptHistory = (try? await historyStore.updateDelivery(
                         id: historyID,
                         state: .failed,
-                        method: lastInsertionMethod?.rawValue
+                        method: lastInsertionMethod?.rawValue,
+                        targetBundleIdentifier: nil
                     )) ?? transcriptHistory
                 }
                 lastDictationStage = "Retry failed"

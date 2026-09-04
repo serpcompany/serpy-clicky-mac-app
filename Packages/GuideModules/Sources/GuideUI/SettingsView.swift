@@ -46,6 +46,29 @@ public struct SettingsView: View {
                     .tabItem { Label("Privacy", systemImage: "hand.raised") }
                     .tag(SettingsTab.privacy)
             }
+            if model.runtimeMode == .uiTest {
+                Divider()
+                HStack {
+                    Button(model.phase == .recording ? "Stop Dictation Fixture" : "Start Dictation Fixture") {
+                        model.toggleDictationFromMenu()
+                    }
+                    Button("Cancel Dictation Fixture") { model.cancelDictation() }
+                    Button(model.guidancePhase == .listening ? "Finish Guide Fixture" : "Start Guide Fixture") {
+                        model.toggleGuidanceVoice()
+                    }
+                    Button("Cancel Guide Fixture") { model.cancelGuidanceVoice() }
+                    Button("Open Guide Transcript") { model.openGuidanceTranscript() }
+                    Button("Configure OpenAI Fixture") {
+                        model.talkProviderSelection = .openAI
+                        model.talkDisclosureAccepted = true
+                        model.talkCredentialDraft = "fixture-key"
+                        model.saveTalkCredential()
+                        Task { await model.testSavedTalkCredential() }
+                    }
+                }
+                Text(verbatim: "dictation=\(String(describing: model.phase));guide=\(String(describing: model.guidancePhase))")
+                    .accessibilityIdentifier("test.runtime.state")
+            }
         }
         .padding()
         .frame(minWidth: 640, minHeight: 560)
@@ -54,6 +77,13 @@ public struct SettingsView: View {
         }
         .onAppear {
             settingsWindowLifecycle.didAppear()
+        }
+        .onExitCommand {
+            if model.phase.isActive {
+                model.cancelDictation()
+            } else if model.guidancePhase != .idle {
+                model.cancelGuidanceVoice()
+            }
         }
     }
 

@@ -10,8 +10,7 @@
         "environmentVariableEntries" : [
           { "key" : "SENTRY_DSN", "value" : "" },
           { "key" : "SERPY_NETWORK_DISABLED", "value" : "1" },
-          { "key" : "SERPY_STORAGE_MODE", "value" : "ephemeral" },
-          { "key" : "SERPY_GOLDEN_FIXTURE_CATALOG", "value" : "UF-01,UF-02,UF-03,UF-04,UF-05,UF-08,UF-09,UF-10,UF-11,UF-12" }
+          { "key" : "SERPY_STORAGE_MODE", "value" : "memory" }
         ]
       }
     }
@@ -25,8 +24,8 @@
     "userAttachmentLifetime" : "deleteOnSuccess",
     "targetForVariableExpansion" : {
       "containerPath" : "container:GuideCompanion.xcodeproj",
-      "identifier" : "6815E1BB97592EBA085E82C8",
-      "name" : "GuideCompanionGoldenHost"
+      "identifier" : "C72578BA9BADD56511A59773",
+      "name" : "GuideCompanion"
     }
   },
   "testTargets" : [

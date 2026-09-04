@@ -7,26 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		025CC4B358D7A1B43A932405 /* GuideUITestComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 837A10EF3292103B344E4B75 /* GuideUITestComposition.swift */; };
 		33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11CF664193125A6D4EDC0FAF /* GuideUI */; };
 		34A605741DE02A6B17DB039F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 402E6AB6BF038ED9D42B35CD /* Assets.xcassets */; };
 		4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */; };
-		7188896EB0E89AF89612838D /* GuideTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 4DA372F67CB7ABFBF314199D /* GuideTestSupport */; };
 		75B0738563E442E11FC4FB09 /* GoldenUITestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15D32009580958F12B13B2E8 /* GoldenUITestCase.swift */; };
 		7C928719518AA808ED5B3B03 /* GoldenGuideUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE0EE746FCFB1B0120F94B3 /* GoldenGuideUITests.swift */; };
 		9FDCD85439B52AF22561A60D /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = E878CF5435BA1D7276BA94B8 /* GuideCore */; };
-		BE899F25BDBD256EEF4D870C /* GoldenHarnessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD5324AE216E4E6A6870288A /* GoldenHarnessApp.swift */; };
 		E98C786B1C00C0EF08B0E22F /* GoldenDictationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D90639FE6C002C325CBBBA /* GoldenDictationUITests.swift */; };
 		EC5B6B3502E591824DA037B6 /* GoldenPermissionsAndLifecycleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5A59E59D09E17D90B28F0B /* GoldenPermissionsAndLifecycleUITests.swift */; };
 		FF400FA0636D88205DE2D8EA /* GuideMac in Frameworks */ = {isa = PBXBuildFile; productRef = FFB5392BB48DD619D30AAD3A /* GuideMac */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		3D30893490DD03AA94658D8C /* PBXContainerItemProxy */ = {
+		B958B7FBDC825EED1C5568C2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0AFA0107528D7902F0E2685F /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 6815E1BB97592EBA085E82C8;
-			remoteInfo = GuideCompanionGoldenHost;
+			remoteGlobalIDString = C72578BA9BADD56511A59773;
+			remoteInfo = GuideCompanion;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -37,13 +36,12 @@
 		402E6AB6BF038ED9D42B35CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GuideCompanion.entitlements; sourceTree = "<group>"; };
 		7B5A59E59D09E17D90B28F0B /* GoldenPermissionsAndLifecycleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenPermissionsAndLifecycleUITests.swift; sourceTree = "<group>"; };
+		837A10EF3292103B344E4B75 /* GuideUITestComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideUITestComposition.swift; sourceTree = "<group>"; };
 		87D90639FE6C002C325CBBBA /* GoldenDictationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenDictationUITests.swift; sourceTree = "<group>"; };
 		9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionApp.swift; sourceTree = "<group>"; };
 		92ABEB16055301DBFF398885 /* SERPy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SERPy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CFE0EE746FCFB1B0120F94B3 /* GoldenGuideUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenGuideUITests.swift; sourceTree = "<group>"; };
 		DA1572F19C3E0D8130EEF6A4 /* GuideModules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GuideModules; path = Packages/GuideModules; sourceTree = SOURCE_ROOT; };
-		F39D72B59540BF1DBE60BC05 /* serpyGoldenHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = serpyGoldenHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FD5324AE216E4E6A6870288A /* GoldenHarnessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenHarnessApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,14 +52,6 @@
 				9FDCD85439B52AF22561A60D /* GuideCore in Frameworks */,
 				FF400FA0636D88205DE2D8EA /* GuideMac in Frameworks */,
 				33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		FFDB3221B4FD6AE89CA41BA6 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				7188896EB0E89AF89612838D /* GuideTestSupport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,7 +71,6 @@
 			children = (
 				1A4519E3B22F16775F01BFEC /* GuideCompanionUITests.xctest */,
 				92ABEB16055301DBFF398885 /* SERPy.app */,
-				F39D72B59540BF1DBE60BC05 /* serpyGoldenHost.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -103,17 +92,10 @@
 				48FD6FB2B86163145DF82BC6 /* Resources */,
 				665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */,
 				9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */,
+				837A10EF3292103B344E4B75 /* GuideUITestComposition.swift */,
 				3F61D8657750A3BC5FE004B3 /* Info.plist */,
 			);
 			path = App;
-			sourceTree = "<group>";
-		};
-		45BE355C4FE0FB4B7E7D84EC /* GoldenHost */ = {
-			isa = PBXGroup;
-			children = (
-				FD5324AE216E4E6A6870288A /* GoldenHarnessApp.swift */,
-			);
-			path = GoldenHost;
 			sourceTree = "<group>";
 		};
 		48FD6FB2B86163145DF82BC6 /* Resources */ = {
@@ -128,7 +110,6 @@
 			isa = PBXGroup;
 			children = (
 				2991CCBEE9008831151D6F36 /* App */,
-				45BE355C4FE0FB4B7E7D84EC /* GoldenHost */,
 				295C5EC77B7D4457BE787C42 /* GuideCompanionUITests */,
 				007A1CC91626A28E12775EF8 /* Packages */,
 				17EFB257F5758A59B940B974 /* Products */,
@@ -138,25 +119,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6815E1BB97592EBA085E82C8 /* GuideCompanionGoldenHost */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 50A721C7EECA26ABF4B1481A /* Build configuration list for PBXNativeTarget "GuideCompanionGoldenHost" */;
-			buildPhases = (
-				77BB0FF940752DEDD97EF51E /* Sources */,
-				FFDB3221B4FD6AE89CA41BA6 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = GuideCompanionGoldenHost;
-			packageProductDependencies = (
-				4DA372F67CB7ABFBF314199D /* GuideTestSupport */,
-			);
-			productName = GuideCompanionGoldenHost;
-			productReference = F39D72B59540BF1DBE60BC05 /* serpyGoldenHost.app */;
-			productType = "com.apple.product-type.application";
-		};
 		85C699F9ABBAC335777CC339 /* GuideCompanionUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 84AC320DEC0A26FAC5E79C78 /* Build configuration list for PBXNativeTarget "GuideCompanionUITests" */;
@@ -166,7 +128,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				828AB642C15E4BF35C5E4243 /* PBXTargetDependency */,
+				04502B577BFDCC3C868C3C61 /* PBXTargetDependency */,
 			);
 			name = GuideCompanionUITests;
 			packageProductDependencies = (
@@ -206,14 +168,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					6815E1BB97592EBA085E82C8 = {
-						DevelopmentTeam = 847HR8U8D9;
-						ProvisioningStyle = Automatic;
-					};
 					85C699F9ABBAC335777CC339 = {
 						DevelopmentTeam = 847HR8U8D9;
 						ProvisioningStyle = Automatic;
-						TestTargetID = 6815E1BB97592EBA085E82C8;
+						TestTargetID = C72578BA9BADD56511A59773;
 					};
 					C72578BA9BADD56511A59773 = {
 						DevelopmentTeam = 847HR8U8D9;
@@ -239,7 +197,6 @@
 			projectRoot = "";
 			targets = (
 				C72578BA9BADD56511A59773 /* GuideCompanion */,
-				6815E1BB97592EBA085E82C8 /* GuideCompanionGoldenHost */,
 				85C699F9ABBAC335777CC339 /* GuideCompanionUITests */,
 			);
 		};
@@ -268,65 +225,26 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		77BB0FF940752DEDD97EF51E /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				BE899F25BDBD256EEF4D870C /* GoldenHarnessApp.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		ED94EDFBAC5E39026C198119 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */,
+				025CC4B358D7A1B43A932405 /* GuideUITestComposition.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		828AB642C15E4BF35C5E4243 /* PBXTargetDependency */ = {
+		04502B577BFDCC3C868C3C61 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 6815E1BB97592EBA085E82C8 /* GuideCompanionGoldenHost */;
-			targetProxy = 3D30893490DD03AA94658D8C /* PBXContainerItemProxy */;
+			target = C72578BA9BADD56511A59773 /* GuideCompanion */;
+			targetProxy = B958B7FBDC825EED1C5568C2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		0DEA2A12A89640CBBCDDCF83 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				COMBINE_HIDPI_IMAGES = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.serpcompany.guidecompanion.internal.golden-host";
-				PRODUCT_NAME = serpyGoldenHost;
-				SDKROOT = macosx;
-			};
-			name = Release;
-		};
-		115E39392798FD93B4DE9E44 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				COMBINE_HIDPI_IMAGES = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.serpcompany.guidecompanion.internal.golden-host";
-				PRODUCT_NAME = serpyGoldenHost;
-				SDKROOT = macosx;
-			};
-			name = Debug;
-		};
 		15CCA21DB2EB83470639573F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -340,7 +258,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.serpcompany.guidecompanion.internal.uitests;
 				SDKROOT = macosx;
-				TEST_TARGET_NAME = GuideCompanionGoldenHost;
+				TEST_TARGET_NAME = GuideCompanion;
 			};
 			name = Debug;
 		};
@@ -357,7 +275,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.serpcompany.guidecompanion.internal.uitests;
 				SDKROOT = macosx;
-				TEST_TARGET_NAME = GuideCompanionGoldenHost;
+				TEST_TARGET_NAME = GuideCompanion;
 			};
 			name = Release;
 		};
@@ -558,15 +476,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		50A721C7EECA26ABF4B1481A /* Build configuration list for PBXNativeTarget "GuideCompanionGoldenHost" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				115E39392798FD93B4DE9E44 /* Debug */,
-				0DEA2A12A89640CBBCDDCF83 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		84AC320DEC0A26FAC5E79C78 /* Build configuration list for PBXNativeTarget "GuideCompanionUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -589,10 +498,6 @@
 		11CF664193125A6D4EDC0FAF /* GuideUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GuideUI;
-		};
-		4DA372F67CB7ABFBF314199D /* GuideTestSupport */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = GuideTestSupport;
 		};
 		E878CF5435BA1D7276BA94B8 /* GuideCore */ = {
 			isa = XCSwiftPackageProductDependency;

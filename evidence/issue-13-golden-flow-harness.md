@@ -1,40 +1,39 @@
 # Issue 13 golden-flow harness evidence
 
-Date: 2026-09-04
+Date: 2026-09-05
 
 Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
-## Safety design
+## Rejected first design
 
-- The production app is not the XCUI test host.
-- `GuideCompanionGoldenHost` imports only `GuideTestSupport`, whose sole
-  dependency is `GuideCore`, and has a distinct test-only bundle identifier.
-- The fixture driver delegates permission, lifecycle, Dictation phase,
-  walkthrough progression, Talk authorization, and diagnostic classification
-  decisions to the production `GuideCore` policies/state machines. It does not
-  carry a second copy of those decisions.
-- The confirmed Dictation UI fixture runs the production `RecordingCoordinator`
-  with deterministic session, target, insertion, and Last Dictation adapters;
-  the UI can advance only from the coordinator's observed delivery result.
-- Failed, unconfirmed, and interrupted recovery fixtures likewise run through
-  the production coordinator and expose only the resulting persisted delivery
-  state. Permission denial and Last Dictation markers are bounded to a
-  canonical plan-owned session directory and are verified across host relaunch.
+- `GuideCompanionGoldenHost` and `GuideTestSupport` were rejected by the owner.
+  Their results proved only a replacement fixture application and do not count
+  as end-to-end evidence for serpy.
+
+## Current safety design
+
+- XCUI targets the production `GuideCompanion` application.
+- `AppRuntimeMode.uiTest` resolves in `GuideCompanionApp.init` before model
+  composition.
+- The real lifecycle, `GuideAppModel`, GuideUI views/controllers, routing,
+  `RecordingCoordinator`, and `GuideTurnCoordinator` remain in the graph.
+- Only external boundaries receive deterministic in-memory or ephemeral
+  adapters. No production permission, microphone, Keychain, network, Sentry,
+  global-shortcut, or persistent-history adapter is constructed.
 - `AppRuntimeMode.uiTest` admits only deterministic fixtures and ephemeral
   storage; microphone, permission requests, Screen Recording, production
   Keychain, persistent user data, Sentry transport, network providers, and
   global shortcuts are forbidden.
-- Local verification uses only `swift test`, unsigned `xcodebuild build`, and
-  unsigned `xcodebuild build-for-testing`. It never runs XCUI.
+- Routine local verification uses `swift test`, unsigned `xcodebuild build`,
+  and unsigned `xcodebuild build-for-testing`. An explicitly authorized focused
+  lane may execute one named real-app XCUI test.
 - Xcode's temporary build products are explicitly unregistered from Launch
   Services before their one owned run root is removed.
 
 ## Red-capable evidence
 
-- `GoldenRuntimeCompositionTests` failed to compile before the runtime
-  capability contract existed.
-- `GoldenUserFlowHarnessTests` failed to compile before the observable flow
-  fixture existed.
+- `ActualAppRuntimeCompositionTests` lock mode-before-composition and the
+  production-capability exclusion contract.
 - Injected `core-tests` and `app-build` failures each exit 86. The self-test
   proves the owned temporary root is removed after either failure.
 - The runner self-test rejects a traversal-shaped override, forces a
@@ -46,8 +45,8 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | Check | Result | Output retention | Cleanup |
 | --- | --- | --- | --- |
 | `scripts/test-headless-check.sh` | Green | none | Green |
-| `scripts/run-headless-check.sh app-build` | Green; production app and golden XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green; complete package suite passed | none | Green |
+| `scripts/run-headless-check.sh app-build` | Green after real-app retarget; production app and XCUI bundle compiled only | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after real-app retarget; complete package suite passed | none | Green |
 
 ## Deliberately red evidence
 
@@ -57,6 +56,11 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   `evidence/issue-13-local-UF09.xcresult` (generated, ignored, not committed).
   The curated Xcode report screenshot is
   `evidence/issue-13-local-UF09-xcode-report.png`.
+- The first real-app UF-09 attempt is retained at
+  `evidence/issue-13-real-app-UF09.xcresult` (generated and ignored). XCTest
+  connected the runner, then macOS canceled LocalAuthentication while enabling
+  UI automation. No test method or app fixture executed. The owner must approve
+  that OS authentication on the next explicitly announced run.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

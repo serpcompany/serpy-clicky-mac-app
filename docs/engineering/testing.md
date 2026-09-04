@@ -53,11 +53,11 @@ disk limit. Neither command launches an application.
 
 A developer or agent may run one explicitly named golden XCUI test locally
 when the owner requests that exact run. Run it through Xcode or `xcodebuild`
-with `GuideCompanionGoldenHost`, `GuideCompanionGolden.xctestplan`, and a saved
+with the production `GuideCompanion` scheme, `GuideCompanionGolden.xctestplan`, and a saved
 `.xcresult`. The run may briefly take foreground control.
 
-This lane uses only the synthetic golden host. It must not launch production
-serpy, TextEdit, Chrome, System Settings, or another external app; access real
+This lane launches the real serpy application target in `--ui-testing` mode.
+It must not open TextEdit, Chrome, System Settings, or another external app; access real
 permissions, Keychain, Sentry, OpenAI, microphone, or persistent user data; or
 leave an app, runner, registration, scratch directory, or build cache behind.
 Run one selected test at a time and prove teardown before another run. The full
@@ -75,10 +75,11 @@ uses bounded state-based waits, terminates the application, and proves it
 reached the not-running state. An orphan, unexpected Keychain/permission dialog,
 second app instance, or resource-budget breach fails the run without retry.
 
-The isolated lane uses the `GuideCompanionGoldenHost` target and
-`GuideCompanionGolden.xctestplan`. The host imports `GuideTestSupport`, whose
-only dependency is `GuideCore`; it cannot link the production `GuideMac` or
-`GuideUI` adapters. The scheme is compiled locally with `build-for-testing`;
+The isolated lane uses the production `GuideCompanion` target and
+`GuideCompanionGolden.xctestplan`. Runtime mode is resolved before app
+composition. UI-test mode keeps the real lifecycle, `GuideAppModel`, GuideUI,
+routing, and coordinators while injecting deterministic implementations only
+at external adapter protocols. The scheme is compiled locally with `build-for-testing`;
 one explicitly requested test may execute through the focused local UI lane.
 The complete plan runs in an Xcode Cloud workflow named `golden-ui-tests`.
 Configure that workflow for sequential macOS tests, failure-only diagnostics,
@@ -86,10 +87,9 @@ no environment secrets, and no successful screen captures. Make the check
 required only after ten consecutive clean runs with zero prompt, process,
 network, Keychain, or disk violations.
 
-The test plan owns the common `--ui-testing` argument and the complete
-`SERPY_GOLDEN_FIXTURE_CATALOG`. Individual test methods select only a named flow,
-phase, or recovery variant from that catalog; the host fails closed when a flow
-is not in the plan-owned catalog.
+The test plan owns the common `--ui-testing` argument. Individual test methods
+select a named external fixture; product state still advances only through real
+app actions and coordinators.
 
 ### Installed lane
 

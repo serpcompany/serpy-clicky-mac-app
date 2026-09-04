@@ -61,13 +61,8 @@ case "${mode}" in
     pgrep -x SERPy >/dev/null
     ;;
   --golden-malformed)
-    xcodegen generate
-    xcodebuild \
-      -project GuideCompanion.xcodeproj \
-      -scheme GuideCompanion \
-      -destination 'platform=macOS,arch=arm64' \
-      -only-testing:GuideCompanionUITests/GuideCompanionUITests/testMalformedGuidanceFixturePresentsTheHandledFailure \
-      test
+    echo "Use the bounded focused-XCUI procedure in docs/engineering/ci.md; this legacy launcher is disabled." >&2
+    exit 2
     ;;
   *)
     echo "usage: $0 [run|--debug|--logs|--telemetry|--verify|--golden-malformed]" >&2

@@ -10,7 +10,7 @@ result proves. The canonical user outcomes remain in
 | --- | --- | --- | --- |
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Workflow committed; requires a PR or `main` push to produce the first remote report |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Workflow committed; requires a PR or `main` push to produce the first remote report |
-| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Available; first UF-09 execution failed and produced `evidence/issue-13-local-UF09.xcresult` |
+| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Real-app source compiled; execution blocked before the test method by canceled macOS automation authentication |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Not configured; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
@@ -44,20 +44,21 @@ compiles the production app and golden UI test bundle without executing them.
 
 ### Debugging one UI journey locally
 
-Select one test under the `GuideCompanionGoldenHost` scheme and
+Select one test under the `GuideCompanion` scheme and
 `GuideCompanionGolden` test plan in Xcode's Test navigator. A focused local
-XCUI run briefly takes foreground control. It uses only the synthetic
-`serpyGoldenHost`; it must not open production serpy or another application.
+XCUI run briefly takes foreground control. It launches the real app in
+side-effect-incapable UI-test mode; it must not open another application.
 
 Save an `.xcresult` for every claimed run. A compile-only result is not a test
-result. After execution, confirm the golden host and XCTest runner terminated
+result. After execution, confirm serpy and the XCTest runner terminated
 and the temporary build directory was removed.
 
-The first local execution of
-`GT-UF09-001` on 2026-09-04 is intentionally recorded as a failure: the golden
-host did not acquire a process ID and the test timed out after 60 seconds. The
-result bundle is `evidence/issue-13-local-UF09.xcresult`. Do not mark UF-09 green
-until a later executed report passes.
+The first local execution of `GT-UF09-001` on 2026-09-04 is retained as evidence
+that the now-rejected standalone host failed to acquire a process ID. It does
+not count as serpy evidence. The first real-app execution on 2026-09-05 stopped
+before the test method because macOS canceled XCTest automation-mode biometric
+authentication. Do not mark UF-09 green until an authenticated executed report
+passes.
 
 ## GitHub Actions
 
@@ -101,7 +102,7 @@ Primary references:
    Developer team.
 2. Start Xcode Cloud configuration and connect the GitHub repository when Xcode
    requests source access.
-3. Select `GuideCompanionGoldenHost` as the product/scheme.
+3. Select `GuideCompanion` as the product/scheme.
 4. Create a workflow named `golden-ui-tests`.
 5. Add one macOS Test action using the `GuideCompanionGolden` test plan.
 6. Use one macOS destination and sequential test execution.
@@ -128,4 +129,3 @@ Yes, the project needs CI automation, but not a Codex scheduled task:
   macOS permissions, microphone, focus, clipboard, Chrome, and audible speech.
 
 Do not use a recurring Codex automation as a substitute for either CI system.
-

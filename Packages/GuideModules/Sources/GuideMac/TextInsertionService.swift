@@ -15,7 +15,7 @@ public final class FocusedTextTarget: FocusedTextTargetRepresenting, @unchecked 
     fileprivate let element: AXUIElement?
     public let bundleIdentifier: String?
 
-    init(processIdentifier: pid_t, element: AXUIElement?, bundleIdentifier: String?) {
+    public init(processIdentifier: pid_t, element: AXUIElement?, bundleIdentifier: String?) {
         self.processIdentifier = processIdentifier
         self.element = element
         self.bundleIdentifier = bundleIdentifier

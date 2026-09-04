@@ -8,6 +8,8 @@ public final class AppleSpeechGuideTurnTranscriber: GuideTurnTranscribing {
         self.transcriber = transcriber
     }
 
+    public var isOnDeviceAvailable: Bool { transcriber.isOnDeviceAvailable }
+
     public func start(onPartial: @escaping @MainActor @Sendable (String) -> Void) throws {
         try transcriber.start(onPartial: onPartial)
     }
