@@ -51,16 +51,35 @@ targets:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
           ENABLE_TESTABILITY: NO
     scheme:
+      gatherCoverageData: false
+  GuideCompanionGoldenHost:
+    type: application
+    platform: macOS
+    productName: serpyGoldenHost
+    sources:
+      - path: GoldenHost
+    dependencies:
+      - package: GuideModules
+        product: GuideTestSupport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.golden-host
+        PRODUCT_NAME: serpyGoldenHost
+        GENERATE_INFOPLIST_FILE: YES
+    scheme:
       testTargets:
         - GuideCompanionUITests
-      gatherCoverageData: true
+      testPlans:
+        - path: GuideCompanionGolden.xctestplan
+          defaultPlan: true
+      gatherCoverageData: false
   GuideCompanionUITests:
     type: bundle.ui-testing
     platform: macOS
     sources:
       - path: GuideCompanionUITests
     dependencies:
-      - target: GuideCompanion
+      - target: GuideCompanionGoldenHost
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.uitests

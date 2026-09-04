@@ -40,8 +40,12 @@ products inside the repository.
 
 Each future harness invocation must own one unique directory below the operating
 system temporary directory, impose time and disk limits, and remove that
-directory on success, failure, or interruption. The current repository has no
-approved all-in-one verification command; adding it is implementation work.
+directory on success, failure, or interruption. Use
+`scripts/run-headless-check.sh core-tests` for the package suite and
+`scripts/run-headless-check.sh app-build` for unsigned production-app and
+golden-UI-bundle compilation. `scripts/test-headless-check.sh` deliberately
+injects a failure and proves the owned directory is still removed. Neither
+command launches an application.
 
 ### Isolated UI lane
 
@@ -54,6 +58,16 @@ Each test registers teardown before launch, launches one application instance,
 uses bounded state-based waits, terminates the application, and proves it
 reached the not-running state. An orphan, unexpected Keychain/permission dialog,
 second app instance, or resource-budget breach fails the run without retry.
+
+The isolated lane uses the `GuideCompanionGoldenHost` target and
+`GuideCompanionGolden.xctestplan`. The host imports `GuideTestSupport`, whose
+only dependency is `GuideCore`; it cannot link the production `GuideMac` or
+`GuideUI` adapters. The scheme is compiled
+locally with `build-for-testing` but must be executed only by an Xcode Cloud
+workflow named `golden-ui-tests`. Configure that workflow for sequential macOS
+tests, failure-only diagnostics, no environment secrets, and no successful
+screen captures. Make the check required only after ten consecutive clean runs
+with zero prompt, process, network, Keychain, or disk violations.
 
 ### Installed lane
 

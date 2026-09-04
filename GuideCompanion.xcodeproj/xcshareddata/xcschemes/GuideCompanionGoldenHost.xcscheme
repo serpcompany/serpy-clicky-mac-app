@@ -15,9 +15,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C72578BA9BADD56511A59773"
-               BuildableName = "SERPy.app"
-               BlueprintName = "GuideCompanion"
+               BlueprintIdentifier = "6815E1BB97592EBA085E82C8"
+               BuildableName = "serpyGoldenHost.app"
+               BlueprintName = "GuideCompanionGoldenHost"
                ReferencedContainer = "container:GuideCompanion.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -29,16 +29,33 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       onlyGenerateCoverageForSpecifiedTargets = "NO">
+      <TestPlans>
+         <TestPlanReference
+            default = "YES"
+            reference = "container:GuideCompanionGolden.xctestplan">
+         </TestPlanReference>
+      </TestPlans>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C72578BA9BADD56511A59773"
-            BuildableName = "SERPy.app"
-            BlueprintName = "GuideCompanion"
+            BlueprintIdentifier = "6815E1BB97592EBA085E82C8"
+            BuildableName = "serpyGoldenHost.app"
+            BlueprintName = "GuideCompanionGoldenHost"
             ReferencedContainer = "container:GuideCompanion.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "85C699F9ABBAC335777CC339"
+               BuildableName = "GuideCompanionUITests.xctest"
+               BlueprintName = "GuideCompanionUITests"
+               ReferencedContainer = "container:GuideCompanion.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>
@@ -57,9 +74,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C72578BA9BADD56511A59773"
-            BuildableName = "SERPy.app"
-            BlueprintName = "GuideCompanion"
+            BlueprintIdentifier = "6815E1BB97592EBA085E82C8"
+            BuildableName = "serpyGoldenHost.app"
+            BlueprintName = "GuideCompanionGoldenHost"
             ReferencedContainer = "container:GuideCompanion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -76,9 +93,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C72578BA9BADD56511A59773"
-            BuildableName = "SERPy.app"
-            BlueprintName = "GuideCompanion"
+            BlueprintIdentifier = "6815E1BB97592EBA085E82C8"
+            BuildableName = "serpyGoldenHost.app"
+            BlueprintName = "GuideCompanionGoldenHost"
             ReferencedContainer = "container:GuideCompanion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

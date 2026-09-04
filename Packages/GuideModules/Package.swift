@@ -10,7 +10,8 @@ let package = Package(
     products: [
         .library(name: "GuideCore", targets: ["GuideCore"]),
         .library(name: "GuideMac", targets: ["GuideMac"]),
-        .library(name: "GuideUI", targets: ["GuideUI"])
+        .library(name: "GuideUI", targets: ["GuideUI"]),
+        .library(name: "GuideTestSupport", targets: ["GuideTestSupport"])
     ],
     dependencies: [
         .package(
@@ -20,6 +21,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "GuideCore"),
+        .target(name: "GuideTestSupport", dependencies: ["GuideCore"]),
         .target(
             name: "GuideMac",
             dependencies: [
@@ -33,7 +35,7 @@ let package = Package(
         ),
         .testTarget(
             name: "GuideCoreTests",
-            dependencies: ["GuideCore", "GuideMac", "GuideUI"],
+            dependencies: ["GuideCore", "GuideMac", "GuideUI", "GuideTestSupport"],
             resources: [.process("Fixtures")]
         ),
         .testTarget(

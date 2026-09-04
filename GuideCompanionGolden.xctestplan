@@ -1,0 +1,34 @@
+{
+  "configurations" : [
+    {
+      "id" : "07A27F80-85E3-4E23-B5F1-8BEFB84D9161",
+      "name" : "Golden UI",
+      "options" : {
+        "environmentVariableEntries" : [
+          { "key" : "SENTRY_DSN", "value" : "" },
+          { "key" : "SERPY_NETWORK_DISABLED", "value" : "1" },
+          { "key" : "SERPY_STORAGE_MODE", "value" : "ephemeral" }
+        ]
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:GuideCompanion.xcodeproj",
+      "identifier" : "6815E1BB97592EBA085E82C8",
+      "name" : "GuideCompanionGoldenHost"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:GuideCompanion.xcodeproj",
+        "identifier" : "85C699F9ABBAC335777CC339",
+        "name" : "GuideCompanionUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
