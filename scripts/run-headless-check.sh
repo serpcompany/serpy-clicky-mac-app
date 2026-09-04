@@ -157,6 +157,8 @@ run_core_tests() {
     -disableAutomaticPackageResolution \
     ARCHS=arm64 \
     ONLY_ACTIVE_ARCH=YES \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
     REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
 }
 

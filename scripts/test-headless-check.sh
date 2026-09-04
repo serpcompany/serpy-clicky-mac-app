@@ -17,6 +17,13 @@ done
 /usr/bin/grep -Fq 'precondition(mode == .production, "UI-test composition is unavailable in Release builds")' App/GuideCompanionApp.swift || {
   print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
 }
+composition_invocation=$(/usr/bin/sed -n '/-scheme GuideCompanionCompositionTests/,/REGISTER_APP_WITH_LAUNCH_SERVICES=NO/p' scripts/run-headless-check.sh)
+print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_ALLOWED=NO' || {
+  print -u2 "headless App composition tests require a developer certificate"; exit 1
+}
+print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_REQUIRED=NO' || {
+  print -u2 "headless App composition tests require signing"; exit 1
+}
 
 for check_name in core-tests app-build; do
   fixture_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
