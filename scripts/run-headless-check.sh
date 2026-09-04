@@ -63,7 +63,7 @@ cleanup() {
   local built_app
   for built_app in \
     "$run_root/derived-data/Build/Products/Debug/SERPy.app" \
-    "$run_root/derived-data-golden/Build/Products/Debug/SERPy.app"; do
+    "$run_root/derived-data/Build/Products/Release/SERPy.app"; do
     if [[ -d "$built_app" ]]; then
       "$launch_services" -u "$built_app" 2>/dev/null || true
     fi
@@ -158,20 +158,42 @@ run_app_build() {
     -derivedDataPath "$run_root/derived-data" \
     -clonedSourcePackagesDirPath "$run_root/source-packages" \
     -disableAutomaticPackageResolution \
+    ARCHS=arm64 \
+    ONLY_ACTIVE_ARCH=YES \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
-    REGISTER_APP_WITH_LAUNCH_SERVICES=NO
+    REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
+  run_bounded xcodebuild build \
+    -project GuideCompanion.xcodeproj \
+    -scheme GuideCompanion \
+    -configuration Release \
+    -derivedDataPath "$run_root/derived-data" \
+    -clonedSourcePackagesDirPath "$run_root/source-packages" \
+    -disableAutomaticPackageResolution \
+    ARCHS=arm64 \
+    ONLY_ACTIVE_ARCH=YES \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
+  local release_binary="$run_root/derived-data/Build/Products/Release/SERPy.app/Contents/MacOS/SERPy"
+  strings "$release_binary" > "$run_root/release-strings.txt"
+  if rg -q 'GuideUITestComposition|UITestDictationSession|UITestPermissionService|UITestCloudGenerator|UITestIncidentReporter' "$run_root/release-strings.txt"; then
+    print -u2 "Release app contains deterministic UI-test fixture symbols"
+    return 1
+  fi
   run_bounded xcodebuild build-for-testing \
     -project GuideCompanion.xcodeproj \
     -scheme GuideCompanion \
     -testPlan GuideCompanionGolden \
     -configuration Debug \
-    -derivedDataPath "$run_root/derived-data-golden" \
-    -clonedSourcePackagesDirPath "$run_root/source-packages-golden" \
+    -derivedDataPath "$run_root/derived-data" \
+    -clonedSourcePackagesDirPath "$run_root/source-packages" \
     -disableAutomaticPackageResolution \
+    ARCHS=arm64 \
+    ONLY_ACTIVE_ARCH=YES \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
-    REGISTER_APP_WITH_LAUNCH_SERVICES=NO
+    REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
 }
 
 run_selected_check() {

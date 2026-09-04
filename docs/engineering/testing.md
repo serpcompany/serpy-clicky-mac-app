@@ -52,12 +52,14 @@ disk limit. Neither command launches an application.
 ### Focused local UI lane
 
 A developer or agent may run one explicitly named golden XCUI test locally
-when the owner requests that exact run. Run it through Xcode or `xcodebuild`
-with the production `GuideCompanion` scheme, `GuideCompanionGolden.xctestplan`, and a saved
-`.xcresult`. The run may briefly take foreground control.
+when the owner requests that exact run. The only supported entrypoint is
+`scripts/run-golden-ui-test.sh focused`, which selects the production
+`GuideCompanion` scheme and `GuideCompanionGolden.xctestplan` and saves an
+`.xcresult`. Do not invoke this lane directly through Xcode or raw `xcodebuild`,
+because that bypasses its bounds and cleanup. The run may briefly take
+foreground control.
 
-The supported CLI entrypoint is `scripts/run-golden-ui-test.sh focused`; its
-adversarial no-app self-test is `scripts/test-golden-ui-runner.sh`.
+Its adversarial no-app self-test is `scripts/test-golden-ui-runner.sh`.
 
 This lane launches the real serpy application target in `--ui-testing` mode.
 It must not open TextEdit, Chrome, System Settings, or another external app; access real
@@ -71,7 +73,8 @@ golden suite remains an isolated Xcode Cloud responsibility.
 XCTest/XCUI runs in a temporary Xcode Cloud macOS test environment. UI-test
 runtime mode is resolved before production dependencies are constructed and
 uses in-memory credentials, deterministic permissions, local fixtures,
-ephemeral storage, a no-op diagnostic reporter, and no network provider.
+ephemeral storage, an ephemeral receipt-only diagnostic reporter, and no
+network provider.
 
 Each test registers teardown before launch, launches one application instance,
 uses bounded state-based waits, terminates the application, and proves it

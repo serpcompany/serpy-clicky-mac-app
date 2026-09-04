@@ -6,12 +6,19 @@ final class GoldenDictationUITests: GoldenUITestCase {
         launch(flow: "UF-03")
         tap("Start Dictation Fixture")
         XCTAssertTrue(application.buttons["Stop Dictation Fixture"].waitForExistence(timeout: 5))
+        expectValue(identifier: "test.partial.transcript", value: "alpha beta")
         tap("Stop Dictation Fixture")
         XCTAssertTrue(application.staticTexts["The dictation was inserted locally."].waitForExistence(timeout: 5))
         XCTAssertEqual(
             try? String(contentsOf: sessionRoot.appendingPathComponent("insertion.fixture"), encoding: .utf8),
             "alpha beta"
         )
+        let recoveryRecord = try? String(
+            contentsOf: sessionRoot.appendingPathComponent("transcript-history.fixture.json"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(recoveryRecord?.contains("alpha beta") == true)
+        XCTAssertTrue(recoveryRecord?.contains("confirmed") == true)
     }
 
     func test_GT_UF04_001_escapeCancelsRealDictationWithoutLateDelivery() {

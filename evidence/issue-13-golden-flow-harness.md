@@ -43,13 +43,18 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 - UI session-root tests reject matching-name roots outside the canonical system
   temporary directory and symlinked parents. Both the parent and direct-child
   root require a UUID-matched owner token.
-- The actual UI-test model audit is derived from the concrete constructed
-  adapter types. It asserts the exact deterministic type set and rejects any
-  production Keychain, Sentry, microphone, TCC, network, global-shortcut, or
-  persistent-data adapter.
+- Debug UI-test composition is owned by the App target, derives its audit from
+  concrete adapter instances accepted by the deterministic-adapter factory,
+  and is guarded by the model's runtime audit precondition. No fixture or
+  provider object lives in the shipping GuideUI package.
+- Release excludes every UI-test composition source, rejects `--ui-testing`
+  before production construction, and the bounded Release build scans the
+  executable for fixture symbols. The headless harness self-test also rejects
+  any UI-test source under a shipping package target or missing Release
+  exclusion.
 - The Last Dictation fixture persists into the session's ephemeral JSON store;
-  its relaunch test removes the seed argument and proves restoration from that
-  store.
+  the compiled XCUI relaunch removes the seed argument before asserting
+  restoration from that store. Executed proof remains red below.
 
 ## Local results
 
@@ -57,8 +62,8 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | --- | --- | --- | --- |
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
-| `scripts/run-headless-check.sh app-build` | Green after real-app retarget; production app and XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after real-app retarget; complete package suite passed | none | Green |
+| `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green; 100 XCTest and 74 Swift Testing cases passed after the App-owned composition move | none | Green |
 
 ## Deliberately red evidence
 

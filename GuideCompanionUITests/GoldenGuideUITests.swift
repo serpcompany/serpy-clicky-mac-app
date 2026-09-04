@@ -126,7 +126,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
         )
         XCTAssertEqual(
             try? String(contentsOf: sessionRoot.appendingPathComponent("incident.fixture"), encoding: .utf8),
-            "guidance.plan.malformed"
+            "count=1;code=guidance.plan.malformed"
         )
     }
 }

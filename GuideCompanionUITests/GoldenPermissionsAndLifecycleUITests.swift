@@ -4,6 +4,13 @@ import XCTest
 final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
     func test_GT_UF01_001_permissionDenialShowsRecoveryAcrossRelaunch() {
         launch(flow: "UF-01")
+        XCTAssertTrue(
+            application.staticTexts[
+                "macOS prompts only once. If a request was denied, use Open Settings on its row."
+            ].waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(application.staticTexts["Not requested"].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.buttons["Request Microphone"].isEnabled)
         tap("Request Microphone")
         XCTAssertTrue(application.staticTexts["Microphone access was not granted."].waitForExistence(timeout: 5))
         application.terminate()

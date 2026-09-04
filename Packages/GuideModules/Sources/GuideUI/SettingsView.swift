@@ -68,6 +68,8 @@ public struct SettingsView: View {
                 }
                 Text(verbatim: "dictation=\(String(describing: model.phase));guide=\(String(describing: model.guidancePhase))")
                     .accessibilityIdentifier("test.runtime.state")
+                Text(verbatim: model.partialTranscript)
+                    .accessibilityIdentifier("test.partial.transcript")
             }
         }
         .padding()

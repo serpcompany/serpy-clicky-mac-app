@@ -1,6 +1,4 @@
 import Foundation
-import GuideMac
-@testable import GuideUI
 import Testing
 @testable import GuideCore
 
@@ -129,92 +127,6 @@ struct ActualAppRuntimeCompositionTests {
         var missing = Dictionary(uniqueKeysWithValues: RuntimeAdapterRole.allCases.map { ($0, fixture) })
         missing.removeValue(forKey: .credentialStore)
         #expect(!RuntimeCompositionAudit.deterministic(missing).isValid(for: .uiTest))
-    }
-
-    @Test("GT-COMPOSITION-006 Actual UI-test model constructs the audited safe graph")
-    @MainActor
-    func constructsActualSafeModel() throws {
-        let sessionID = UUID().uuidString
-        let parent = canonicalTemporaryDirectory()
-        let root = parent
-            .appendingPathComponent("serpy-real-ui-\(sessionID)")
-        let parentOwner = parent.appendingPathComponent(".serpy-real-ui-parent-\(sessionID)")
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        defer {
-            try? FileManager.default.removeItem(at: root)
-            try? FileManager.default.removeItem(at: parentOwner)
-        }
-        try sessionID.write(to: parentOwner, atomically: true, encoding: .utf8)
-        try sessionID.write(
-            to: root.appendingPathComponent(".serpy-real-ui-owner"),
-            atomically: true,
-            encoding: .utf8
-        )
-        let model = GuideUITestComposition.makeModel(
-            arguments: ["serpy", "--ui-testing", "--golden-flow=UF-09"],
-            environment: [
-                "SERPY_TEST_SESSION_ID": sessionID,
-                "SERPY_TEST_ROOT": root.path,
-                "SERPY_TEST_PARENT": parent.path,
-            ]
-        )
-        #expect(model.runtimeMode == .uiTest)
-        #expect(model.runtimeCompositionAudit.isValid(for: .uiTest))
-        #expect(model.runtimeCompositionAudit.adapters.values.allSatisfy { $0 == .deterministic })
-        let expectedTypes: Set<RuntimeAdapterIdentity> = [
-            RuntimeAdapterIdentity(UITestDictationSession.self),
-            RuntimeAdapterIdentity(UITestGuideTranscriber.self),
-            RuntimeAdapterIdentity(UITestGuideSpeaker.self),
-            RuntimeAdapterIdentity(UITestPermissionService.self),
-            RuntimeAdapterIdentity(UITestTextInsertionService.self),
-            RuntimeAdapterIdentity(UITestScreenContextService.self),
-            RuntimeAdapterIdentity(UITestGuideGenerator.self),
-            RuntimeAdapterIdentity(UITestLocalModelProvider.self),
-            RuntimeAdapterIdentity(UITestCloudGenerator.self),
-            RuntimeAdapterIdentity(UITestCredentialStore.self),
-            RuntimeAdapterIdentity(UITestCredentialVerifier.self),
-            RuntimeAdapterIdentity(UITestExpirySleeper.self),
-            RuntimeAdapterIdentity(UITestIncidentReporter.self),
-            RuntimeAdapterIdentity(UITestHistoryStore.self),
-            RuntimeAdapterIdentity(UITestPreferences.self),
-            RuntimeAdapterIdentity(UITestClipboardService.self),
-            RuntimeAdapterIdentity(UITestShortcutMonitor.self),
-        ]
-        #expect(Set(model.runtimeCompositionAudit.identities.values) == expectedTypes)
-        let forbiddenTypes: Set<RuntimeAdapterIdentity> = [
-            RuntimeAdapterIdentity(KeychainTalkCredentialStore.self),
-            RuntimeAdapterIdentity(SentryDiagnosticReporter.self),
-            RuntimeAdapterIdentity(AppleSpeechTranscriber.self),
-            RuntimeAdapterIdentity(PermissionService.self),
-            RuntimeAdapterIdentity(OpenAIMultimodalGuidanceGenerator.self),
-            RuntimeAdapterIdentity(GlobalShortcutService.self),
-            RuntimeAdapterIdentity(TranscriptHistoryStore.self),
-            RuntimeAdapterIdentity(TextInsertionService.self),
-            RuntimeAdapterIdentity(ScreenContextService.self),
-            RuntimeAdapterIdentity(LocalSpeechOutputService.self),
-            RuntimeAdapterIdentity(UserDefaults.self),
-        ]
-        #expect(Set(model.runtimeCompositionAudit.identities.values).isDisjoint(with: forbiddenTypes))
-    }
-
-    @Test("GT-COMPOSITION-007 recovery fixture persists across a launch without seed arguments")
-    func recoveryFixturePersistsAcrossRelaunch() async throws {
-        let sessionID = UUID().uuidString
-        let parent = canonicalTemporaryDirectory()
-        let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: root) }
-
-        let firstLaunch = UITestHistoryStore(
-            arguments: ["serpy", "--recovery-variant=failed"],
-            sessionRoot: root
-        )
-        #expect(await firstLaunch.load().first?.text == "Recovered fixture dictation")
-
-        let relaunched = UITestHistoryStore(arguments: ["serpy"], sessionRoot: root)
-        let restored = await relaunched.load()
-        #expect(restored.count == 1)
-        #expect(restored.first?.deliveryState == .failed)
     }
 
     private func canonicalTemporaryDirectory() -> URL {

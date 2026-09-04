@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import GuideCore
 import GuideMac
+import GuideUI
 
 final class UITestScreenContextService: AppScreenContextServicing, DeterministicUITestAdapter, @unchecked Sendable {
     @MainActor private var captureCount = 0
@@ -119,4 +120,3 @@ private func waitForUITestRelease(_ url: URL) async throws {
         recovery: "Fix the test driver release signal."
     )
 }
-

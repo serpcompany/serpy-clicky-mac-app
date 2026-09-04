@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import GuideCore
 import GuideMac
+import GuideUI
 
 @MainActor
 final class UITestClipboardService: AppClipboardServicing, DeterministicUITestAdapter {
@@ -156,4 +157,3 @@ actor UITestHistoryStore: AppTranscriptHistoryServicing, DeterministicUITestAdap
         catch { preconditionFailure("transcript history fixture could not be persisted") }
     }
 }
-

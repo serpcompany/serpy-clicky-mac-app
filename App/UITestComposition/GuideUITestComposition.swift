@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import GuideCore
 import GuideMac
+import GuideUI
 
 @MainActor
 public enum GuideUITestComposition {

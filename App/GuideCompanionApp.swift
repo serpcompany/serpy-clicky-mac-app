@@ -34,9 +34,15 @@ private enum GuideAppComposition {
     static func configure(for mode: AppRuntimeMode) -> GuideAppModel {
         if let model { return model }
         runtimeMode = mode
-        let configured = mode == .uiTest
+        let configured: GuideAppModel
+#if DEBUG
+        configured = mode == .uiTest
             ? GuideUITestComposition.makeModel(arguments: CommandLine.arguments)
             : makeProductionModel()
+#else
+        precondition(mode == .production, "UI-test composition is unavailable in Release builds")
+        configured = makeProductionModel()
+#endif
         model = configured
         return configured
     }

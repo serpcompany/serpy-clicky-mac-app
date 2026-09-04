@@ -50,6 +50,11 @@ targets:
           ARCHS: arm64
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
           ENABLE_TESTABILITY: NO
+          EXCLUDED_SOURCE_FILE_NAMES: >-
+            GuideUITestComposition.swift
+            UITestDictationAdapters.swift
+            UITestGuideAdapters.swift
+            UITestTalkAdapters.swift
     scheme:
       testTargets:
         - GuideCompanionUITests

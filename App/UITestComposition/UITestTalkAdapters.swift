@@ -59,17 +59,26 @@ final class UITestCloudGenerator: GuidanceGenerating, DeterministicUITestAdapter
     }
 }
 
-struct UITestIncidentReporter: DiagnosticIncidentReporting, DeterministicUITestAdapter {
-    let sessionRoot: URL
+final class UITestIncidentReporter: DiagnosticIncidentReporting, DeterministicUITestAdapter, @unchecked Sendable {
+    private let sessionRoot: URL
+    private let lock = NSLock()
+    private var reportCount = 0
+
+    init(sessionRoot: URL) { self.sessionRoot = sessionRoot }
+
     func report(_ incident: DiagnosticIncident) {
+        let receipt = lock.withLock {
+            reportCount += 1
+            return "count=\(reportCount);code=\(incident.code.rawValue)"
+        }
         do {
-            try incident.code.rawValue.write(
+            try receipt.write(
                 to: sessionRoot.appendingPathComponent("incident.fixture"),
                 atomically: true,
                 encoding: .utf8
             )
         } catch {
-            preconditionFailure("in-memory diagnostic receipt could not be exposed to XCUI")
+            preconditionFailure("ephemeral diagnostic receipt could not be exposed to XCUI")
         }
     }
 }
@@ -79,4 +88,3 @@ final class UITestShortcutMonitor: GlobalShortcutMonitoring, DeterministicUITest
     func start() throws {}
     func stop() {}
 }
-

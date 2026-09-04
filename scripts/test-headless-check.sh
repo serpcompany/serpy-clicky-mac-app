@@ -3,6 +3,18 @@ set -euo pipefail
 
 temp_parent=$(cd "${TMPDIR:-/tmp}" && pwd -P)
 
+test -z "$(find Packages/GuideModules/Sources -type f -name '*UITest*' -print -quit)" || {
+  print -u2 "UI-test composition leaked into a shipping package target"; exit 1
+}
+for fixture_source in GuideUITestComposition.swift UITestDictationAdapters.swift UITestGuideAdapters.swift UITestTalkAdapters.swift; do
+  rg -q "$fixture_source" project.yml || {
+    print -u2 "$fixture_source is not excluded from Release"; exit 1
+  }
+done
+rg -q 'precondition\(mode == \.production, "UI-test composition is unavailable in Release builds"\)' App/GuideCompanionApp.swift || {
+  print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
+}
+
 for check_name in core-tests app-build; do
   fixture_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
   find "$fixture_root" -depth -delete
