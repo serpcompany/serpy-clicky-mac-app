@@ -52,6 +52,8 @@ screenshots, document content, identity, or arbitrary error strings.
 
 ## Engineering Rules
 
+- **User flows:** read `docs/product/user-flows.md` before changing or verifying
+  user-visible behavior; update its issue traceability when the contract changes.
 - Preserve the dependency direction in `ARCHITECTURE.md`.
 - Add a deterministic state-machine test before connecting a feature to macOS
   APIs.
