@@ -13,6 +13,7 @@
 		33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11CF664193125A6D4EDC0FAF /* GuideUI */; };
 		34A605741DE02A6B17DB039F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 402E6AB6BF038ED9D42B35CD /* Assets.xcassets */; };
 		443C3FEBF813992B2FE19BA8 /* UITestTalkAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54A9FA0DAA494D672AC8BCD /* UITestTalkAdapters.swift */; };
+		4D36E48903E4FFD478DBCE41 /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = 62FC7AE95CC4D2E0BA69E55A /* GuideCore */; };
 		4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */; };
 		64111961D0F8B28EB6EDB3BD /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = BAC0936C6365B8922515E18F /* GuideCore */; };
 		7204EBBE433834E95D41EB0F /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9537BA0D8D33187B249BEF5C /* GuideUI */; };
@@ -78,6 +79,14 @@
 				64111961D0F8B28EB6EDB3BD /* GuideCore in Frameworks */,
 				9A199FF62B52AF13590211E3 /* GuideMac in Frameworks */,
 				7204EBBE433834E95D41EB0F /* GuideUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B68B16490F0090B999224CF4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D36E48903E4FFD478DBCE41 /* GuideCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -192,6 +201,7 @@
 			buildConfigurationList = 84AC320DEC0A26FAC5E79C78 /* Build configuration list for PBXNativeTarget "GuideCompanionUITests" */;
 			buildPhases = (
 				3B900D48AEEFCF48CCF2EB78 /* Sources */,
+				B68B16490F0090B999224CF4 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -200,6 +210,7 @@
 			);
 			name = GuideCompanionUITests;
 			packageProductDependencies = (
+				62FC7AE95CC4D2E0BA69E55A /* GuideCore */,
 			);
 			productName = GuideCompanionUITests;
 			productReference = 1A4519E3B22F16775F01BFEC /* GuideCompanionUITests.xctest */;
@@ -628,6 +639,10 @@
 		11CF664193125A6D4EDC0FAF /* GuideUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GuideUI;
+		};
+		62FC7AE95CC4D2E0BA69E55A /* GuideCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GuideCore;
 		};
 		9537BA0D8D33187B249BEF5C /* GuideUI */ = {
 			isa = XCSwiftPackageProductDependency;

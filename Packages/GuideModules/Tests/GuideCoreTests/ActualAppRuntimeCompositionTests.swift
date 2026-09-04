@@ -138,6 +138,41 @@ struct ActualAppRuntimeCompositionTests {
         ]).path == root.path)
     }
 
+    @Test("GT-COMPOSITION-004D local UI parent requires the bounded wrapper token")
+    func resolvesBoundedWrapperParent() throws {
+        let token = UUID().uuidString
+        #expect(try UITestRunParentPolicy.resolve(environment: [
+            "SERPY_XCUI_PARENT": "/private/tmp/serpy-local-xcui.ABC123",
+            "SERPY_XCUI_RUN_TOKEN": token,
+        ]) == .boundedWrapper(
+            parentPath: "/private/tmp/serpy-local-xcui.ABC123",
+            runToken: token
+        ))
+    }
+
+    @Test("GT-COMPOSITION-004E exact Xcode Cloud workflow may own its parent")
+    func resolvesVerifiedXcodeCloudParent() throws {
+        #expect(try UITestRunParentPolicy.resolve(environment: verifiedCloudEnvironment()) == .verifiedXcodeCloud)
+    }
+
+    @Test("GT-COMPOSITION-004F missing or untrusted cloud identity fails closed")
+    func rejectsMissingAndUntrustedParentProvisioning() {
+        #expect(throws: UITestSessionRootError.invalidIdentity) {
+            try UITestRunParentPolicy.resolve(environment: [:])
+        }
+        var wrongWorkflow = verifiedCloudEnvironment()
+        wrongWorkflow["CI_WORKFLOW"] = "untrusted-workflow"
+        #expect(throws: UITestSessionRootError.invalidIdentity) {
+            try UITestRunParentPolicy.resolve(environment: wrongWorkflow)
+        }
+        #expect(throws: UITestSessionRootError.invalidIdentity) {
+            try UITestRunParentPolicy.resolve(environment: [
+                "SERPY_XCUI_PARENT": "/private/tmp/serpy-local-xcui.ABC123",
+                "SERPY_XCUI_RUN_TOKEN": "not-a-uuid",
+            ])
+        }
+    }
+
     @Test("GT-COMPOSITION-005 UI dependency audit requires every deterministic external role")
     func validatesCompleteAdapterGraph() {
         let fixture = CompositionFixtureAdapter()
@@ -171,6 +206,18 @@ struct ActualAppRuntimeCompositionTests {
             encoding: .utf8
         )
         return (parent, token)
+    }
+
+    private func verifiedCloudEnvironment() -> [String: String] {
+        [
+            "CI": "TRUE",
+            "CI_XCODE_CLOUD": "TRUE",
+            "CI_WORKFLOW": "golden-ui-tests",
+            "CI_XCODE_PROJECT": "GuideCompanion",
+            "CI_XCODE_SCHEME": "GuideCompanion",
+            "CI_XCODEBUILD_ACTION": "test-without-building",
+            "CI_BUILD_ID": "fixture-build-id",
+        ]
     }
 }
 

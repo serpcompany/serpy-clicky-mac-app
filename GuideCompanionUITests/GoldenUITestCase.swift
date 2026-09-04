@@ -1,4 +1,5 @@
 import AppKit
+import GuideCore
 import XCTest
 
 @MainActor
@@ -9,6 +10,7 @@ class GoldenUITestCase: XCTestCase {
     private(set) var sessionRoot: URL!
     private var sessionParent: URL!
     private var runToken = ""
+    private var ownsSessionParent = false
     private var sessionID = ""
 
     func launch(
@@ -23,17 +25,29 @@ class GoldenUITestCase: XCTestCase {
         let application = XCUIApplication()
         self.application = application
         if sessionRoot == nil {
-            guard let rawParent = ProcessInfo.processInfo.environment["SERPY_XCUI_PARENT"],
-                  let suppliedRunToken = ProcessInfo.processInfo.environment["SERPY_XCUI_RUN_TOKEN"] else {
-                XCTFail("bounded UI runner did not provide the shared session parent and owner token")
-                return
-            }
-            sessionID = UUID().uuidString
-            runToken = suppliedRunToken
-            sessionParent = URL(fileURLWithPath: rawParent, isDirectory: true)
-            sessionRoot = sessionParent
-                .appendingPathComponent("serpy-real-ui-\(sessionID)")
             do {
+                let provisioning = try UITestRunParentPolicy.resolve(
+                    environment: ProcessInfo.processInfo.environment
+                )
+                switch provisioning {
+                case let .boundedWrapper(parentPath, suppliedRunToken):
+                    runToken = suppliedRunToken
+                    sessionParent = URL(fileURLWithPath: parentPath, isDirectory: true)
+                case .verifiedXcodeCloud:
+                    runToken = UUID().uuidString
+                    let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+                    sessionParent = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
+                        .appendingPathComponent("serpy-local-xcui.\(suffix)")
+                    try FileManager.default.createDirectory(at: sessionParent, withIntermediateDirectories: false)
+                    try runToken.write(
+                        to: sessionParent.appendingPathComponent(".serpy-local-xcui-owner"),
+                        atomically: true,
+                        encoding: .utf8
+                    )
+                    ownsSessionParent = true
+                }
+                sessionID = UUID().uuidString
+                sessionRoot = sessionParent.appendingPathComponent("serpy-real-ui-\(sessionID)")
                 try FileManager.default.createDirectory(at: sessionRoot, withIntermediateDirectories: false)
                 try sessionID.write(
                     to: sessionRoot.appendingPathComponent(".serpy-real-ui-owner"),
@@ -41,7 +55,7 @@ class GoldenUITestCase: XCTestCase {
                     encoding: .utf8
                 )
             } catch {
-                XCTFail("could not create isolated UI-test session: \(error)")
+                XCTFail("could not provision an authorized isolated UI-test session: \(error)")
                 return
             }
         }
@@ -52,8 +66,13 @@ class GoldenUITestCase: XCTestCase {
                 withBundleIdentifier: self.productBundleIdentifier
             ).map(\.processIdentifier))
             XCTAssertEqual(remaining, self.preexistingProcessIDs)
-            try? FileManager.default.removeItem(at: self.sessionRoot)
+            try? FileManager.default.removeItem(
+                at: self.ownsSessionParent ? self.sessionParent : self.sessionRoot
+            )
             XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionRoot.path))
+            if self.ownsSessionParent {
+                XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionParent.path))
+            }
         }
         application.launchArguments = [
             "--ui-testing",

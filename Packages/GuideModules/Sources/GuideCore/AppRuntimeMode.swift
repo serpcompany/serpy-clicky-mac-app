@@ -22,6 +22,31 @@ public enum UITestSessionRootError: Error, Equatable, Sendable {
     case missingOwnership
 }
 
+public enum UITestRunParentProvisioning: Equatable, Sendable {
+    case boundedWrapper(parentPath: String, runToken: String)
+    case verifiedXcodeCloud
+}
+
+public enum UITestRunParentPolicy {
+    public static func resolve(environment: [String: String]) throws -> UITestRunParentProvisioning {
+        if let parent = environment["SERPY_XCUI_PARENT"],
+           let token = environment["SERPY_XCUI_RUN_TOKEN"],
+           UUID(uuidString: token) != nil {
+            return .boundedWrapper(parentPath: parent, runToken: token)
+        }
+        guard environment["CI"] == "TRUE",
+              environment["CI_XCODE_CLOUD"] == "TRUE",
+              environment["CI_WORKFLOW"] == "golden-ui-tests",
+              environment["CI_XCODE_PROJECT"] == "GuideCompanion",
+              environment["CI_XCODE_SCHEME"] == "GuideCompanion",
+              environment["CI_XCODEBUILD_ACTION"] == "test-without-building",
+              environment["CI_BUILD_ID"]?.isEmpty == false else {
+            throw UITestSessionRootError.invalidIdentity
+        }
+        return .verifiedXcodeCloud
+    }
+}
+
 public enum UITestSessionRootPolicy {
     public static func validate(environment: [String: String]) throws -> URL {
         guard let sessionID = environment["SERPY_TEST_SESSION_ID"],

@@ -45,6 +45,10 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   parent shared across the XCTest and app processes. They reject matching-name
   roots elsewhere and symlinked parents; independent run and session UUID
   tokens bind the parent and direct-child root.
+- Parent provisioning tests cover the bounded local wrapper, the exact
+  documented Xcode Cloud environment, and missing, malformed, or wrong-workflow
+  environments. Only the verified cloud case may create and tear down its own
+  shared parent when wrapper variables are absent.
 - Debug UI-test composition is owned by the App target, derives its audit from
   concrete adapter instances accepted by the deterministic-adapter factory,
   and is guarded by the model's runtime audit precondition. No fixture or
@@ -70,7 +74,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after shared-root correction; 100 XCTest, 75 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after local and Xcode Cloud shared-root correction; 100 XCTest, 78 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 

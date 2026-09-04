@@ -69,6 +69,8 @@ targets:
       - path: GuideCompanionUITests
     dependencies:
       - target: GuideCompanion
+      - package: GuideModules
+        product: GuideCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.uitests

@@ -65,6 +65,12 @@ The bounded runner owns one canonical `serpy-local-xcui.*` directory directly
 under `/private/tmp`. XCTest and the app share that exact parent using separate
 run and session owner tokens; neither process may substitute its own `TMPDIR`.
 Invalid startup configuration exits immediately with an explicit error.
+When the bounded variables are absent, parent creation is permitted only when
+Apple's predefined environment identifies `CI_XCODE_CLOUD=TRUE`, the
+`golden-ui-tests` workflow, the `GuideCompanion` project and scheme, and a
+`test-without-building` action with a nonempty build ID. XCTest then owns and
+removes the exact `/private/tmp` parent. Missing or mismatched cloud identity
+fails before app launch.
 
 This lane launches the real serpy application target in `--ui-testing` mode.
 It must not open TextEdit, Chrome, System Settings, or another external app; access real
