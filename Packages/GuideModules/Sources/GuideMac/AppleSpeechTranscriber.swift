@@ -63,6 +63,8 @@ public final class AppleSpeechTranscriber {
     private var inputTapInstalled = false
     private var completionGate = SpeechCompletionGate()
     private var temporaryAudioURL: URL?
+    public private(set) var failedCleanupAudioURL: URL?
+    public private(set) var lastCleanupFailure: GuideFailure?
 
     public init() {}
 
@@ -98,6 +100,8 @@ public final class AppleSpeechTranscriber {
         }
 
         latestTranscript = ""
+        failedCleanupAudioURL = nil
+        lastCleanupFailure = nil
         partialHandler = onPartial
         completionGate.reset()
 
@@ -266,12 +270,34 @@ public final class AppleSpeechTranscriber {
         completionGate.reset()
         if discardAudio, let temporaryAudioURL {
             do {
-                try FileManager.default.removeItem(at: temporaryAudioURL)
+                try TemporaryAudioCleanup.discard(temporaryAudioURL)
+                self.temporaryAudioURL = nil
+            } catch let failure as GuideFailure {
+                failedCleanupAudioURL = temporaryAudioURL
+                lastCleanupFailure = failure
+                speechCleanupLogger.error("Temporary speech audio deletion failed")
             } catch {
+                failedCleanupAudioURL = temporaryAudioURL
+                lastCleanupFailure = GuideFailure(
+                    stage: .storage,
+                    message: "Temporary speech audio could not be deleted safely.",
+                    recovery: "Close processes using the temporary audio and retry cleanup."
+                )
                 speechCleanupLogger.error("Temporary speech audio deletion failed")
             }
+        } else {
+            temporaryAudioURL = nil
         }
-        temporaryAudioURL = nil
+    }
+
+    public func retryFailedAudioCleanup() throws {
+        guard let failedCleanupAudioURL else { return }
+        try TemporaryAudioCleanup.discard(failedCleanupAudioURL)
+        self.failedCleanupAudioURL = nil
+        lastCleanupFailure = nil
+        if temporaryAudioURL == failedCleanupAudioURL {
+            temporaryAudioURL = nil
+        }
     }
 
     private func stopCapturingAudio() {
@@ -294,6 +320,25 @@ public final class AppleSpeechTranscriber {
 
     private func speechFailure(_ message: String, recovery: String) -> GuideFailure {
         GuideFailure(stage: .transcription, message: message, recovery: recovery)
+    }
+}
+
+public enum TemporaryAudioCleanup {
+    public typealias Delete = (URL) throws -> Void
+
+    public static func discard(
+        _ url: URL,
+        delete: Delete = { try FileManager.default.removeItem(at: $0) }
+    ) throws {
+        do {
+            try delete(url)
+        } catch {
+            throw GuideFailure(
+                stage: .storage,
+                message: "Temporary speech audio could not be deleted safely.",
+                recovery: "Close processes using the temporary audio and retry cleanup."
+            )
+        }
     }
 }
 

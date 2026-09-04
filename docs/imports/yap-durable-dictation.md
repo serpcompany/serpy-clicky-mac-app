@@ -37,6 +37,13 @@ Pinned source: <https://github.com/FrigadeHQ/yap/tree/5f06bb1aa889abaa064b09a9bf
 - Added every-buffer owner-only raw-audio checkpoints, explicit checkpoint
   failure, discoverable interrupted audio, and recovery into pending Last
   Dictation without automatic insertion.
+- The recovery regression drives 130 seconds of synthetic PCM through the
+  production session boundary, injects a recognition-limit failure after the
+  one-minute boundary, then retranscribes that same checkpoint and verifies all
+  five ordered sentinel phrases survive exactly once.
+- Copies buffers on the real-time callback and serializes ordered disk writes on
+  a bounded executor. Queue overflow is terminal and visible; it cannot silently
+  drop audio and return truncated success.
 - Use only already-installed Apple Speech assets during Dictation. Yap's asset
   download/install behavior was removed so automated or ordinary activation
   cannot begin an undocumented download.

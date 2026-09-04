@@ -30,6 +30,19 @@ private enum GuideAppComposition {
 
     static let model: GuideAppModel = {
         let local = LocalGuidanceService()
+        let permissionService = PermissionService()
+        let dictationSession = DurableDictationSession()
+        let insertionService = TextInsertionService()
+        let historyStore = TranscriptHistoryStore()
+        let recordingCoordinator = RecordingCoordinator(
+            session: dictationSession,
+            targetReader: insertionService,
+            inserter: insertionService,
+            history: historyStore
+        )
+        let screenContextService = ScreenContextService()
+        let guidanceTranscriber = AppleSpeechTranscriber()
+        let guidanceSpeaker = LocalSpeechOutputService()
         let credentialStore = KeychainTalkCredentialStore()
         let credentialVerifier = OpenAITalkCredentialVerifier()
         let cloud = OpenAIMultimodalGuidanceGenerator(credentialStore: credentialStore)
@@ -39,6 +52,13 @@ private enum GuideAppComposition {
             credentialStore: credentialStore
         )
         return GuideAppModel(
+            permissionService: permissionService,
+            recordingCoordinator: recordingCoordinator,
+            insertionService: insertionService,
+            historyStore: historyStore,
+            screenContextService: screenContextService,
+            guidanceTranscriber: guidanceTranscriber,
+            guidanceSpeaker: guidanceSpeaker,
             localGuidanceService: local,
             talkCredentialStore: credentialStore,
             talkCredentialVerifier: credentialVerifier,

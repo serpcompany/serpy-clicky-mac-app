@@ -4,12 +4,22 @@ import GuideCore
 import os
 import Speech
 
+public enum StreamingRecoveryInputMode: Equatable, Sendable {
+    case streamCheckpointBuffers
+    case transcriberReadsCheckpointURL
+}
+
 public protocol StreamingTranscriber: AnyObject, Sendable {
     var onPartial: (@Sendable (String) -> Void)? { get set }
+    var recoveryInputMode: StreamingRecoveryInputMode { get }
     func begin(locale: Locale) async throws
     func feed(_ buffer: AVAudioPCMBuffer)
     func finish(recoveryAudioURL: URL?) async throws -> String
     func cancel()
+}
+
+public extension StreamingTranscriber {
+    var recoveryInputMode: StreamingRecoveryInputMode { .streamCheckpointBuffers }
 }
 
 private final class TranscriptionFailureBox: @unchecked Sendable {
@@ -167,15 +177,19 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
     private let recognizer: any AudioChunkRecognizing
     private var cancelled = false
     private let maximumChunkDuration: TimeInterval
+    private let overlapDuration: TimeInterval
     private let temporaryDirectory: URL
+    var recoveryInputMode: StreamingRecoveryInputMode { .transcriberReadsCheckpointURL }
 
     init(
         recognizer: any AudioChunkRecognizing = OnDeviceSFSpeechChunkRecognizer(),
         maximumChunkDuration: TimeInterval = 50,
+        overlapDuration: TimeInterval = 1,
         temporaryDirectory: URL = FileManager.default.temporaryDirectory
     ) {
         self.recognizer = recognizer
         self.maximumChunkDuration = maximumChunkDuration
+        self.overlapDuration = min(max(0, overlapDuration), max(0, maximumChunkDuration - 0.1))
         self.temporaryDirectory = temporaryDirectory
     }
 
@@ -196,7 +210,8 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
             )
         }
         let chunks = try splitIfNeeded(recoveryAudioURL)
-        var finalized: [String] = []
+        var finalized = ""
+        let reconciler = TranscriptOverlapReconciler()
         do {
             for chunk in chunks.urls {
                 try Task.checkCancellation()
@@ -204,8 +219,8 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
                 let text = try await recognizer.recognize(chunk)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !text.isEmpty {
-                    finalized.append(text)
-                    onPartial?(finalized.joined(separator: " "))
+                    finalized = reconciler.appending(finalized, next: text)
+                    onPartial?(finalized)
                 }
             }
             try chunks.cleanup()
@@ -213,7 +228,7 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
             do { try chunks.cleanup() } catch let cleanupFailure { throw cleanupFailure }
             throw error
         }
-        let text = finalized.joined(separator: " ")
+        let text = finalized
         guard !text.isEmpty else {
             throw transcriptionFailure(
                 "No speech was detected.",
@@ -231,6 +246,7 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
     private func splitIfNeeded(_ sourceURL: URL) throws -> TemporaryAudioChunks {
         let source = try AVAudioFile(forReading: sourceURL)
         let framesPerChunk = AVAudioFramePosition(source.processingFormat.sampleRate * maximumChunkDuration)
+        let overlapFrames = AVAudioFramePosition(source.processingFormat.sampleRate * overlapDuration)
         guard source.length > framesPerChunk else {
             return TemporaryAudioChunks(urls: [sourceURL], temporaryURLs: [])
         }
@@ -276,6 +292,9 @@ final class ChunkedSFSpeechTranscriber: StreamingTranscriber, @unchecked Sendabl
             }
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
             urls.append(url)
+            if source.framePosition < source.length, overlapFrames > 0 {
+                source.framePosition = max(0, source.framePosition - overlapFrames)
+            }
         }
         return TemporaryAudioChunks(urls: urls, temporaryURLs: urls)
     }

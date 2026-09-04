@@ -15,10 +15,38 @@ public final class FocusedTextTarget: FocusedTextTargetRepresenting, @unchecked 
     fileprivate let element: AXUIElement?
     public let bundleIdentifier: String?
 
-    fileprivate init(processIdentifier: pid_t, element: AXUIElement?, bundleIdentifier: String?) {
+    init(processIdentifier: pid_t, element: AXUIElement?, bundleIdentifier: String?) {
         self.processIdentifier = processIdentifier
         self.element = element
         self.bundleIdentifier = bundleIdentifier
+    }
+}
+
+@MainActor
+public protocol PasteEventDispatching: AnyObject {
+    /// Performs the generation check and irreversible event post on the same
+    /// serialized executor. Returns false when cancellation won before commit.
+    func commitPaste(ifAllowed: () -> Bool) throws -> Bool
+}
+
+@MainActor
+private final class CGPasteEventDispatcher: PasteEventDispatching {
+    func commitPaste(ifAllowed: () -> Bool) throws -> Bool {
+        guard ifAllowed() else { return false }
+        guard let source = CGEventSource(stateID: .combinedSessionState),
+              let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
+            throw GuideFailure(
+                stage: .insertion,
+                message: "The paste keystroke could not be created.",
+                recovery: "Copy the transcript and paste it manually."
+            )
+        }
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+        return true
     }
 }
 
@@ -60,12 +88,44 @@ public enum TextValueReplacement {
 
 @MainActor
 public final class TextInsertionService: FocusedTextTargetReading, TextInserting {
+    public typealias ProcessIdentifierProvider = @MainActor () -> pid_t
+    public typealias PostPasteDelay = @MainActor @Sendable () async throws -> Void
+
     private var cancellationGeneration: UInt64 = 0
+    private var insertionActive = false
+    private var irreversibleCommit = false
+    private let pasteboard: NSPasteboard
+    private let frontmostProcessIdentifier: ProcessIdentifierProvider
+    private let pasteDispatcher: any PasteEventDispatching
+    private let postPasteDelay: PostPasteDelay
 
-    public init() {}
+    public convenience init() {
+        self.init(
+            pasteboard: .general,
+            frontmostProcessIdentifier: {
+                NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0
+            },
+            pasteDispatcher: CGPasteEventDispatcher(),
+            postPasteDelay: { try await Task.sleep(for: .milliseconds(550)) }
+        )
+    }
 
-    public func cancel() {
+    init(
+        pasteboard: NSPasteboard,
+        frontmostProcessIdentifier: @escaping ProcessIdentifierProvider,
+        pasteDispatcher: any PasteEventDispatching,
+        postPasteDelay: @escaping PostPasteDelay
+    ) {
+        self.pasteboard = pasteboard
+        self.frontmostProcessIdentifier = frontmostProcessIdentifier
+        self.pasteDispatcher = pasteDispatcher
+        self.postPasteDelay = postPasteDelay
+    }
+
+    public func cancel() -> Bool {
+        guard !insertionActive || !irreversibleCommit else { return false }
         cancellationGeneration &+= 1
+        return true
     }
 
     public func captureFocusedTarget() throws -> FocusedTextTarget {
@@ -123,6 +183,9 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
     }
 
     public func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
+        insertionActive = true
+        irreversibleCommit = false
+        defer { insertionActive = false }
         let generation = cancellationGeneration
         try validateInsertion(generation)
         guard !text.isEmpty else {
@@ -138,7 +201,7 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
             insertionLogger.notice("Session paste did not verify; trying Accessibility fallbacks")
         }
 
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier,
+        guard frontmostProcessIdentifier() == target.processIdentifier,
               let element = target.element,
               isEditableTextTarget(element) else {
             throw insertionFailure(
@@ -187,13 +250,17 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
     ) async throws -> TextInsertionMethod? {
         try validateInsertion(generation)
         let valueBefore = stringValue(of: element)
+        irreversibleCommit = true
         let result = AXUIElementSetAttributeValue(
             element,
             kAXSelectedTextAttribute as CFString,
             text as CFString
         )
         insertionLogger.notice("AX selected-text write result=\(result.rawValue)")
-        guard result == .success else { return nil }
+        guard result == .success else {
+            irreversibleCommit = false
+            return nil
+        }
         try? await Task.sleep(for: .milliseconds(120))
         try validateInsertion(generation)
         guard let valueBefore,
@@ -227,11 +294,13 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
             return nil
         }
 
+        irreversibleCommit = true
         guard AXUIElementSetAttributeValue(
             element,
             kAXValueAttribute as CFString,
             replacement.value as CFString
         ) == .success else {
+            irreversibleCommit = false
             insertionLogger.notice("AX value replacement was rejected")
             return nil
         }
@@ -290,13 +359,12 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
         generation: UInt64
     ) async throws -> Bool {
         try validateInsertion(generation)
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
+        guard frontmostProcessIdentifier() == target.processIdentifier else {
             throw insertionFailure(
                 "The destination app changed before insertion.",
                 recovery: "Your transcript is preserved. Focus the intended field and use Retry."
             )
         }
-        let pasteboard = NSPasteboard.general
         let snapshot = PasteboardSnapshot(pasteboard: pasteboard)
         let valueBeforePaste = target.element.flatMap(stringValue)
 
@@ -316,23 +384,15 @@ public final class TextInsertionService: FocusedTextTargetReading, TextInserting
         }
         try validateInsertion(generation)
 
-        guard let source = CGEventSource(stateID: .combinedSessionState),
-              let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) else {
-            throw insertionFailure(
-                "The paste keystroke could not be created.",
-                recovery: "Copy the transcript and paste it manually."
-            )
+        let committed = try pasteDispatcher.commitPaste {
+            generation == cancellationGeneration && !Task.isCancelled
         }
+        guard committed else { throw CancellationError() }
+        irreversibleCommit = true
 
-        keyDown.flags = .maskCommand
-        keyUp.flags = .maskCommand
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
-
-        try await Task.sleep(for: .milliseconds(550))
+        try await postPasteDelay()
         try validateInsertion(generation)
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier else {
+        guard frontmostProcessIdentifier() == target.processIdentifier else {
             throw insertionFailure(
                 "The destination app changed during insertion.",
                 recovery: "Your transcript is preserved. Focus the intended field and use Retry."

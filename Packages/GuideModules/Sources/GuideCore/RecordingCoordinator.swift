@@ -149,10 +149,10 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
 
     public func cancel() {
         guard phase.isActive else { return }
+        guard inserter.cancel() else { return }
         attemptID = nil
         operationTask?.cancel()
         operationTask = nil
-        inserter.cancel()
         do {
             try session.cancel()
         } catch {
@@ -170,10 +170,10 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
         if phase.isActive {
             cancel()
         } else {
+            guard inserter.cancel() else { return }
             attemptID = nil
             operationTask?.cancel()
             operationTask = nil
-            inserter.cancel()
             do {
                 try session.cancel()
             } catch {
@@ -246,8 +246,8 @@ public final class RecordingCoordinator<Target: FocusedTextTargetRepresenting> {
 
     private func cancelAttempt(id: UUID) {
         guard attemptID == id else { return }
+        guard inserter.cancel() else { return }
         attemptID = nil
-        inserter.cancel()
         do {
             try session.cancel()
         } catch {

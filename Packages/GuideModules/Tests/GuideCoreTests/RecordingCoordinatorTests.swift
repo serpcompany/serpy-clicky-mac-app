@@ -102,6 +102,30 @@ struct RecordingCoordinatorTests {
         #expect(inserter.mutatedTargets.isEmpty)
     }
 
+    @Test("Escape after irreversible insertion commit does not claim cancellation")
+    func committedInsertionFinishesTruthfully() async {
+        let events = EventLog()
+        let inserter = CommittedCoordinatorInserter()
+        let coordinator = RecordingCoordinator(
+            session: CoordinatorSession(text: "already committed"),
+            targetReader: CoordinatorTargetReader(),
+            inserter: inserter,
+            history: CoordinatorStore(events: events)
+        )
+        coordinator.start(retainAudioInHistory: false)
+        await coordinator.waitUntilSettled()
+        coordinator.finish()
+        await inserter.waitUntilCommitted()
+
+        coordinator.cancel()
+        #expect(coordinator.phase == .inserting)
+        inserter.complete()
+        await coordinator.waitUntilSettled()
+
+        #expect(coordinator.phase == .succeeded)
+        #expect(inserter.cancelCount == 1)
+    }
+
     @Test("checkpoint failure is visible and prevents persistence and insertion")
     func checkpointFailureStopsCompletion() async {
         let events = EventLog()
@@ -309,11 +333,12 @@ private final class BlockingCoordinatorInserter: TextInserting {
         return .accessibility
     }
 
-    func cancel() {
+    func cancel() -> Bool {
         cancelCount += 1
         cancelled = true
         continuation?.resume()
         continuation = nil
+        return true
     }
 
     func waitUntilStarted() async {
@@ -321,6 +346,33 @@ private final class BlockingCoordinatorInserter: TextInserting {
     }
 
     func completePendingInsertion() {
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
+@MainActor
+private final class CommittedCoordinatorInserter: TextInserting {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private(set) var committed = false
+    private(set) var cancelCount = 0
+
+    func insert(_ text: String, into target: CoordinatorTarget) async throws -> TextInsertionMethod {
+        committed = true
+        await withCheckedContinuation { continuation = $0 }
+        return .accessibility
+    }
+
+    func cancel() -> Bool {
+        cancelCount += 1
+        return !committed
+    }
+
+    func waitUntilCommitted() async {
+        while !committed { await Task.yield() }
+    }
+
+    func complete() {
         continuation?.resume()
         continuation = nil
     }

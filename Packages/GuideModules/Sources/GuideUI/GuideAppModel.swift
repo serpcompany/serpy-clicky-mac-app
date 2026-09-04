@@ -67,7 +67,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let permissionService: PermissionService
-    @ObservationIgnored private let dictationSession: any DictationSessioning
     @ObservationIgnored private let insertionService: TextInsertionService
     @ObservationIgnored private let historyStore: TranscriptHistoryStore
     @ObservationIgnored private let screenContextService: ScreenContextService
@@ -88,18 +87,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var shortcutService: (any GlobalShortcutMonitoring)?
     @ObservationIgnored private let activationPolicy = DictationActivationPolicy()
     @ObservationIgnored private let transientSurfaceVisibilityPolicy = TransientCompanionSurfaceVisibilityPolicy()
-    @ObservationIgnored private lazy var recordingCoordinator: RecordingCoordinator<FocusedTextTarget> = {
-        let coordinator = RecordingCoordinator(
-            session: dictationSession,
-            targetReader: insertionService,
-            inserter: insertionService,
-            history: historyStore
-        )
-        coordinator.onStateChange = { [weak self] in
-            self?.synchronizeDictationState()
-        }
-        return coordinator
-    }()
+    @ObservationIgnored private let recordingCoordinator: RecordingCoordinator<FocusedTextTarget>
     @ObservationIgnored private var guideWindowController: GuideConversationWindowController?
     @ObservationIgnored private var guideResponseDismissalTask: Task<Void, Never>?
     @ObservationIgnored private lazy var guideTurnCoordinator = GuideTurnCoordinator(
@@ -128,6 +116,13 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public init(
         defaults: UserDefaults = .standard,
+        permissionService: PermissionService,
+        recordingCoordinator: RecordingCoordinator<FocusedTextTarget>,
+        insertionService: TextInsertionService,
+        historyStore: TranscriptHistoryStore,
+        screenContextService: ScreenContextService,
+        guidanceTranscriber: AppleSpeechTranscriber,
+        guidanceSpeaker: LocalSpeechOutputService,
         localGuidanceService: LocalGuidanceService,
         talkCredentialStore: any TalkCredentialStoring,
         talkCredentialVerifier: any TalkCredentialVerifying,
@@ -137,14 +132,14 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         shortcutMonitorFactory: @escaping ShortcutMonitorFactory
     ) {
         self.defaults = defaults
-        permissionService = PermissionService()
-        dictationSession = DurableDictationSession()
-        insertionService = TextInsertionService()
-        historyStore = TranscriptHistoryStore()
-        screenContextService = ScreenContextService()
+        self.permissionService = permissionService
+        self.recordingCoordinator = recordingCoordinator
+        self.insertionService = insertionService
+        self.historyStore = historyStore
+        self.screenContextService = screenContextService
         self.localGuidanceService = localGuidanceService
-        guidanceTranscriber = AppleSpeechTranscriber()
-        guidanceSpeaker = LocalSpeechOutputService()
+        self.guidanceTranscriber = guidanceTranscriber
+        self.guidanceSpeaker = guidanceSpeaker
         self.talkCredentialStore = talkCredentialStore
         self.talkCredentialVerifier = talkCredentialVerifier
         self.talkVerificationExpirySleeper = talkVerificationExpirySleeper
@@ -182,6 +177,9 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             accessibility: .unknown,
             screenRecording: .unknown
         )
+        recordingCoordinator.onStateChange = { [weak self] in
+            self?.synchronizeDictationState()
+        }
     }
 
     public var menuBarSymbol: String {
@@ -221,11 +219,11 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public var dictationReady: Bool {
-        permissions.dictationReady && dictationSession.isOnDeviceAvailable
+        permissions.dictationReady && recordingCoordinator.isOnDeviceAvailable
     }
 
     public var speechAvailability: String {
-        dictationSession.availabilityDescription
+        recordingCoordinator.availabilityDescription
     }
 
     public var shortcutDescription: String {
@@ -805,6 +803,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         guard phase.isActive else { return }
         recordingCoordinator.cancel()
         synchronizeDictationState()
+        guard phase == .cancelled else { return }
         statusMessage = "Dictation cancelled."
         lastDictationStage = "Cancelled"
         Self.logger.notice("Dictation cancelled")

@@ -16,8 +16,16 @@ final class TalkVerificationExpiryTests: XCTestCase {
             cloud: ExpiryNoopGuidanceGenerator(),
             credentialStore: store
         )
+        let dictation = makeTestDictationDependencies()
         let model = GuideAppModel(
             defaults: defaults,
+            permissionService: PermissionService(),
+            recordingCoordinator: dictation.coordinator,
+            insertionService: dictation.insertion,
+            historyStore: dictation.history,
+            screenContextService: ScreenContextService(),
+            guidanceTranscriber: AppleSpeechTranscriber(),
+            guidanceSpeaker: LocalSpeechOutputService(),
             localGuidanceService: local,
             talkCredentialStore: store,
             talkCredentialVerifier: AlwaysValidCredentialVerifier(),
@@ -86,8 +94,16 @@ final class TalkVerificationExpiryTests: XCTestCase {
             cloud: ExpiryNoopGuidanceGenerator(),
             credentialStore: store
         )
+        let dictation = makeTestDictationDependencies()
         let model = GuideAppModel(
             defaults: defaults,
+            permissionService: PermissionService(),
+            recordingCoordinator: dictation.coordinator,
+            insertionService: dictation.insertion,
+            historyStore: dictation.history,
+            screenContextService: ScreenContextService(),
+            guidanceTranscriber: AppleSpeechTranscriber(),
+            guidanceSpeaker: LocalSpeechOutputService(),
             localGuidanceService: local,
             talkCredentialStore: store,
             talkCredentialVerifier: AlwaysValidCredentialVerifier(),
@@ -99,6 +115,39 @@ final class TalkVerificationExpiryTests: XCTestCase {
         model.talkDisclosureAccepted = true
         return (model, sleeper, store)
     }
+}
+
+@MainActor
+private func makeTestDictationDependencies() -> (
+    coordinator: RecordingCoordinator<FocusedTextTarget>,
+    insertion: TextInsertionService,
+    history: TranscriptHistoryStore
+) {
+    let insertion = TextInsertionService()
+    let history = TranscriptHistoryStore(
+        fileURL: FileManager.default.temporaryDirectory
+            .appending(path: "serpy-talk-model-\(UUID().uuidString)/transcripts.json")
+    )
+    let coordinator = RecordingCoordinator(
+        session: ExpiryNoopDictationSession(),
+        targetReader: insertion,
+        inserter: insertion,
+        history: history
+    )
+    return (coordinator, insertion, history)
+}
+
+@MainActor
+private final class ExpiryNoopDictationSession: DictationSessioning {
+    var onPartial: (@MainActor @Sendable (String) -> Void)?
+    var isOnDeviceAvailable: Bool { true }
+    var availabilityDescription: String { "available" }
+    func start(retainAudioInHistory: Bool) async throws {}
+    func stop() async throws -> SpeechTranscriptionResult {
+        .init(transcript: "", temporaryAudioURL: nil)
+    }
+    func cancel() throws {}
+    func discardTemporaryAudio(at url: URL) throws {}
 }
 
 private final class ExpiryMemoryCredentialStore: TalkCredentialStoring, @unchecked Sendable {

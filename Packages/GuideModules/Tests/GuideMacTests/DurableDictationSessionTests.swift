@@ -70,6 +70,49 @@ struct DurableDictationSessionTests {
         }
     }
 
+    @Test("recognition limit failure recovers the same 130-second checkpoint without sentinel loss")
+    func failedRecognitionRecoversCompleteCheckpoint() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "serpy-failure-recovery-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let capture = SyntheticAudioCapture()
+        let failing = DurableDictationSession(
+            capture: capture,
+            makeTranscriber: { FrameDrivenTranscriber(failAfterFrames: 61 * 16_000) },
+            makeCheckpointWriter: { try RecoverableAudioCheckpointWriter(directoryURL: directory) },
+            stopTail: DictationStopTail(duration: .zero),
+            checkReadiness: {},
+            recoveryDirectory: directory
+        )
+        try await failing.start(retainAudioInHistory: false)
+        try emitLongSession(into: capture)
+        await #expect(throws: GuideFailure.self) {
+            _ = try await failing.stop()
+        }
+        #expect(try RecoverableAudioCheckpointWriter.recoverableAudioURLs(in: directory).count == 1)
+
+        let recovery = DurableDictationSession(
+            capture: SyntheticAudioCapture(),
+            makeTranscriber: { FrameDrivenTranscriber() },
+            makeCheckpointWriter: { try RecoverableAudioCheckpointWriter(directoryURL: directory) },
+            stopTail: DictationStopTail(duration: .zero),
+            checkReadiness: {},
+            recoveryDirectory: directory
+        )
+        let recovered = try await recovery.recoverInterruptedAudio()
+
+        let expected = "BEGIN alpha BEFORE-60 beta AFTER-60 gamma MIDDLE delta END omega"
+        #expect(recovered.count == 1)
+        #expect(recovered[0].transcript == expected)
+        var cursor = expected.startIndex
+        for sentinel in ["BEGIN", "BEFORE-60", "AFTER-60", "MIDDLE", "END"] {
+            #expect(expected.components(separatedBy: sentinel).count - 1 == 1)
+            let range = expected.range(of: sentinel, range: cursor..<expected.endIndex)
+            #expect(range != nil)
+            if let range { cursor = range.upperBound }
+        }
+    }
+
     @Test("macOS 14–25 fallback splits real long audio below the recognizer limit")
     func legacyFallbackUsesSequentialSubMinuteChunks() async throws {
         let directory = FileManager.default.temporaryDirectory
@@ -108,9 +151,50 @@ struct DurableDictationSessionTests {
         let result = try await transcriber.finish(recoveryAudioURL: sourceURL)
 
         #expect(result == "BEGIN alpha BEFORE-60 beta AFTER-60 gamma MIDDLE delta END omega")
-        #expect(recognizer.durations == [50, 50, 30])
+        #expect(recognizer.durations.count == 3)
         #expect(recognizer.durations.allSatisfy { $0 <= 50.01 })
-        #expect(recognizer.durations.reduce(0, +) > 129.9)
+        #expect(recognizer.durations.reduce(0, +) > 131.9)
+    }
+
+    @Test("overlapping legacy chunks preserve a marker crossing the cut exactly once")
+    func legacyBoundaryOverlapDoesNotLoseOrDuplicateWords() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "serpy-boundary-overlap-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let sourceURL = directory.appending(path: "boundary.caf")
+        let format = try #require(AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 16_000,
+            channels: 1,
+            interleaved: false
+        ))
+        try {
+            let file = try AVAudioFile(
+                forWriting: sourceURL,
+                settings: format.settings,
+                commonFormat: .pcmFormatFloat32,
+                interleaved: false
+            )
+            for second in 1...101 {
+                let marker: Float? = (second == 49 || second == 50) ? 0.70 : nil
+                try file.write(from: oneSecondBuffer(marker: marker))
+            }
+        }()
+        let recognizer = BoundaryChunkRecognizer()
+        let transcriber = ChunkedSFSpeechTranscriber(
+            recognizer: recognizer,
+            maximumChunkDuration: 50,
+            overlapDuration: 1,
+            temporaryDirectory: directory
+        )
+        try await transcriber.begin(locale: .init(identifier: "en-US"))
+
+        let result = try await transcriber.finish(recoveryAudioURL: sourceURL)
+
+        #expect(result == "BEGIN boundary phrase AFTER END")
+        #expect(result.components(separatedBy: "boundary phrase").count - 1 == 1)
+        #expect(Array(recognizer.containsBoundaryMarker.prefix(2)) == [true, true])
     }
 
     @Test("device restart failure rejects a captured prefix as success")
@@ -199,9 +283,24 @@ struct DurableDictationSessionTests {
         let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000))
         buffer.frameLength = 16_000
         if let samples = buffer.floatChannelData?[0] {
-            samples.initialize(repeating: marker ?? 0, count: Int(buffer.frameLength))
+            samples.initialize(repeating: 0, count: Int(buffer.frameLength))
+            if let marker { samples[0] = marker }
         }
         return buffer
+    }
+
+    private func emitLongSession(into capture: SyntheticAudioCapture) throws {
+        for second in 1...130 {
+            let marker: Float? = switch second {
+            case 1: 0.10
+            case 59: 0.20
+            case 61: 0.30
+            case 90: 0.40
+            case 130: 0.50
+            default: nil
+            }
+            capture.emit(try oneSecondBuffer(marker: marker))
+        }
     }
 }
 
@@ -217,6 +316,33 @@ private final class FixtureChunkRecognizer: AudioChunkRecognizing, @unchecked Se
         durations.append(Double(file.length) / file.processingFormat.sampleRate)
         defer { index += 1 }
         return index < results.count ? results[index] : ""
+    }
+    func cancel() {}
+}
+
+private final class BoundaryChunkRecognizer: AudioChunkRecognizing, @unchecked Sendable {
+    private var index = 0
+    private(set) var containsBoundaryMarker: [Bool] = []
+    func prepare(locale: Locale) async throws {}
+    func recognize(_ url: URL) async throws -> String {
+        let file = try AVAudioFile(forReading: url)
+        let capacity = AVAudioFrameCount(file.length)
+        let buffer = try #require(AVAudioPCMBuffer(
+            pcmFormat: file.processingFormat,
+            frameCapacity: capacity
+        ))
+        try file.read(into: buffer)
+        let samples = buffer.floatChannelData?[0]
+        let hasMarker = samples.map { pointer in
+            (0..<Int(buffer.frameLength)).contains { pointer[$0] > 0.65 }
+        } ?? false
+        containsBoundaryMarker.append(hasMarker)
+        defer { index += 1 }
+        return switch index {
+        case 0: "BEGIN boundary phrase"
+        case 1: "boundary phrase AFTER"
+        default: "END"
+        }
     }
     func cancel() {}
 }
@@ -269,7 +395,12 @@ private final class FrameDrivenTranscriber: StreamingTranscriber, @unchecked Sen
             )
             return
         }
-        let marker = buffer.floatChannelData?[0][0] ?? 0
+        let marker: Float
+        if let samples = buffer.floatChannelData?[0] {
+            marker = (0..<Int(buffer.frameLength)).reduce(Float.zero) { max($0, samples[$1]) }
+        } else {
+            marker = 0
+        }
         let segment: String? = switch marker {
         case 0.09...0.11: "BEGIN alpha "
         case 0.19...0.21: "BEFORE-60 beta "

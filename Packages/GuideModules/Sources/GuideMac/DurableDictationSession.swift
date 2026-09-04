@@ -37,7 +37,7 @@ public final class DurableDictationSession: DictationSessioning {
     private let relay = AudioBufferRelay()
     private let failure = SessionFailureBox()
     private var transcriber: (any StreamingTranscriber)?
-    private var checkpoint: RecoverableAudioCheckpointWriter?
+    private var checkpoint: SerializedAudioCheckpointWriter?
 
     public init() {
         capture = YapAudioCaptureService()
@@ -99,11 +99,11 @@ public final class DurableDictationSession: DictationSessioning {
         try checkReadiness()
         failure.reset()
         relay.reset()
-        let checkpoint = try makeCheckpointWriter()
+        let checkpoint = SerializedAudioCheckpointWriter(writer: try makeCheckpointWriter())
         self.checkpoint = checkpoint
         capture.onFailure = { [failure] value in failure.store(value) }
         capture.onBuffer = { [weak self, checkpoint] buffer in
-            checkpoint.append(buffer)
+            _ = checkpoint.enqueue(buffer)
             self?.relay.receive(buffer)
         }
 
@@ -171,7 +171,7 @@ public final class DurableDictationSession: DictationSessioning {
             }
             try await transcriber.begin(locale: locale)
             do {
-                if #available(macOS 26.0, *), transcriber is SpeechAnalyzerStreamingTranscriber {
+                if transcriber.recoveryInputMode == .streamCheckpointBuffers {
                     try feedFile(url, to: transcriber)
                 }
                 let text = try await transcriber.finish(recoveryAudioURL: url)

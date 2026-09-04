@@ -117,11 +117,13 @@ public enum TextInsertionMethod: String, Equatable, Sendable {
 public protocol TextInserting<FocusedTarget>: AnyObject {
     associatedtype FocusedTarget: FocusedTextTargetRepresenting
     func insert(_ text: String, into target: FocusedTarget) async throws -> TextInsertionMethod
-    func cancel()
+    /// Returns true only while delivery is still cancelable. False means the
+    /// irreversible target mutation was already synchronously committed.
+    func cancel() -> Bool
 }
 
 public extension TextInserting {
-    func cancel() {}
+    func cancel() -> Bool { true }
 }
 
 public protocol LastDictationStoring: Sendable {
