@@ -108,6 +108,17 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
 ## Valid focused actual-app evidence
 
+- `GT-UF12-001` passed in the real `GuideCompanion` app at tested commit
+  `0a21ed140f9ebc6211f85b9ddf3636031a9ecf36` through the bounded ambient
+  shortcut lane on the M3 on 2026-09-05. It executed one test in 13.624 seconds
+  with zero failures or skips, asserted the exact visible malformed-guidance
+  cause and recovery action, recorded exactly one allowlisted
+  `guidance.plan.malformed` diagnostic, and kept the transcript inspector
+  absent. The retained local bundle is
+  `evidence/issue-13-real-app-UF12-m3-run3.xcresult` (generated and ignored);
+  the committed redacted machine-readable proof is
+  `evidence/issue-13-real-app-UF12-m3-run3-proof.json`. Process and wrapper-root
+  cleanup passed, with no serpy or XCUI process remaining.
 - `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
   `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
   ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
