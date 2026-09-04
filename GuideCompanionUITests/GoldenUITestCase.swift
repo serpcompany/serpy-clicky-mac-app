@@ -106,7 +106,13 @@ class GoldenUITestCase: XCTestCase {
             object: ambient
         )
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
-        if let value { XCTAssertEqual(ambient.value as? String, value) }
+        if let value {
+            XCTAssertEqual(ambient.value as? String, value)
+            if !value.isEmpty {
+                XCTAssertGreaterThanOrEqual(ambient.frame.width, 300)
+                XCTAssertGreaterThan(ambient.frame.height, 46)
+            }
+        }
     }
 
     func closeSettingsForAmbientGuide() {

@@ -6,13 +6,13 @@ final class GoldenGuideUITests: GoldenUITestCase {
         await launch(flow: "UF-08", extraArguments: ["--stepwise-guide"])
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
-        expectAmbient(labelContains: "SERPy is listening", value: "")
-        expectAmbient(labelContains: "Open a new window", value: "")
+        expectAmbient(labelContains: "SERPy is listening", value: "Fixture Browser — Fixture Window")
+        expectAmbient(labelContains: "Open a new window", value: "Fixture Browser — Fixture Window")
         triggerShortcut("guide-released")
-        expectAmbient(labelContains: "Reading this screen", value: "")
-        expectAmbient(labelContains: "Fixture Browser — Fixture Window", value: "")
+        expectAmbient(labelContains: "Reading this screen", value: "Fixture Browser — Fixture Window")
+        expectAmbient(labelContains: "Fixture Browser — Fixture Window", value: "Fixture Browser — Fixture Window")
         releaseFixture("capture")
-        expectAmbient(labelContains: "Thinking locally", value: "")
+        expectAmbient(labelContains: "Thinking locally", value: "Fixture Browser — Fixture Window")
         releaseFixture("generation")
         expectAmbient(labelContains: "SERPy is speaking", value: "Open the File menu.")
         expectAmbient(labelContains: "Step 1 of 2", value: "Open the File menu.")
@@ -40,7 +40,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
         await launch(flow: "UF-10")
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
-        expectAmbient(labelContains: "Open a new window", value: "")
+        expectAmbient(labelContains: "Open a new window", value: "Fixture Browser — Fixture Window")
         cancelAmbientGuide()
     }
 
@@ -114,7 +114,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
 
     private func askAmbientGuide() {
         triggerShortcut("guide-pressed")
-        expectAmbient(labelContains: "Open a new window", value: "")
+        expectAmbient(labelContains: "Open a new window", value: "Fixture Browser — Fixture Window")
         triggerShortcut("guide-released")
     }
 
@@ -122,7 +122,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
         await launch(flow: "UF-10", extraArguments: [extraArgument])
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
-        expectAmbient(labelContains: "Open a new window", value: "")
+        expectAmbient(labelContains: "Open a new window", value: "Fixture Browser — Fixture Window")
         triggerShortcut("guide-released")
         expectAmbient(labelContains: label)
         cancelAmbientGuide(lateAdapter: lateAdapter)

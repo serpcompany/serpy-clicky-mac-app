@@ -96,7 +96,22 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, ambient failure recovery mapping, and Dictation partial mapping; 100 XCTest, 85 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, ambient failure recovery mapping, Dictation partial mapping, and target-display fallback; 100 XCTest, 87 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
+
+## Valid focused actual-app evidence
+
+- `GT-UF09-001` passed in the real `GuideCompanion` app through the bounded
+  ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
+  the transcript inspector or another app, drove the installed
+  `GlobalShortcutCallbacks`, and asserted stale evidence, fresh advancement,
+  and completion. Every nonempty instruction had exact AX content and an
+  expanded ambient frame (at least 300 points wide and taller than the 46-point
+  icon-only state). The retained local bundle is
+  `evidence/issue-13-real-app-UF09-ambient-run10.xcresult` (generated and
+  ignored); the committed machine-readable summary is
+  `evidence/issue-13-real-app-UF09-ambient-run10-summary.json` (one passed, zero
+  failed). Process, XCTest-session, wrapper-root, and Launch Services cleanup
+  passed. No private-desktop video or frame was committed.
 
 ## Deliberately red evidence
 
@@ -161,10 +176,21 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   through token-owned signals and assert only the ambient panel lifecycle. The
   screenshot `evidence/issue-13-real-app-UF09-run5-xcode-report.png` is retained
   only as a labeled record of this rejected proof and its runtime warning; it
-  must not be cited as golden acceptance. The warning was attributed to the
-  UI-test target before interaction while synchronous session provisioning ran
-  on the test's main actor. Provisioning now runs in a detached task; removal of
-  that warning remains pending the next authorized ambient execution.
+  must not be cited as golden acceptance. Later activity-tree inspection in the
+  valid ambient run placed the same warning beneath XCTest's discovered
+  interrupting Superwhisper window, alongside an existing Chrome window—not
+  beneath serpy launch or session provisioning. The harness does not close or
+  control either external app. Session provisioning remains off the main actor.
+- Ambient runs 6–9 are retained locally as red-capable evidence. Run 6 exposed
+  the real icon-only bug: a target without display metadata made panel layout
+  return before resizing. Run 7 proved the response card was visibly expanded
+  after target-frame display fallback, while AX value remained empty. Run 8
+  proved the controller-owned hosting-view AX value worked and exposed captured
+  context; its test still expected the obsolete empty value. Run 9 passed exact
+  response values and width but rejected a valid 54-point card using an
+  arbitrary 58-point height threshold. Run 10 uses the product invariant:
+  response cards must exceed the 46-point icon state in both dimensions. All
+  private-desktop diagnostic exports for runs 6–9 were removed.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
