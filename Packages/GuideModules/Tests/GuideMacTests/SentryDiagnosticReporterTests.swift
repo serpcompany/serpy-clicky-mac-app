@@ -21,6 +21,13 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         XCTAssertEqual(configuration.dsn, "https://public@example.invalid/1")
         XCTAssertEqual(configuration.environment, "development")
         XCTAssertFalse(configuration.debug)
+        XCTAssertNil(SentryRuntimeConfiguration.resolve(
+            processEnvironment: [
+                "SENTRY_DSN": "https://public@example.invalid/1",
+                "SENTRY_ENVIRONMENT": "production"
+            ],
+            bundleInfo: [:]
+        ))
     }
 
     func testDescriptorUsesStableFingerprintAndOnlyAllowlistedTags() {
@@ -50,7 +57,14 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         let secret = "SECRET-IDENTITY-ORCHID-731"
         let event = Event(level: .error)
         event.message = SentryMessage(formatted: "guidance.plan.malformed")
-        event.tags = ["serpy_schema": "handled-v1"]
+        event.environment = "development"
+        event.tags = [
+            "serpy_schema": "handled-v1",
+            "failure_stage": "guidance",
+            "provider_kind": "local",
+            "unapproved": secret
+        ]
+        event.fingerprint = ["unapproved-fingerprint"]
         let user = User()
         user.userId = secret
         event.user = user
@@ -76,5 +90,17 @@ final class SentryDiagnosticReporterTests: XCTestCase {
         XCTAssertNil(scrubbed.transaction)
         XCTAssertNil(scrubbed.stacktrace)
         XCTAssertNil(scrubbed.exceptions)
+        XCTAssertEqual(scrubbed.message?.formatted, "guidance.plan.malformed")
+        XCTAssertEqual(scrubbed.fingerprint, ["guidance.plan.malformed"])
+        XCTAssertEqual(scrubbed.tags, [
+            "failure_stage": "guidance",
+            "provider_kind": "local",
+            "serpy_schema": "handled-v1"
+        ])
+
+        let unclassified = Event(level: .error)
+        unclassified.message = SentryMessage(formatted: secret)
+        unclassified.tags = ["serpy_schema": "handled-v1"]
+        XCTAssertNil(SentryHandledEventScrubber().scrub(unclassified))
     }
 }

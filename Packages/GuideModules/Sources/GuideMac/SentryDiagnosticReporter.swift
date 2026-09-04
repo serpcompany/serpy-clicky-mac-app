@@ -19,6 +19,7 @@ public struct SentryRuntimeConfiguration: Equatable, Sendable {
         let environment = processEnvironment["SENTRY_ENVIRONMENT"]
             ?? bundleInfo["SentryEnvironment"] as? String
             ?? "development"
+        guard environment == "development" else { return nil }
         return SentryRuntimeConfiguration(
             dsn: dsn,
             environment: environment,
@@ -47,7 +48,23 @@ public struct SentryHandledEventScrubber {
     public init() {}
 
     public func scrub(_ event: Event) -> Event? {
-        guard event.tags?["serpy_schema"] == "handled-v1" else { return nil }
+        guard event.environment == "development",
+              event.tags?["serpy_schema"] == "handled-v1",
+              let message = event.message?.formatted,
+              let code = GuideFailureCode(rawValue: message),
+              code != .unclassified,
+              let stageValue = event.tags?["failure_stage"],
+              GuideFailureStage(rawValue: stageValue) != nil,
+              let providerValue = event.tags?["provider_kind"],
+              GuideFailureProvider(rawValue: providerValue) != nil
+        else { return nil }
+        event.message = SentryMessage(formatted: code.rawValue)
+        event.fingerprint = [code.rawValue]
+        event.tags = [
+            "failure_stage": stageValue,
+            "provider_kind": providerValue,
+            "serpy_schema": "handled-v1"
+        ]
         event.user = nil
         event.context = nil
         event.extra = nil

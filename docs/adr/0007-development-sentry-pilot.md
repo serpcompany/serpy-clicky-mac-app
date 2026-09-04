@@ -21,6 +21,7 @@ The first event contract contains only:
 - schema version;
 - Sentry environment;
 - application release, version, and build;
+- error severity and Cocoa platform identifier;
 - event timestamp and Sentry event identifier; and
 - Sentry SDK name and version.
 

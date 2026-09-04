@@ -785,21 +785,6 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentGuidanceCaption(failure.message, mode: .error)
     }
 
-    public func presentMalformedGuidanceFixtureForTesting() {
-        let failure = GuideFailure(
-            stage: .guidance,
-            code: .guidancePlanMalformed,
-            provider: .local,
-            message: "The local guide returned malformed structured guidance.",
-            recovery: "Try the question again. SERPy did not present incomplete steps."
-        )
-        incidentReporter.report(DiagnosticIncident(failure: failure))
-        guidancePhase = .failed(failure)
-        statusMessage = failure.message
-        recoveryMessage = failure.recovery
-        presentGuidanceCaption(failure.message, mode: .error, autoDismiss: false)
-    }
-
     public func cancelDictation() {
         guard phase.isActive else { return }
         transcriber.cancel()
@@ -1222,11 +1207,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         scheduleReset(after: hasRecoverableTranscript ? 12 : 4)
     }
 
-    private func presentGuidanceCaption(
-        _ text: String,
-        mode: CompanionMode,
-        autoDismiss: Bool = true
-    ) {
+    private func presentGuidanceCaption(_ text: String, mode: CompanionMode) {
         presentation.mode = mode
         if mode == .success {
             presentation.responseText = text
@@ -1237,7 +1218,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.caption = text
         applyCompanionVisibility()
         companionController.refresh()
-        guard mode != .success, autoDismiss else { return }
+        guard mode != .success else { return }
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))
             guard let self, !guidancePhase.isActive else { return }
