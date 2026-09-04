@@ -1,110 +1,59 @@
-# Delivery Plan
+# Version 1 delivery plan
 
-Every phase produces an independently reviewable artifact. Later phases cannot
-turn an earlier red acceptance row green by assertion.
+Version 1 stabilizes existing functionality. It does not add onboarding,
+payments, broader Settings/options, language features, changed history defaults,
+or other SERP applications. `docs/product/version-1-stabilization.md` is the
+scope and acceptance authority.
 
-## Phase 0 — Risk Probes and Decisions
+## Phase 1 — Dictation stabilization
 
-Goal: prove the uncertain macOS seams before building product UI.
+Exercise the existing Dictation workflow in TextEdit and Chrome. Reproduce each
+failure, add a regression test at the lowest honest layer, correct the behavior,
+and verify the affected headless suite.
 
-Disposable probes:
+Complete this phase only when the exact installed artifact passes invocation,
+local transcription, insertion, cancellation, clipboard preservation, existing
+recovery, quit, and relaunch without a permission loop or duplicate process.
 
-1. Record microphone audio and compare local transcription candidates.
-2. Insert fixed and multiline text into TextEdit, Notes, a browser, Slack, and a
-   code editor while preserving clipboard and selection behavior.
-3. Show a nonactivating cursor overlay across multiple displays without
-   intercepting unrelated clicks or covering the menu bar.
-4. Capture one explicitly chosen window, extract Accessibility/OCR context, and
-   obtain a two-turn local guidance conversation on the owner's Mac.
-5. Package a minimal signed probe using the intended stable bundle namespace to
-   characterize TCC behavior.
+## Phase 2 — Guide stabilization
 
-Deliverables:
+Use installed HeyClicky and the Issue #7 Clipy recording as the UX/behavior
+oracle. The pinned historical MIT Clicky revision in `PROVENANCE.md` is an
+approved implementation donor.
 
-- Measured comparison report.
-- ADR 0002 selecting the first speech engine.
-- ADR 0003 selecting insertion and fallback policy.
-- ADR 0004 recording the local guidance capability floor.
-- Updated minimum macOS decision if evidence requires it.
+Reproduce and fix the existing Guide workflow in vertical slices: lifecycle,
+compact phase UI, target lock, two-step Chrome walkthrough, progression, safe
+pointing, speech ordering, cancellation, click-through behavior, and cleanup.
 
-Done when every probe has measured results and no probe code has leaked into
-production modules by copy/paste.
+Complete this phase only when the exact installed artifact passes the Chrome
+`File` → `New Window` → done walkthrough and the owner accepts the functional
+result.
 
-## Phase 1 — Dictation-Only Vertical Slice
+## Phase 3 — User-facing name
 
-Goal: make one complete, offline, no-key dictation journey excellent.
+Change visible product identity from `SERPy` to `serpy` while preserving the
+existing bundle identifier, signing identity, Keychain service, preferences
+domain, and internal module/type names. Verify permissions and stored state
+survive the change.
 
-Build:
+## Phase 4 — Test enforcement
 
-- Thin menu-bar shell and normal Settings window.
-- Microphone/Accessibility onboarding state machine.
-- Model download/readiness experience.
-- Configurable push-to-talk shortcut.
-- Recording status overlay.
-- Local transcription and focused-field insertion.
-- Cancellation, undo-friendly behavior, clipboard restoration, and actionable
-  failures.
+Implement the safe lanes in `docs/engineering/testing.md` around the accepted
+functional baseline:
 
-Done when the exact signed app passes Acceptance A1–A9 offline on the internal
-test Mac after a fresh preference and permission reset.
+- headless local package and compile checks;
+- isolated Xcode Cloud UI checks;
+- explicit installed-artifact acceptance.
 
-## Phase 2 — Reliable Cursor Companion
+The local command must not launch serpy. Build/test products use bounded
+temporary storage and are removed on exit or interruption. The UI-test runtime
+must construct no production Keychain, permission, Sentry, or network adapter.
 
-Goal: provide a pleasant, persistent visual companion independent of guidance.
+Complete this phase only after the functional baseline is already green and the
+new harness proves it leaves no app process, prompt, or build cache behind.
 
-Build:
+## Phase 5 — Later iteration
 
-- Companion visibility state machine.
-- Cursor-safe positioning, multi-display geometry, Reduce Motion behavior.
-- Compact captions and explicit hide/show control.
-- Instrumented hide reasons and return policies.
-- Non-floating Settings behavior.
-
-Done when Acceptance B1–B8 pass and the cursor never blocks menu-bar access.
-
-## Phase 3 — Local Screen Guidance
-
-Goal: hold an explicit back-and-forth conversation about the current screen and
-point safely.
-
-Build:
-
-- On-demand Screen Recording onboarding.
-- Request-scoped content selection and capture.
-- Accessibility and OCR context extraction.
-- Selected local guidance adapter.
-- Transient multi-turn voice state with local recognition and spoken output.
-- Optional normal non-floating transcript window with no typing composer.
-- Structured guidance-plan validation.
-- Caption, speech, and cursor pointing without autonomous action.
-
-Done when Acceptance C1–C9 pass with networking disabled on the supported test
-machine, or the owner explicitly approves a revised local-capability boundary.
-
-## Phase 4 — Installed Product Baseline
-
-Goal: prove the three journeys in a normal downloadable build.
-
-Build:
-
-- Product-owned identity and assets.
-- Developer ID signing, notarization, stapling, DMG, checksum, and manifest.
-- Clean install/relaunch/uninstall instructions.
-- Local diagnostics export with automatic content redaction.
-
-Done when a quarantined HTTPS download is installed through Finder, passes
-Gatekeeper without a bypass, completes all required journeys, and relaunches
-without permission loops.
-
-## Phase 5 — Optional Expansion Gate
-
-Only after the installed baseline passes should the owner decide whether to add:
-
-- Wake word.
-- Optional cloud providers.
-- Rewriting/formatting modes.
-- Tutorial ingestion and richer screen understanding.
-- Autonomous agents or computer use.
-- Accounts, sync, billing, updates, or additional platforms.
-
-Each is a separate product and risk decision, not an automatic continuation.
+After Version 1 is functionally locked, create separate issues for design
+iteration, refactoring, onboarding, payments, Settings improvements, language
+features, storage-default changes, and other SERP app integrations.

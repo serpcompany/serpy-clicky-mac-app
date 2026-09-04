@@ -2,14 +2,15 @@
 
 ## Mission
 
-Build the smallest polished macOS guide companion defined in `PRODUCT.md`.
-Work through `DELIVERY_PLAN.md` in order and advance `ACCEPTANCE.md` only with
-the required evidence.
+Stabilize the two existing Version 1 capabilities defined in
+`docs/product/version-1-stabilization.md`: Dictation first, then the
+HeyClicky-style Guide. Lock working behavior with tests before design changes or
+refactoring. Do not add later product areas during stabilization.
 
 ## Current Authorization
 
 The owner authorized implementation through the installed-product finish line
-on 2026-08-16. Work through Phases 0–4 in order. This authorization includes
+on 2026-08-16. Follow `DELIVERY_PLAN.md` in order. This authorization includes
 local source changes, local model/runtime evaluation, stable tester-owned
 signing configuration, packaging, notarization, and installed-app verification.
 It does not authorize a public release, public remote, billing, cloud services,
@@ -36,12 +37,16 @@ screenshots, document content, identity, or arbitrary error strings.
   sync, billing, product analytics, pets, widgets, browser control, or MCP in
   the product. The only approved cloud paths are the request-scoped Talk
   adapter and development-only Sentry pilot described above.
-- Do not copy or decompile HeyClicky code, assets, private protocols, or product
-  identity. Use it only as observable behavioral evidence.
-- Do not import OpenClicky code without completing the gate in `PROVENANCE.md`.
+- Use installed HeyClicky as the UX/behavior oracle. The historical public MIT
+  source `farzaa/clicky@a80fa80721a8aebe51a170a7780705024ebc6e46` is an approved
+  donor for Version 1; follow `PROVENANCE.md` for attribution and separation.
+- Preserve serpy identity and use only the approved historical source revision;
+  later private HeyClicky code, credentials, signing, services, and release
+  configuration are outside the donor boundary.
 - Do not copy upstream signing identities, Team IDs, bundle IDs, Sparkle keys,
   appcasts, credentials, release hosts, or secrets.
-- Never store audio, screenshots, or transcript content by default.
+- Keep screenshots, audio, and Guide content transient by default. Dictation may
+  retain only the bounded Last Dictation recovery record defined in `PRODUCT.md`.
 - Never send Talk content unless the provider is explicitly selected, the
   per-device disclosure is accepted, and a credential is available. Never
   silently fall back between local and cloud guidance.
@@ -52,8 +57,13 @@ screenshots, document content, identity, or arbitrary error strings.
 
 ## Engineering Rules
 
+- **Version 1:** read `docs/product/version-1-stabilization.md` before planning,
+  implementing, reviewing, or verifying product work.
 - **User flows:** read `docs/product/user-flows.md` before changing or verifying
   user-visible behavior; update its issue traceability when the contract changes.
+- **Testing:** read `docs/engineering/testing.md` before running tests or changing
+  the harness. Routine local verification is headless; XCUI runs in the isolated
+  UI lane and installed verification uses one exact reviewed artifact.
 - Preserve the dependency direction in `ARCHITECTURE.md`.
 - Add a deterministic state-machine test before connecting a feature to macOS
   APIs.

@@ -1,4 +1,8 @@
-# Voice-first Guide clean-room reconstruction scope
+# Historical Guide reconstruction scope
+
+> Historical evidence: this file records the build-40/Issue #7 reconstruction
+> context. Current Version 1 scope is `docs/product/version-1-stabilization.md`,
+> and current donor permission is `PROVENANCE.md`.
 
 ## Authorization and finish line
 
@@ -21,19 +25,16 @@ Settings recovery, and preference persistence. The completion manifest stays
 red until every row has paired installed evidence or the owner explicitly
 accepts a named residual difference.
 
-## Clean-room boundary
+## Reference and donor boundary
 
-HeyClicky is a black-box behavioral oracle only. Do not inspect or decompile
-its executable, copy its assets, product identity, private protocols,
-credentials, services, prompts, or implementation. Account, plan, Agent,
+Installed HeyClicky is the UX/behavior oracle. Account, plan, Agent,
 integration, community, analytics, autonomous-action, and private-service
-surfaces are not SERPy features; their absence is a declared product-boundary
-difference, not evidence that Guide parity has passed.
+surfaces are not Version 1 features.
 
 The historical public repository `https://github.com/farzaa/clicky` is MIT at
-commit `a80fa80721a8aebe51a170a7780705024ebc6e46`. No source from it is imported
-on this rebuild branch unless a `PROVENANCE.md` import record names exact
-files/lines, license/notices, dependencies, tests, removals, and approval.
+commit `a80fa80721a8aebe51a170a7780705024ebc6e46` and is an approved Version 1
+donor. `PROVENANCE.md` defines the traceability and separation requirements;
+another approval is not required for that pinned revision.
 
 ## Provider and privacy boundary
 

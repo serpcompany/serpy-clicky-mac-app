@@ -1,5 +1,9 @@
 # HeyClicky voice-guide UI/UX inventory
 
+> Historical research: use this file for observations, not current scope or
+> source permission. `docs/product/version-1-stabilization.md` controls the
+> release and `PROVENANCE.md` approves the pinned historical MIT Clicky donor.
+
 Status: reference research, not a parity claim  
 Observed: 2026-09-04  
 Scope: the voice-first Talk/computer-guide journey defined in
@@ -290,8 +294,9 @@ cloud behavior.
 
 ## Prioritized SERPy UI/UX backlog
 
-This backlog seeks behavioral clarity, not HeyClicky branding or pixel copying.
-It stays inside SERPy's local, non-operating guide boundary.
+This historical backlog sought behavioral clarity. Current Version 1 may reuse
+the approved historical MIT implementation while preserving serpy identity and
+the boundaries in `PROVENANCE.md`.
 
 ### P0 — make a voice turn feel like one continuous ambient interaction
 
@@ -397,9 +402,10 @@ not clicking.
 
 ### P2 — progressive, ephemeral walkthrough drawings
 
-**Change:** After single-point guidance is proven, add a small owned vocabulary of
-arrows, outlines, paths, and labels rendered progressively with speech. Use SERPy's
-own visual language; do not copy HeyClicky shapes, colors, text, motion, or assets.
+**Historical proposal:** After single-point guidance is proven, add arrows,
+outlines, paths, and labels rendered progressively with speech. Version 1 may
+reuse covered code and visual primitives from the approved pinned MIT donor;
+product identity and asset treatment follow `PROVENANCE.md`.
 
 **Acceptance criteria:**
 
@@ -412,7 +418,7 @@ own visual language; do not copy HeyClicky shapes, colors, text, motion, or asse
 - A real click on the instructed AX element—not elapsed time—may advance a
   walkthrough; unsupported apps are reported as unsupported.
 
-### P2 — teach the interaction through doing
+### Deferred — teach the interaction through doing
 
 **Change:** Replace explanatory settings copy as the main onboarding mechanism with
 a two-minute local tutorial: invoke by voice, observe live transcript, receive one
@@ -428,16 +434,16 @@ permission/error state.
   operation after completion.
 - VoiceOver and keyboard-only users can complete an equivalent path.
 
-## What not to copy
+## Current donor boundary
 
-- No HeyClicky name, mascot, notch artwork, colors, labels, audio, assets, or
-  personality text.
-- No always-listening microphone, cloud service, account memory, integrations,
-  or agent/computer-control behavior; these are outside `PRODUCT.md`.
-- No assumption that a hardware notch exists. SERPy needs a native, accessible
-  fallback surface on every supported Mac/display.
-- No older Clicky implementation code. The public repository is behavioral and
-  architectural evidence only unless the separate provenance gate is completed.
+- Installed HeyClicky supplies UX/behavior evidence.
+- The pinned historical MIT Clicky revision is approved implementation source.
+- Preserve serpy identity and exclude upstream credentials, signing, services,
+  account data, update infrastructure, and release destinations.
+- Reuse of code and covered visual primitives is recorded under `docs/imports/`;
+  separately licensed or unlicensed third-party assets are not assumed covered.
+- Onboarding, always-listening microphone, account memory, integrations, and
+  agent/computer-control behavior are outside Version 1.
 
 ## Unresolved questions and evidence gaps
 

@@ -295,7 +295,7 @@ its normal non-floating transcript window.
 
 | Shape | Decision | Reason |
 | --- | --- | --- |
-| Fork OpenClicky wholesale | Reject | Broad coupled scope and inherited failure states |
+| Fork an upstream app wholesale | Reject | Import relevant covered units from the approved pinned MIT donor without inheriting upstream identity, services, or product-wide coupling |
 | Reverse engineer HeyClicky implementation | Reject | Hidden internals and unnecessary clean-room risk |
 | Local HTTP agent bridge | Defer | Adds attack surface without helping core journeys |
 | One giant observable manager | Reject | Recreates the coupling already observed |

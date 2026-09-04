@@ -1,5 +1,9 @@
 # OpenClicky evaluation record
 
+> Historical evidence: current Version 1 scope is
+> `docs/product/version-1-stabilization.md`; current source reuse permission is
+> defined only by `PROVENANCE.md`.
+
 ## Purpose
 
 OpenClicky was evaluated as a behavioral and source reference before SERPy was
@@ -55,11 +59,11 @@ Original detailed reports remain in the private evaluation issue tracker:
 7. [Free local voice requirement](https://github.com/devinschumacher/openclicky-internal-releases/issues/7)
 8. [Focused-field global dictation requirement](https://github.com/devinschumacher/openclicky-internal-releases/issues/8)
 
-## Source-retention boundary
+## Historical source-retention record
 
-No OpenClicky source has been copied into SERPy. Any future import must pass the
-recorded gate in `PROVENANCE.md` and identify exact files, lines, license
-obligations, dependencies, tests, and removed upstream identity.
+No OpenClicky source had been copied into the evaluated SERPy builds described
+here. This is a historical fact, not a current restriction. Version 1 may reuse
+the pinned MIT Clicky donor under `PROVENANCE.md`.
 
 The unique source and wrapper histories are preserved in a separate private,
 read-only archive with their original ancestry intact:

@@ -3,6 +3,14 @@
 Statuses are `unimplemented`, `implemented`, `unit-tested`, `integration-tested`,
 `installed-observed`, or `accepted`. Only direct evidence can advance a row.
 
+## Version 1 override
+
+Version 1 is controlled by `docs/product/version-1-stabilization.md`. The owner
+rejected the currently installed functional result, so prior
+`installed-observed` entries below are historical evidence only and do not
+satisfy the Version 1 gate. Dictation and Guide must be reverified together on
+one exact reviewed artifact before owner acceptance.
+
 ## A — Local Dictation
 
 | ID | Journey | Required evidence | Status |

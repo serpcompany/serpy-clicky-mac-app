@@ -2,39 +2,37 @@
 
 ## Outcome
 
-A nontechnical Mac user can install the app, complete a short and understandable
-permission flow, dictate text anywhere, and optionally ask for visual guidance
-about the app currently on screen.
+Version 1 makes the two capabilities already present in serpy work reliably:
+local Dictation into another application and a HeyClicky-style voice Guide for
+the application currently on screen.
 
 The core experience remains useful offline and without an account, subscription,
 API key, or metered provider.
 
 ## First Product Journeys
 
-### Journey A — First local dictation
+### Journey A — Existing local dictation
 
-1. Install and launch the notarized app normally.
-2. The app explains and requests Microphone permission.
-3. The app explains and requests Accessibility permission only when insertion
-   requires it.
-4. If a speech model is required, the user sees its language, size, storage
-   destination, and download progress.
-5. The user focuses a text field, invokes the configurable shortcut, speaks,
+1. The user launches the current app and completes its existing permission
+   setup where required.
+2. The user focuses a text field, invokes the configurable shortcut, speaks,
    and releases or stops recording.
-6. The exact transcript appears at the caret without sending the message or
+3. The exact transcript appears at the caret without sending the message or
    invoking an assistant.
-7. The same journey works offline after model installation.
+4. Cancellation changes nothing, clipboard fallback restores prior contents,
+   and failed or uncertain delivery remains recoverable.
+5. The same journey works offline after model installation.
 
 ### Journey B — Normal app presence and transient companion
 
-1. SERPy remains visible in the Dock and Command-Tab for its running lifetime.
+1. serpy remains visible in the Dock and Command-Tab for its running lifetime.
 2. Closing Settings does not hide the running app; Dock activation foregrounds
    its normal surface and Dock Quit terminates it.
 3. No persistent cursor-following badge covers the work surface while idle.
 4. Dictation and Guide surfaces appear transiently when meaningful, remain
    nonactivating and click-through, then clear deterministically.
 
-### Journey C — Ask for screen guidance
+### Journey C — Existing HeyClicky-style Guide
 
 1. The user invokes the voice guide from the menu or holds the configurable
    Guide modifier chord while speaking, then releases it to send.
@@ -88,9 +86,7 @@ API key, or metered provider.
 Included:
 
 - Apple Silicon Mac.
-- Native concise menu-bar menu plus normal non-floating Settings window.
-- The menu bar contains status and primary actions only; onboarding,
-  explanations, diagnostics, and manual tests live in Settings.
+- Existing concise menu-bar menu plus normal non-floating Settings window.
 - Configurable push-to-talk and toggle-dictation shortcuts.
 - Free on-device speech-to-text.
 - Focused-field insertion with clipboard-preserving fallback.
@@ -107,6 +103,13 @@ Included:
 
 Deferred:
 
+- Onboarding redesign.
+- Payments, subscriptions, and accounts.
+- Broader Settings redesign and additional options.
+- Selected-keyboard and automatic spoken-language features from Issues #2 and
+  #3.
+- Changing transcript/audio history defaults from Issue #5.
+- Window Manager, Shortcut Coach, and other SERP utility integration.
 - Wake word and always-listening microphone.
 - Autonomous computer use or browser control.
 - Shell/file tools, MCP, connected accounts, email, calendars, or child agents.
@@ -126,6 +129,7 @@ an explicit owner decision.
 
 ## Product Success
 
-The product is not successful because it builds or displays a cursor. It is
-successful when a fresh, signed installation completes the user journeys in
-`ACCEPTANCE.md` without Xcode, Terminal, API keys, or undocumented workarounds.
+The product is not successful because it builds or displays a cursor. Version 1
+is successful when one exact signed installation completes the Dictation and
+Guide workflows in `docs/product/version-1-stabilization.md` and their accepted
+rows in `ACCEPTANCE.md` without Xcode, Terminal, or undocumented workarounds.

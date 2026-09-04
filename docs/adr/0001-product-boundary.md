@@ -1,6 +1,7 @@
-# ADR 0001: Guide-Only First Product
+# ADR 0001: Two-part first product
 
-Status: accepted
+Status: accepted; Version 1 stabilization clarified by
+`docs/product/version-1-stabilization.md`
 
 ## Context
 
@@ -12,9 +13,11 @@ provider is unavailable.
 
 ## Decision
 
-The first product includes independent local dictation, a persistent cursor
-companion, and explicitly invoked screen guidance. It excludes autonomous
-actions, shell/browser control, connected services, and agent orchestration.
+The first product includes two independent capabilities: local Dictation and an
+explicitly invoked screen Guide. Guide surfaces are transient when meaningful;
+there is no required idle cursor-following companion. The product excludes
+autonomous actions, shell/browser control, connected services, and agent
+orchestration.
 
 ## Consequences
 

@@ -1,71 +1,54 @@
-# Provenance and Reference Policy
+# Provenance and donor policy
 
-## Reference Roles
+## Approved references
 
-| Reference | Permitted role | Not permitted |
-| --- | --- | --- |
-| HeyClicky installed/product experience | Behavioral oracle and acceptance inspiration | Code, assets, private protocols, decompilation-derived implementation |
-| OpenClicky MIT repository | Source reference and candidate donor for narrow audited units | Wholesale fork architecture, upstream identity, credentials, keys, feeds, release destinations |
-| Prior Keylume clean-room project | Evidence process, test patterns, packaging lessons | Treating experimental branches as selected production architecture |
-| Superwhisper public documentation | Dictation behavior benchmark | Proprietary implementation assumptions |
+| Reference | Role |
+| --- | --- |
+| Installed `/Applications/HeyClicky.app` | Version 1 UX and behavior oracle |
+| `https://github.com/farzaa/clicky` at `a80fa80721a8aebe51a170a7780705024ebc6e46` | Approved MIT source donor for Dictation/Guide stabilization |
+| OpenClicky | Secondary behavioral/source reference when the approved donor lacks the required behavior |
+| Superwhisper public behavior | Dictation outcome benchmark only |
 
-## Import Gate
+The owner approved reuse of the pinned historical Clicky source for Version 1.
+An implementation agent does not need another permission decision before using
+code from that exact revision.
 
-No OpenClicky code enters this repository until an import record identifies:
+## Required import record
 
-- Exact upstream URL and commit.
-- Exact source files and copied/derived lines.
-- Applicable license and notice text.
-- Why reuse is safer than a small independent implementation.
-- Dependencies pulled in by the unit.
-- Tests surrounding the adopted behavior.
-- Product names, identifiers, assets, secrets, or update settings removed.
-- Approval status.
+Reuse remains traceable rather than ambiguous. Before committing imported or
+derived code, add or update one record under `docs/imports/` containing:
 
-Use one record per logical component under `docs/imports/`.
+- upstream repository and exact commit;
+- source path and adopted symbols or ranges;
+- MIT license/notice attribution;
+- dependencies retained or removed;
+- serpy-specific modifications;
+- tests protecting the adopted behavior; and
+- upstream product identity, assets, credentials, signing, services, worker
+  configuration, update feeds, and release destinations removed.
 
-## Candidate Reuse Classification
+This record documents an approved import; it is not a second approval gate.
 
-These are audit candidates, not approved imports:
+## Separation boundary
 
-| Area | Initial classification | Reason |
-| --- | --- | --- |
-| Local transcription provider protocols | Adapt concept | Useful seam; implementation coupling must be measured |
-| Apple Speech adapter | Inspect/reimplement or narrow import | Small platform adapter candidate |
-| Parakeet model management | Inspect | Valuable behavior but currently integrated with broader settings/state |
-| Global shortcut monitor | Inspect/reimplement | Narrow behavior; permission and modifier semantics need dedicated tests |
-| Cursor geometry/choreography | Adapt algorithms after audit | Useful edge cases; do not import overlay managers wholesale |
-| DMG/notarization verification | Adapt process | Proven locally; must use new identity and destinations |
-| CompanionManager | Reject | Centralized product-wide coupling |
-| Notch/settings window managers | Reject | Inherited intrusive UX and excessive scope |
-| Agent, browser, MCP, shell, bridge | Reject for first product | Outside guide-only product contract |
-| Pets, widgets, galleries | Reject for first product | No connection to first journeys |
-| Sparkle configuration | Defer | Updating is not required to validate the first product |
+The installed HeyClicky app may be observed through normal UI and accessibility
+surfaces. The pinned public repository may be read, copied, and modified under
+its MIT license. Later private HeyClicky implementation, credentials, services,
+and unavailable source remain outside the donor boundary.
 
-## Brand Separation
+The shipped product uses the lowercase **serpy** name and owner-controlled
+branding. Keep the existing bundle identifier, signing identity, Keychain
+service, preferences domain, and release destination during stabilization.
+Never copy upstream secrets, Team IDs, bundle IDs, signing assets, Sparkle keys,
+appcasts, hosted endpoints, or user/account data.
 
-The product name `SERPy` and assets from `/Users/devin/Brands/SERP` are owned
-brand inputs supplied by the project owner. Do not copy the
-HeyClicky, Clicky, OpenClicky, or Keylume name, icon, cursor artwork, sounds,
-copywriting, bundle identifiers, URL schemes, or marketing assets.
+MIT code permission does not automatically license third-party trademarks,
+marketing copy, icons, artwork, or sounds. Use serpy-owned or system assets
+unless a specific asset is covered and recorded.
 
-MIT compliance does not itself clear third-party assets or trademarks. Every
-shipped asset must be original, commissioned, or separately licensed.
+## Historical records
 
-## 2026-09-04 rejected-build rebuild
-
-Branch `codex/heyclicky-guide-rebuild` imports no code or assets from current
-HeyClicky or the historical MIT repository. The rejected build-39 visual
-adaptation commit is not in this branch. Current HeyClicky `1.0.48 (57)` is
-used only through installed screenshots, accessibility output, and observable
-interaction; private/account regions are not committed. No additional MIT
-notice is required unless a later commit passes the import gate above.
-
-## 2026-09-04 issue #7 implementation
-
-Branch `codex/issue-7-guide-parity` is an independent implementation from the
-SERPy build-40 checkpoint. It imports no HeyClicky or OpenClicky source, assets,
-protocols, prompts, sounds, identity, or credentials. Issue #7's owner recording
-is used only as behavioral evidence. The implementation adds downstream-owned
-presence, progression, structured-plan, overlay, and speech policies; no MIT
-notice or import record is required for this branch.
+Existing build reports and import notes describe what earlier branches did.
+Statements such as “no donor code was imported” remain true for those historical
+builds, but they do not restrict new Version 1 work. This file and
+`docs/product/version-1-stabilization.md` control current implementation.
