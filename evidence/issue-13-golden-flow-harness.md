@@ -100,18 +100,21 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
 ## Valid focused actual-app evidence
 
-- `GT-UF09-001` passed in the real `GuideCompanion` app through the bounded
+- `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
+  `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
   ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
   the transcript inspector or another app, drove the installed
   `GlobalShortcutCallbacks`, and asserted stale evidence, fresh advancement,
   and completion. Every nonempty instruction had exact AX content and an
   expanded ambient frame (at least 300 points wide and taller than the 46-point
   icon-only state). The retained local bundle is
-  `evidence/issue-13-real-app-UF09-ambient-run10.xcresult` (generated and
-  ignored); the committed machine-readable summary is
-  `evidence/issue-13-real-app-UF09-ambient-run10-summary.json` (one passed, zero
-  failed). Process, XCTest-session, wrapper-root, and Launch Services cleanup
-  passed. No private-desktop video or frame was committed.
+  `evidence/issue-13-real-app-UF09-ambient-run11.xcresult` (generated and
+  ignored); the committed redacted machine-readable proof is
+  `evidence/issue-13-real-app-UF09-ambient-run11-proof.json` (one passed, zero
+  failed, with device identifiers removed). The result contains four named
+  1040×194 screenshots cropped to the `guide.ambient` element: Step 1, stale
+  refusal, Step 2, and Done. Process, XCTest-session, wrapper-root, and Launch
+  Services cleanup passed. No private-desktop video or frame was committed.
 
 ## Deliberately red evidence
 

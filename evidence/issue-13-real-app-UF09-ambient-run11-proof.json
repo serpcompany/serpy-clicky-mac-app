@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "issue": 13,
+  "testId": "GT-UF09-001",
+  "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep()",
+  "testedCommit": "79cd0d216f1f09913d2531b16a69c26b2cfbac63",
+  "resultBundle": "evidence/issue-13-real-app-UF09-ambient-run11.xcresult",
+  "result": {
+    "status": "passed",
+    "executed": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 54.778
+  },
+  "assertions": {
+    "staleEvidenceRefused": true,
+    "freshEvidenceAdvanced": true,
+    "walkthroughCompleted": true,
+    "exactResponseAccessibilityValues": true,
+    "expandedAmbientGeometry": "width >= 300 and height > 46"
+  },
+  "elementOnlyAttachments": [
+    { "name": "UF09 Step 1 - Open the File menu", "pixels": "1040x194" },
+    { "name": "UF09 Stale Evidence - Step 1 remains", "pixels": "1040x194" },
+    { "name": "UF09 Step 2 - Choose New Window", "pixels": "1040x194" },
+    { "name": "UF09 Done - Walkthrough complete", "pixels": "1040x194" }
+  ],
+  "cleanup": {
+    "wrapperExitCode": 0,
+    "serpyAndUITestProcessesRemaining": 0,
+    "xctestSessionRootsRemaining": 0,
+    "wrapperRootsRemaining": 0,
+    "status": "passed"
+  },
+  "redaction": {
+    "hardwareIdentifiersIncluded": false,
+    "hostLabelsIncluded": false,
+    "privateDesktopCaptureIncluded": false
+  }
+}
