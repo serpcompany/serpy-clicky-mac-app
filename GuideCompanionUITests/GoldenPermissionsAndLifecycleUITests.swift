@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
     func test_GT_UF01_001_permissionDenialShowsOneRecoveryRoute() {
         launch(flow: "UF-01")

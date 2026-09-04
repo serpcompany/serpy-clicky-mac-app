@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class GoldenDictationUITests: GoldenUITestCase {
     func test_GT_UF03_001_dictationShowsPartialThenConfirmedDelivery() {
         launch(flow: "UF-03")

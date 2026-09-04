@@ -1,6 +1,7 @@
 import AppKit
 import XCTest
 
+@MainActor
 class GoldenUITestCase: XCTestCase {
     private(set) var application: XCUIApplication!
     private let goldenBundleIdentifier = "com.serpcompany.guidecompanion.internal.golden-host"

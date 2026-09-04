@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class GoldenGuideUITests: GoldenUITestCase {
     func test_GT_UF08_001_questionReachesFollowUpReadyWithoutComposer() {
         launch(flow: "UF-08")

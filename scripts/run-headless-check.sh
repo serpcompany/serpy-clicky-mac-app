@@ -19,6 +19,15 @@ else
 fi
 
 cleanup() {
+  local launch_services=/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister
+  local built_app
+  for built_app in \
+    "$run_root/derived-data/Build/Products/Debug/SERPy.app" \
+    "$run_root/derived-data-golden/Build/Products/Debug/serpyGoldenHost.app"; do
+    if [[ -d "$built_app" ]]; then
+      "$launch_services" -u "$built_app" 2>/dev/null || true
+    fi
+  done
   find "$run_root" -depth -delete 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM HUP

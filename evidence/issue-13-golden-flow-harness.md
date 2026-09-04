@@ -15,6 +15,8 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   global shortcuts are forbidden.
 - Local verification uses only `swift test`, unsigned `xcodebuild build`, and
   unsigned `xcodebuild build-for-testing`. It never runs XCUI.
+- Xcode's temporary build products are explicitly unregistered from Launch
+  Services before their one owned run root is removed.
 
 ## Red-capable evidence
 
