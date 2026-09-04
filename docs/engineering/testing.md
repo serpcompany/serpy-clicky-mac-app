@@ -9,7 +9,7 @@ agent loop is headless; it never launches serpy.
 | --- | --- | --- |
 | Unit | Pure policies, state machines, parsing, layout, sanitization | Swift Testing by default; existing XCTest may remain |
 | Direct integration | Multiple real modules behind controlled platform adapters | Swift Testing by default; existing XCTest may remain |
-| UI | A few critical window and interaction journeys | XCTest/XCUI in Xcode Cloud |
+| UI | A few critical window and interaction journeys | Focused opt-in XCUI in Xcode; full suite in Xcode Cloud |
 | Installed | macOS-owned and human-observed behavior | Exact signed/notarized artifact on the owner's Mac |
 
 `swift test` is the SwiftPM command used for package tests; it can run both
@@ -49,6 +49,20 @@ that TERM-ignoring descendants are killed and the owned directory is removed.
 Each command owns a new process group with a 30-minute wall limit and an 8 GiB
 disk limit. Neither command launches an application.
 
+### Focused local UI lane
+
+A developer or agent may run one explicitly named golden XCUI test locally
+when the owner requests that exact run. Run it through Xcode or `xcodebuild`
+with `GuideCompanionGoldenHost`, `GuideCompanionGolden.xctestplan`, and a saved
+`.xcresult`. The run may briefly take foreground control.
+
+This lane uses only the synthetic golden host. It must not launch production
+serpy, TextEdit, Chrome, System Settings, or another external app; access real
+permissions, Keychain, Sentry, OpenAI, microphone, or persistent user data; or
+leave an app, runner, registration, scratch directory, or build cache behind.
+Run one selected test at a time and prove teardown before another run. The full
+golden suite remains an isolated Xcode Cloud responsibility.
+
 ### Isolated UI lane
 
 XCTest/XCUI runs in a temporary Xcode Cloud macOS test environment. UI-test
@@ -64,12 +78,13 @@ second app instance, or resource-budget breach fails the run without retry.
 The isolated lane uses the `GuideCompanionGoldenHost` target and
 `GuideCompanionGolden.xctestplan`. The host imports `GuideTestSupport`, whose
 only dependency is `GuideCore`; it cannot link the production `GuideMac` or
-`GuideUI` adapters. The scheme is compiled
-locally with `build-for-testing` but must be executed only by an Xcode Cloud
-workflow named `golden-ui-tests`. Configure that workflow for sequential macOS
-tests, failure-only diagnostics, no environment secrets, and no successful
-screen captures. Make the check required only after ten consecutive clean runs
-with zero prompt, process, network, Keychain, or disk violations.
+`GuideUI` adapters. The scheme is compiled locally with `build-for-testing`;
+one explicitly requested test may execute through the focused local UI lane.
+The complete plan runs in an Xcode Cloud workflow named `golden-ui-tests`.
+Configure that workflow for sequential macOS tests, failure-only diagnostics,
+no environment secrets, and no successful screen captures. Make the check
+required only after ten consecutive clean runs with zero prompt, process,
+network, Keychain, or disk violations.
 
 The test plan owns the common `--ui-testing` argument and the complete
 `SERPY_GOLDEN_FIXTURE_CATALOG`. Individual test methods select only a named flow,

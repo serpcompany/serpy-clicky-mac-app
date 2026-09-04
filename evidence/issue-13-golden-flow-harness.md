@@ -51,8 +51,14 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
 ## Deliberately red evidence
 
-- `golden-ui-tests` has not run. Xcode Cloud must be connected by the owner and
-  execute the dedicated scheme/test plan; local XCUI substitution is forbidden.
+- `GT-UF09-001` was executed once through the focused local Xcode/XCUI lane on
+  2026-09-04. It failed after 60 seconds because the golden host did not acquire
+  a process ID. The actual local result bundle is
+  `evidence/issue-13-local-UF09.xcresult` (generated, ignored, not committed).
+  The curated Xcode report screenshot is
+  `evidence/issue-13-local-UF09-xcode-report.png`.
+- `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
+  and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
   until one exact reviewed artifact is exercised in the installed lane.
