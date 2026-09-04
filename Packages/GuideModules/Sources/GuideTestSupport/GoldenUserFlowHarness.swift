@@ -98,6 +98,7 @@ public struct GoldenUserFlowHarness: Sendable {
     private var disclosureAccepted = false
     private var permissionMachine = PermissionStateMachine(state: .explained)
     private var dictationMachine = DictationStateMachine()
+    private var guideConversation = GuidanceConversationStateMachine()
     private var activeWalkthroughStep = 0
     private let progressionPolicy = GuideProgressionPolicy()
     private let walkthroughPlan = GuidancePlan(
@@ -242,14 +243,35 @@ public struct GoldenUserFlowHarness: Sendable {
             break
 
         case (.guideQuestion, .idle, .advancePhase):
+            guard GuidanceVoiceActivationPolicy().shortcutAction(for: .idle) == .startListening else {
+                throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
+            }
             phase = .listening
             observableState.overlayCount = 1
-        case (.guideQuestion, .listening, .advancePhase): phase = .transcribing
-        case (.guideQuestion, .transcribing, .advancePhase): phase = .capturing
-        case (.guideQuestion, .capturing, .advancePhase): phase = .thinking
+        case (.guideQuestion, .listening, .advancePhase):
+            guard GuidanceVoiceActivationPolicy().shortcutAction(for: .listening) == .finishListening else {
+                throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
+            }
+            phase = .transcribing
+        case (.guideQuestion, .transcribing, .advancePhase):
+            try guideConversation.submit(question: "How do I open a new window?")
+            guard guideConversation.phase == .capturing else {
+                throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
+            }
+            phase = .capturing
+        case (.guideQuestion, .capturing, .advancePhase):
+            try guideConversation.beginThinking()
+            guard guideConversation.phase == .thinking else {
+                throw GoldenHarnessError.invalidAction(flow: flow, phase: phase)
+            }
+            phase = .thinking
         case (.guideQuestion, .thinking, .advancePhase):
+            try guideConversation.complete(
+                answer: "Open the File menu, then choose New Window.",
+                contextLabel: "Fixture Window"
+            )
             phase = .speaking
-            observableState.answer = "Open the File menu, then choose New Window."
+            observableState.answer = guideConversation.messages.last?.content ?? ""
         case (.guideQuestion, .speaking, .advancePhase): phase = .followUpReady
 
         case (.walkthrough, .walkthroughStepOne, .staleEvidence),
