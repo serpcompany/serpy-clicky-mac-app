@@ -61,20 +61,23 @@ because that bypasses its bounds and cleanup. The run may briefly take
 foreground control.
 
 Its adversarial no-app self-test is `scripts/test-golden-ui-runner.sh`.
-The bounded runner owns one canonical `serpy-local-xcui.*` directory directly
-under `/private/tmp`. XCTest and the app share that exact parent using separate
-run and session owner tokens; neither process may substitute its own `TMPDIR`.
-For local `xcodebuild`, the wrapper passes the parent and run token with the
-`TEST_RUNNER_` prefix so Xcode strips that prefix and exposes the original
-names inside the XCTest runner. The test then explicitly forwards the session
-variables to the application launch environment. See Apple's
+The bounded wrapper owns one canonical `serpy-local-xcui.*` build/source scratch
+directory directly under `/private/tmp`; the sandboxed XCTest runner never
+writes inside it. XCTest creates and owns a separate `serpy-xctest-session.*`
+directory in its own writable canonical temporary directory, with independent
+run and session owner tokens. The app validates that exact base-parent-root
+chain without substituting its process-specific `TMPDIR`.
+For local `xcodebuild`, the wrapper passes the authorization run token with the
+`TEST_RUNNER_` prefix so Xcode strips that prefix and exposes the original name
+inside the XCTest runner. The test then explicitly forwards the canonical
+session paths and tokens to the application launch environment. See Apple's
 [environment-variable reference](https://developer.apple.com/documentation/xcode/environment-variable-reference).
 Invalid startup configuration exits immediately with an explicit error.
-When the bounded variables are absent, parent creation is permitted only when
+When the bounded token is absent, session creation is permitted only when
 Apple's predefined environment identifies `CI_XCODE_CLOUD=TRUE`, the
 `golden-ui-tests` workflow, the `GuideCompanion` project and scheme, and a
 `test-without-building` action with a nonempty build ID. XCTest then owns and
-removes the exact `/private/tmp` parent. Missing or mismatched cloud identity
+removes the exact XCTest-owned session. Missing or mismatched cloud identity
 fails before app launch.
 
 This lane launches the real serpy application target in `--ui-testing` mode.

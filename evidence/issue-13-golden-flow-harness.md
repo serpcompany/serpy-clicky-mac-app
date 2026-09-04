@@ -41,14 +41,14 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   TERM-to-KILL escalation, interrupts a live owned group, and runs a command
   that creates build-shaped output before exiting 65. It proves the original
   status is retained and no descendant or run directory survives.
-- UI session-root tests use a bounded-runner-owned canonical `/private/tmp`
-  parent shared across the XCTest and app processes. They reject matching-name
-  roots elsewhere and symlinked parents; independent run and session UUID
-  tokens bind the parent and direct-child root.
-- Parent provisioning tests cover the bounded local wrapper, the exact
+- UI session-root tests keep bounded-runner build scratch separate from the
+  XCTest-owned session in XCTest's writable canonical temporary directory.
+  They reject matching-name roots elsewhere and symlinked parents; independent
+  run and session UUID tokens bind the parent and direct-child root.
+- Session provisioning tests cover the bounded local wrapper, the exact
   documented Xcode Cloud environment, and missing, malformed, or wrong-workflow
   environments. Only the verified cloud case may create and tear down its own
-  shared parent when wrapper variables are absent.
+  XCTest session when a wrapper token is absent.
 - Debug UI-test composition is owned by the App target, derives its audit from
   concrete adapter instances accepted by the deterministic-adapter factory,
   and is guarded by the model's runtime audit precondition. No fixture or
@@ -74,7 +74,7 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 | `scripts/test-headless-check.sh` | Green | none | Green |
 | `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
 | `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
-| `scripts/run-headless-check.sh core-tests` | Green after atomic local/Xcode Cloud provisioning; 100 XCTest, 81 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning; 100 XCTest, 82 Swift Testing cases, and 3 App composition contract tests passed | none | Green |
 
 ## Deliberately red evidence
 
@@ -107,6 +107,17 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   top-level nonzero-exit path that skipped the EXIT trap and retained its build
   root; the adversarial runner test now exercises that exact path with a deep,
   3.5 GiB sparse build tree and requires synchronous cleanup before exit.
+- The third owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-run3.xcresult` (generated and ignored). It
+  executed one test and failed immediately before app launch with Cocoa 513 /
+  POSIX `EPERM`: the sandboxed XCTest runner received the authorization token
+  but could not create its session inside the wrapper-owned `/private/tmp`
+  build root. The wrapper now owns only build/source scratch. XCTest creates a
+  separately tokened session beneath its own writable canonical temporary
+  directory and forwards the exact paths and tokens to the app. App validation
+  accepts only the current Darwin user temporary directory or the exact serpy
+  XCTest runner container temporary directory; spoofed and symlinked paths
+  remain rejected.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.

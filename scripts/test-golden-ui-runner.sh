@@ -37,7 +37,6 @@ set -e
 rm "$cleanup_marker"
 assert_clean "$marker" "$result"
 
-/usr/bin/grep -Fq 'TEST_RUNNER_SERPY_XCUI_PARENT="$run_root"' scripts/run-golden-ui-test.sh
 /usr/bin/grep -Fq 'TEST_RUNNER_SERPY_XCUI_RUN_TOKEN="$run_token"' scripts/run-golden-ui-test.sh
 if /usr/bin/grep -Fq 'env SERPY_XCUI_PARENT=' scripts/run-golden-ui-test.sh; then
   print -u2 "runner authorization variables bypass TEST_RUNNER_ propagation"

@@ -9,8 +9,8 @@ class GoldenUITestCase: XCTestCase {
     private var preexistingProcessIDs: Set<pid_t> = []
     private(set) var sessionRoot: URL!
     private var sessionParent: URL!
+    private var sessionTemporaryRoot: URL!
     private var runToken = ""
-    private var ownsSessionParent = false
     private var sessionID = ""
 
     func launch(
@@ -30,10 +30,10 @@ class GoldenUITestCase: XCTestCase {
                     environment: ProcessInfo.processInfo.environment
                 )
                 runToken = session.runToken
+                sessionTemporaryRoot = session.temporaryRoot
                 sessionParent = session.parent
                 sessionID = session.sessionID
                 sessionRoot = session.root
-                ownsSessionParent = session.ownsParent
             } catch {
                 XCTFail("could not provision an authorized isolated UI-test session: \(error)")
                 return
@@ -46,13 +46,9 @@ class GoldenUITestCase: XCTestCase {
                 withBundleIdentifier: self.productBundleIdentifier
             ).map(\.processIdentifier))
             XCTAssertEqual(remaining, self.preexistingProcessIDs)
-            try? FileManager.default.removeItem(
-                at: self.ownsSessionParent ? self.sessionParent : self.sessionRoot
-            )
+            try? FileManager.default.removeItem(at: self.sessionParent)
             XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionRoot.path))
-            if self.ownsSessionParent {
-                XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionParent.path))
-            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: self.sessionParent.path))
         }
         application.launchArguments = [
             "--ui-testing",
@@ -71,6 +67,7 @@ class GoldenUITestCase: XCTestCase {
             "SERPY_TEST_SESSION_ID": sessionID,
             "SERPY_TEST_ROOT": sessionRoot.path,
             "SERPY_TEST_PARENT": sessionParent.path,
+            "SERPY_TEST_TEMP_ROOT": sessionTemporaryRoot.path,
             "SERPY_XCUI_RUN_TOKEN": runToken,
         ]
         application.launch()

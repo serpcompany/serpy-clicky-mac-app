@@ -155,7 +155,7 @@ if [[ ${SERPY_UI_RUNNER_FIXTURE:-} == command-fails-top-level ]]; then
     exit 65
   ' "serpy-ui-runner-$fixture_marker" "$run_root")
 else
-  ui_command=(/usr/bin/env TEST_RUNNER_SERPY_XCUI_PARENT="$run_root" TEST_RUNNER_SERPY_XCUI_RUN_TOKEN="$run_token" xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
+  ui_command=(/usr/bin/env TEST_RUNNER_SERPY_XCUI_RUN_TOKEN="$run_token" xcodebuild test -quiet -project GuideCompanion.xcodeproj -scheme GuideCompanion -testPlan GuideCompanionGolden -destination 'platform=macOS,arch=arm64' -derivedDataPath "$run_root/DerivedData" -clonedSourcePackagesDirPath "$run_root/SourcePackages" -resultBundlePath "$result_path" "-only-testing:$selection")
 fi
 if run_bounded "${ui_command[@]}"; then
   exit 0

@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import GuideCore
 import GuideMac
 import XCTest
@@ -90,12 +91,20 @@ final class GuideAppCompositionContractTests: XCTestCase {
         let sessionID = UUID().uuidString
         let runToken = UUID().uuidString
         let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        let parent = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
-            .appendingPathComponent("serpy-local-xcui.\(suffix)")
+        let rawTemporaryPath = FileManager.default.temporaryDirectory.path
+        guard let resolvedTemporaryPath = Darwin.realpath(rawTemporaryPath, nil) else {
+            throw UITestSessionRootError.invalidLocation
+        }
+        defer { Darwin.free(resolvedTemporaryPath) }
+        let temporaryRoot = URL(
+            fileURLWithPath: String(cString: resolvedTemporaryPath),
+            isDirectory: true
+        )
+        let parent = temporaryRoot.appendingPathComponent("serpy-xctest-session.\(suffix)")
         let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
         try runToken.write(
-            to: parent.appendingPathComponent(".serpy-local-xcui-owner"),
+            to: parent.appendingPathComponent(".serpy-xctest-run-owner"),
             atomically: true,
             encoding: .utf8
         )
@@ -112,6 +121,7 @@ final class GuideAppCompositionContractTests: XCTestCase {
                 "SERPY_XCUI_RUN_TOKEN": runToken,
                 "SERPY_TEST_ROOT": root.path,
                 "SERPY_TEST_PARENT": parent.path,
+                "SERPY_TEST_TEMP_ROOT": temporaryRoot.path,
             ]
         )
     }

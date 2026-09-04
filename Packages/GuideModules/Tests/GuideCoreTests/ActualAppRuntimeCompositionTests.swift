@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import Testing
 @testable import GuideCore
 
@@ -42,7 +43,8 @@ struct ActualAppRuntimeCompositionTests {
                 "SERPY_XCUI_RUN_TOKEN": run.token,
                 "SERPY_TEST_ROOT": root.path,
                 "SERPY_TEST_PARENT": run.parent.path,
-            ])
+                "SERPY_TEST_TEMP_ROOT": run.base.path,
+            ], allowedTemporaryRoots: [run.base])
         }
     }
 
@@ -64,7 +66,8 @@ struct ActualAppRuntimeCompositionTests {
             "SERPY_XCUI_RUN_TOKEN": run.token,
             "SERPY_TEST_ROOT": root.path,
             "SERPY_TEST_PARENT": run.parent.path,
-        ]).path == root.path)
+            "SERPY_TEST_TEMP_ROOT": run.base.path,
+        ], allowedTemporaryRoots: [run.base]).path == root.path)
     }
 
     @Test("GT-COMPOSITION-004A UI session rejects a matching suffix outside the system temp root")
@@ -78,7 +81,7 @@ struct ActualAppRuntimeCompositionTests {
         defer { try? FileManager.default.removeItem(at: unrelatedParent) }
         try sessionID.write(to: root.appendingPathComponent(".serpy-real-ui-owner"), atomically: true, encoding: .utf8)
         try runToken.write(
-            to: unrelatedParent.appendingPathComponent(".serpy-local-xcui-owner"),
+            to: unrelatedParent.appendingPathComponent(".serpy-xctest-run-owner"),
             atomically: true,
             encoding: .utf8
         )
@@ -88,7 +91,8 @@ struct ActualAppRuntimeCompositionTests {
                 "SERPY_XCUI_RUN_TOKEN": runToken,
                 "SERPY_TEST_ROOT": root.path,
                 "SERPY_TEST_PARENT": unrelatedParent.path,
-            ])
+                "SERPY_TEST_TEMP_ROOT": unrelatedParent.deletingLastPathComponent().path,
+            ], allowedTemporaryRoots: [runTestTemporaryDirectory()])
         }
     }
 
@@ -97,7 +101,7 @@ struct ActualAppRuntimeCompositionTests {
         let sessionID = UUID().uuidString
         let run = try makeOwnedRunParent()
         let symlinkName = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        let symlinkParent = sharedTemporaryDirectory().appendingPathComponent("serpy-local-xcui.\(symlinkName)")
+        let symlinkParent = run.base.appendingPathComponent("serpy-xctest-session.\(symlinkName)")
         let root = run.parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         try FileManager.default.createSymbolicLink(at: symlinkParent, withDestinationURL: run.parent)
@@ -112,7 +116,8 @@ struct ActualAppRuntimeCompositionTests {
                 "SERPY_XCUI_RUN_TOKEN": run.token,
                 "SERPY_TEST_ROOT": symlinkParent.appendingPathComponent(root.lastPathComponent).path,
                 "SERPY_TEST_PARENT": symlinkParent.path,
-            ])
+                "SERPY_TEST_TEMP_ROOT": run.base.path,
+            ], allowedTemporaryRoots: [run.base])
         }
     }
 
@@ -135,19 +140,32 @@ struct ActualAppRuntimeCompositionTests {
             "SERPY_XCUI_RUN_TOKEN": run.token,
             "SERPY_TEST_ROOT": root.path,
             "SERPY_TEST_PARENT": run.parent.path,
-        ]).path == root.path)
+            "SERPY_TEST_TEMP_ROOT": run.base.path,
+        ], allowedTemporaryRoots: [run.base]).path == root.path)
     }
 
     @Test("GT-COMPOSITION-004D local UI parent requires the bounded wrapper token")
     func resolvesBoundedWrapperParent() throws {
         let token = UUID().uuidString
         #expect(try UITestRunParentPolicy.resolve(environment: [
-            "SERPY_XCUI_PARENT": "/private/tmp/serpy-local-xcui.ABC123",
             "SERPY_XCUI_RUN_TOKEN": token,
-        ]) == .boundedWrapper(
-            parentPath: "/private/tmp/serpy-local-xcui.ABC123",
-            runToken: token
-        ))
+        ]) == .boundedWrapper(runToken: token))
+    }
+
+    @Test("GT-COMPOSITION-004D2 XCTest session does not write into wrapper build scratch")
+    func provisionsOutsideUnwritableWrapperScratch() throws {
+        let token = UUID().uuidString
+        let base = runTestTemporaryDirectory()
+        let session = try UITestRunSessionProvisioner.provision(
+            environment: [
+                "SERPY_XCUI_RUN_TOKEN": token,
+                "SERPY_XCUI_PARENT": "/private/tmp/serpy-local-xcui.unwritable",
+            ],
+            temporaryDirectory: base
+        )
+        defer { try? session.remove() }
+        #expect(session.parent.deletingLastPathComponent() == base)
+        #expect(!session.parent.path.hasPrefix("/private/tmp/serpy-local-xcui.unwritable/"))
     }
 
     @Test("GT-COMPOSITION-004E exact Xcode Cloud workflow may own its parent")
@@ -167,7 +185,6 @@ struct ActualAppRuntimeCompositionTests {
         }
         #expect(throws: UITestSessionRootError.invalidIdentity) {
             try UITestRunParentPolicy.resolve(environment: [
-                "SERPY_XCUI_PARENT": "/private/tmp/serpy-local-xcui.ABC123",
                 "SERPY_XCUI_RUN_TOKEN": "not-a-uuid",
             ])
         }
@@ -206,21 +223,27 @@ struct ActualAppRuntimeCompositionTests {
         #expect(!RuntimeCompositionAudit.deterministic(missing, allowlist: allowlist).isValid(for: .uiTest))
     }
 
-    private func sharedTemporaryDirectory() -> URL {
-        URL(fileURLWithPath: "/private/tmp", isDirectory: true)
+    private func runTestTemporaryDirectory() -> URL {
+        let rawPath = FileManager.default.temporaryDirectory.path
+        guard let resolved = Darwin.realpath(rawPath, nil) else {
+            return FileManager.default.temporaryDirectory
+        }
+        defer { Darwin.free(resolved) }
+        return URL(fileURLWithPath: String(cString: resolved), isDirectory: true)
     }
 
-    private func makeOwnedRunParent() throws -> (parent: URL, token: String) {
+    private func makeOwnedRunParent() throws -> (base: URL, parent: URL, token: String) {
         let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        let parent = sharedTemporaryDirectory().appendingPathComponent("serpy-local-xcui.\(suffix)")
+        let base = runTestTemporaryDirectory()
+        let parent = base.appendingPathComponent("serpy-xctest-session.\(suffix)")
         let token = UUID().uuidString
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
         try token.write(
-            to: parent.appendingPathComponent(".serpy-local-xcui-owner"),
+            to: parent.appendingPathComponent(".serpy-xctest-run-owner"),
             atomically: true,
             encoding: .utf8
         )
-        return (parent, token)
+        return (base, parent, token)
     }
 
     private func verifiedCloudEnvironment() -> [String: String] {
@@ -239,8 +262,9 @@ struct ActualAppRuntimeCompositionTests {
         fault: UITestProvisioningFault,
         suffix: String
     ) throws {
-        let parent = sharedTemporaryDirectory().appendingPathComponent("serpy-local-xcui.\(suffix)")
-        let unrelated = sharedTemporaryDirectory()
+        let base = runTestTemporaryDirectory()
+        let parent = base.appendingPathComponent("serpy-xctest-session.\(suffix)")
+        let unrelated = base
             .appendingPathComponent("serpy-unrelated-\(UUID().uuidString)")
         try "keep".write(to: unrelated, atomically: true, encoding: .utf8)
         defer {
@@ -251,6 +275,7 @@ struct ActualAppRuntimeCompositionTests {
         #expect(throws: UITestSessionRootError.injectedProvisioningFailure) {
             try UITestRunSessionProvisioner.provision(
                 environment: verifiedCloudEnvironment(),
+                temporaryDirectory: base,
                 fault: fault,
                 identifiers: UITestProvisioningIdentifiers(
                     runToken: UUID().uuidString,

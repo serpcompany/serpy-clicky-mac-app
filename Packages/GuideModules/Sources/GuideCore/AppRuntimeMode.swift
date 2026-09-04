@@ -25,16 +25,15 @@ public enum UITestSessionRootError: Error, Equatable, Sendable {
 }
 
 public enum UITestRunParentProvisioning: Equatable, Sendable {
-    case boundedWrapper(parentPath: String, runToken: String)
+    case boundedWrapper(runToken: String)
     case verifiedXcodeCloud
 }
 
 public enum UITestRunParentPolicy {
     public static func resolve(environment: [String: String]) throws -> UITestRunParentProvisioning {
-        if let parent = environment["SERPY_XCUI_PARENT"],
-           let token = environment["SERPY_XCUI_RUN_TOKEN"],
+        if let token = environment["SERPY_XCUI_RUN_TOKEN"],
            UUID(uuidString: token) != nil {
-            return .boundedWrapper(parentPath: parent, runToken: token)
+            return .boundedWrapper(runToken: token)
         }
         guard environment["CI"] == "TRUE",
               environment["CI_XCODE_CLOUD"] == "TRUE",
@@ -57,14 +56,14 @@ public enum UITestProvisioningFault: Equatable, Sendable {
 }
 
 public struct UITestRunSession: Sendable {
+    public let temporaryRoot: URL
     public let parent: URL
     public let root: URL
     public let runToken: String
     public let sessionID: String
-    public let ownsParent: Bool
 
     public func remove(fileManager: FileManager = .default) throws {
-        try fileManager.removeItem(at: ownsParent ? parent : root)
+        try fileManager.removeItem(at: parent)
     }
 }
 
@@ -83,42 +82,37 @@ public struct UITestProvisioningIdentifiers: Sendable {
 public enum UITestRunSessionProvisioner {
     public static func provision(
         environment: [String: String],
+        temporaryDirectory: URL = FileManager.default.temporaryDirectory,
         fileManager: FileManager = .default,
         fault: UITestProvisioningFault = .none,
         identifiers: UITestProvisioningIdentifiers = .init()
     ) throws -> UITestRunSession {
         let provisioning = try UITestRunParentPolicy.resolve(environment: environment)
         let runToken: String
-        let parent: URL
-        let ownsParent: Bool
         switch provisioning {
-        case let .boundedWrapper(parentPath, suppliedRunToken):
+        case let .boundedWrapper(suppliedRunToken):
             runToken = suppliedRunToken
-            parent = URL(fileURLWithPath: parentPath, isDirectory: true)
-            ownsParent = false
         case .verifiedXcodeCloud:
             runToken = identifiers.runToken ?? UUID().uuidString
-            let suffix = identifiers.parentSuffix
-                ?? UUID().uuidString.replacingOccurrences(of: "-", with: "")
-            parent = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
-                .appendingPathComponent("serpy-local-xcui.\(suffix)")
-            ownsParent = true
         }
 
+        guard let temporaryRoot = canonicalExistingURL(temporaryDirectory.path) else {
+            throw UITestSessionRootError.invalidLocation
+        }
+        let suffix = identifiers.parentSuffix ?? runToken.replacingOccurrences(of: "-", with: "")
+        let parent = temporaryRoot.appendingPathComponent("serpy-xctest-session.\(suffix)")
         let sessionID = identifiers.sessionID ?? UUID().uuidString
         let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
         do {
-            if ownsParent {
-                try fileManager.createDirectory(at: parent, withIntermediateDirectories: false)
-                if fault == .afterParentCreation {
-                    throw UITestSessionRootError.injectedProvisioningFailure
-                }
-                try runToken.write(
-                    to: parent.appendingPathComponent(".serpy-local-xcui-owner"),
-                    atomically: true,
-                    encoding: .utf8
-                )
+            try fileManager.createDirectory(at: parent, withIntermediateDirectories: false)
+            if fault == .afterParentCreation {
+                throw UITestSessionRootError.injectedProvisioningFailure
             }
+            try runToken.write(
+                to: parent.appendingPathComponent(".serpy-xctest-run-owner"),
+                atomically: true,
+                encoding: .utf8
+            )
             try fileManager.createDirectory(at: root, withIntermediateDirectories: false)
             if fault == .afterSessionCreation {
                 throw UITestSessionRootError.injectedProvisioningFailure
@@ -132,59 +126,74 @@ public enum UITestRunSessionProvisioner {
                 throw UITestSessionRootError.injectedProvisioningFailure
             }
             return UITestRunSession(
+                temporaryRoot: temporaryRoot,
                 parent: parent,
                 root: root,
                 runToken: runToken,
-                sessionID: sessionID,
-                ownsParent: ownsParent
+                sessionID: sessionID
             )
         } catch {
-            let ownedPath = ownsParent ? parent : root
-            if fileManager.fileExists(atPath: ownedPath.path) {
-                do { try fileManager.removeItem(at: ownedPath) }
+            if fileManager.fileExists(atPath: parent.path) {
+                do { try fileManager.removeItem(at: parent) }
                 catch { throw UITestSessionRootError.provisioningCleanupFailed }
             }
             throw error
         }
     }
+
+    private static func canonicalExistingURL(_ path: String) -> URL? {
+        guard let resolved = Darwin.realpath(path, nil) else { return nil }
+        defer { Darwin.free(resolved) }
+        return URL(fileURLWithPath: String(cString: resolved), isDirectory: true)
+    }
 }
 
 public enum UITestSessionRootPolicy {
-    public static func validate(environment: [String: String]) throws -> URL {
+    public static func validate(
+        environment: [String: String],
+        allowedTemporaryRoots: [URL]? = nil
+    ) throws -> URL {
         guard let sessionID = environment["SERPY_TEST_SESSION_ID"],
               UUID(uuidString: sessionID) != nil,
               let runToken = environment["SERPY_XCUI_RUN_TOKEN"],
               UUID(uuidString: runToken) != nil,
               let rawRoot = environment["SERPY_TEST_ROOT"],
-              let rawParent = environment["SERPY_TEST_PARENT"] else {
+              let rawParent = environment["SERPY_TEST_PARENT"],
+              let rawTemporaryRoot = environment["SERPY_TEST_TEMP_ROOT"] else {
             throw UITestSessionRootError.invalidIdentity
         }
         let supplied = URL(fileURLWithPath: rawRoot)
         let suppliedParent = URL(fileURLWithPath: rawParent)
+        let suppliedTemporaryRoot = URL(fileURLWithPath: rawTemporaryRoot)
         guard let canonicalRoot = canonicalExistingURL(rawRoot),
-              let canonicalParent = canonicalExistingURL(rawParent) else {
+              let canonicalParent = canonicalExistingURL(rawParent),
+              let canonicalTemporaryRoot = canonicalExistingURL(rawTemporaryRoot) else {
             throw UITestSessionRootError.invalidLocation
         }
-        // `/tmp` is a symlink on macOS. Require the shared physical path
-        // selected by the bounded runner instead of Foundation's
-        // process-sensitive temporary-directory normalization.
-        let sharedTemporaryDirectory = URL(fileURLWithPath: "/private/tmp", isDirectory: true)
         let parentName = canonicalParent.lastPathComponent
-        let parentSuffix = parentName.dropFirst("serpy-local-xcui.".count)
+        let parentSuffix = parentName.dropFirst("serpy-xctest-session.".count)
+        let temporaryRootIsAllowed = if let allowedTemporaryRoots {
+            allowedTemporaryRoots.contains(where: { $0.path == canonicalTemporaryRoot.path })
+        } else {
+            isRecognizedSystemTemporaryRoot(canonicalTemporaryRoot)
+        }
         guard canonicalRoot.lastPathComponent == "serpy-real-ui-\(sessionID)",
               canonicalRoot.deletingLastPathComponent() == canonicalParent,
-              canonicalParent.deletingLastPathComponent() == sharedTemporaryDirectory,
-              parentName.hasPrefix("serpy-local-xcui."),
+              canonicalParent.deletingLastPathComponent() == canonicalTemporaryRoot,
+              temporaryRootIsAllowed,
+              parentName.hasPrefix("serpy-xctest-session."),
               !parentSuffix.isEmpty,
               parentSuffix.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber) }),
               supplied.path == canonicalRoot.path,
               suppliedParent.path == canonicalParent.path,
+              suppliedTemporaryRoot.path == canonicalTemporaryRoot.path,
               (try? supplied.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
-              (try? suppliedParent.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+              (try? suppliedParent.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true,
+              (try? suppliedTemporaryRoot.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
             throw UITestSessionRootError.invalidLocation
         }
         let ownerURL = canonicalRoot.appendingPathComponent(".serpy-real-ui-owner")
-        let parentOwnerURL = canonicalParent.appendingPathComponent(".serpy-local-xcui-owner")
+        let parentOwnerURL = canonicalParent.appendingPathComponent(".serpy-xctest-run-owner")
         guard let owner = try? String(contentsOf: ownerURL, encoding: .utf8), owner == sessionID,
               let parentOwner = try? String(contentsOf: parentOwnerURL, encoding: .utf8),
               parentOwner == runToken else {
@@ -197,6 +206,25 @@ public enum UITestSessionRootPolicy {
         guard let resolved = Darwin.realpath(path, nil) else { return nil }
         defer { Darwin.free(resolved) }
         return URL(fileURLWithPath: String(cString: resolved))
+    }
+
+    private static func isRecognizedSystemTemporaryRoot(_ root: URL) -> Bool {
+        var buffer = [CChar](repeating: 0, count: Int(PATH_MAX))
+        if confstr(_CS_DARWIN_USER_TEMP_DIR, &buffer, buffer.count) > 0 {
+            let bytes = buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+            if let canonical = canonicalExistingURL(String(decoding: bytes, as: UTF8.self)),
+               canonical.path == root.path {
+                return true
+            }
+        }
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        return [
+            "com.serpcompany.guidecompanion.internal.uitests",
+            "com.serpcompany.guidecompanion.internal.uitests.xctrunner",
+        ].contains { container in
+            home.appendingPathComponent("Library/Containers/\(container)/Data/tmp", isDirectory: true).path
+                == root.path
+        }
     }
 }
 
