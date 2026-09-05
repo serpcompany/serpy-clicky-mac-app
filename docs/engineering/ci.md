@@ -109,7 +109,7 @@ not complete proof; see `evidence/issue-13-golden-flow-harness.md`.
   labeled red or partial. It cannot authenticate artifacts, approve a proof as
   complete, or imply that a UI journey passed.
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
-  adversarially tests the runner, then runs the complete package suite and
+  adversarially tests both bounded runners without launching an app, then runs the complete package suite and
   App-owned composition contract.
 - `app-build`: compiles the production app and golden UI bundle without launch.
 
