@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "runId": "58b2bc64-bd3d-478b-ab15-34b9b4d76059",
+  "sourceCommit": "e34046fea5f5c646c4be0cfa3b3d22a35b502a2f",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "result": "FAILED",
+  "startedAt": "2026-09-05T02:07:52.819Z",
+  "finishedAt": "2026-09-05T02:10:30.191Z",
+  "passedTests": 0,
+  "failedTests": 1,
+  "launchCompleted": true,
+  "failureLocation": "GoldenDictationUITests.swift:10",
+  "failure": "Transient Dictation inserted locally static-text lookup did not exist within five seconds",
+  "observedUI": "Last stage showed Confirmed via accessibility; Last Dictation contained the expected synthetic transcript; status had already reset to Ready",
+  "otherAssertions": "Exact insertion fixture and confirmed recovery record assertions produced no failures",
+  "resultArtifactId": "b823b17c-53de-4a6e-baf9-60b56e313244",
+  "diagnosis": "Focused selection did not reproduce the startup timeout; success-message assertion races the 0.8-second reset and assumes label lookup for AX value text",
+  "nextExperiment": "Assert persistent confirmed delivery UI value without changing production timing, retaining exact insertion and recovery assertions",
+  "countsTowardAcceptance": false,
+  "consecutiveCleanRuns": 0
+}

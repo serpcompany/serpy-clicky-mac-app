@@ -7,7 +7,12 @@ final class GoldenDictationUITests: GoldenUITestCase {
         triggerShortcut("dictation-pressed")
         expectAmbient(labelContains: "alpha beta")
         triggerShortcut("dictation-pressed")
-        XCTAssertTrue(application.staticTexts["Dictation inserted locally."].waitForExistence(timeout: 5))
+        // The success toast resets after 0.8 seconds. Assert the persistent
+        // delivery outcome, exposed by macOS LabeledContent as an AX value.
+        let confirmedDelivery = application.staticTexts.matching(
+            NSPredicate(format: "value == %@", "Confirmed via accessibility")
+        ).firstMatch
+        XCTAssertTrue(confirmedDelivery.waitForExistence(timeout: 5))
         XCTAssertEqual(
             try? String(contentsOf: sessionRoot.appendingPathComponent("insertion.fixture"), encoding: .utf8),
             "alpha beta"
