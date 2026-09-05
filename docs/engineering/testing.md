@@ -66,6 +66,9 @@ because that bypasses its bounds and cleanup. The run may briefly take
 foreground control.
 
 Its adversarial no-app self-test is `scripts/test-golden-ui-runner.sh`.
+Both serpy and XCUI must already be closed for that self-test. An occupied
+lane exits before fixtures run; this is an unmet precondition, not a passing
+timeout/cleanup test. The self-test never quits the owner's application.
 The bounded wrapper owns one canonical `serpy-local-xcui.*` build/source scratch
 directory directly under `/private/tmp`; the sandboxed XCTest runner never
 writes inside it. XCTest creates and owns a separate `serpy-xctest-session.*`
