@@ -293,5 +293,12 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   only for `GuideCompanionUITests`; Release `SERPy.app` remains hardened. The
   burn-in stays 0/10 until the corrected cloud run completes.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
+- Manual run 3 (`c6c63f70-5245-40d7-b1ea-5e77ee9f8acc`) at `7b7475c`
+  confirmed every cloud identity field matched except the project: Apple
+  provides `GuideCompanion.xcodeproj`. The tests now propagate provisioning
+  errors rather than crashing on absent session roots. Replaying the observed
+  filename in the headless fixture failed with `invalidIdentity` before the
+  comparison was corrected. See `issue-13-xcode-cloud-run3-red-proof.json`.
+  The corrected full cloud plan still needs execution; this is not a green run.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
   until one exact reviewed artifact is exercised in the installed lane.

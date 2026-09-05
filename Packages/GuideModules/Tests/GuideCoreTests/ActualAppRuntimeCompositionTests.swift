@@ -175,6 +175,13 @@ struct ActualAppRuntimeCompositionTests {
 
     @Test("GT-COMPOSITION-004F missing or untrusted cloud identity fails closed")
     func rejectsMissingAndUntrustedParentProvisioning() {
+        for project in ["GuideCompanion", "Other.xcodeproj", "/tmp/GuideCompanion.xcodeproj"] {
+            var environment = verifiedCloudEnvironment()
+            environment["CI_XCODE_PROJECT"] = project
+            #expect(throws: UITestSessionRootError.invalidIdentity) {
+                try UITestRunParentPolicy.resolve(environment: environment)
+            }
+        }
         #expect(throws: UITestSessionRootError.invalidIdentity) {
             try UITestRunParentPolicy.resolve(environment: [:])
         }
@@ -251,7 +258,7 @@ struct ActualAppRuntimeCompositionTests {
             "CI": "TRUE",
             "CI_XCODE_CLOUD": "TRUE",
             "CI_WORKFLOW": "golden-ui-tests",
-            "CI_XCODE_PROJECT": "GuideCompanion",
+            "CI_XCODE_PROJECT": "GuideCompanion.xcodeproj",
             "CI_XCODE_SCHEME": "GuideCompanion",
             "CI_XCODEBUILD_ACTION": "test-without-building",
             "CI_BUILD_ID": "fixture-build-id",

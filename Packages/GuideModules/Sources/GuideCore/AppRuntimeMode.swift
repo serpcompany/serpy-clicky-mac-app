@@ -38,7 +38,7 @@ public enum UITestRunParentPolicy {
         guard environment["CI"] == "TRUE",
               environment["CI_XCODE_CLOUD"] == "TRUE",
               environment["CI_WORKFLOW"] == "golden-ui-tests",
-              environment["CI_XCODE_PROJECT"] == "GuideCompanion",
+              environment["CI_XCODE_PROJECT"] == "GuideCompanion.xcodeproj",
               environment["CI_XCODE_SCHEME"] == "GuideCompanion",
               environment["CI_XCODEBUILD_ACTION"] == "test-without-building",
               environment["CI_BUILD_ID"]?.isEmpty == false else {

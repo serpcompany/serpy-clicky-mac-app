@@ -36,24 +36,6 @@ class GoldenUITestCase: XCTestCase {
                 sessionID = session.sessionID
                 sessionRoot = session.root
             } catch {
-                // Temporary cloud probe: report only fixed classifications, never values.
-                let environment = ProcessInfo.processInfo.environment
-                let expected = [
-                    "CI": "TRUE",
-                    "CI_XCODE_CLOUD": "TRUE",
-                    "CI_WORKFLOW": "golden-ui-tests",
-                    "CI_XCODE_PROJECT": "GuideCompanion",
-                    "CI_XCODE_SCHEME": "GuideCompanion",
-                    "CI_XCODEBUILD_ACTION": "test-without-building",
-                ]
-                let classifications = expected.keys.sorted().map { key in
-                    let classification = environment[key] == nil ? "missing"
-                        : environment[key] == expected[key] ? "matched" : "different"
-                    return "\(key)=\(classification)"
-                }.joined(separator: ",")
-                let projectHasExtension = environment["CI_XCODE_PROJECT"] == "GuideCompanion.xcodeproj"
-                let hasBuildID = environment["CI_BUILD_ID"]?.isEmpty == false
-                XCTFail("[DEBUG-cloud-identity] \(classifications); projectFilename=\(projectHasExtension); buildIDPresent=\(hasBuildID)")
                 throw error
             }
         }

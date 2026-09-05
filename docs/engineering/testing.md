@@ -91,7 +91,8 @@ session paths and tokens to the application launch environment. See Apple's
 Invalid startup configuration exits immediately with an explicit error.
 When the bounded token is absent, session creation is permitted only when
 Apple's predefined environment identifies `CI_XCODE_CLOUD=TRUE`, the
-`golden-ui-tests` workflow, the `GuideCompanion` project and scheme, and a
+`golden-ui-tests` workflow, the `GuideCompanion.xcodeproj` project and
+`GuideCompanion` scheme, and a
 `test-without-building` action with a nonempty build ID. XCTest then owns and
 removes the exact XCTest-owned session. Missing or mismatched cloud identity
 fails before app launch.

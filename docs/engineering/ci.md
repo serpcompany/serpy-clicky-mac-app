@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056` in run `33930252682` |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056` in run `33930252682` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 2 loaded the tests but rejected cloud session identity before app launch; diagnostic rerun pending; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 3 identified the project filename mismatch; corrected comparison under verification; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
 ## What developers run
