@@ -109,25 +109,31 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 ## GitHub Actions results
 
 - PR #14 verification run
-  [33930252682](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33930252682)
-  passed for exact commit `15d7056b24f46c25e3be43cb086b1c2a065180c3`:
+  [33938651169](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33938651169)
+  passed for exact base commit
+  `1901f81a0b0504821801fa98634e017fba9bf114`:
   `core-tests` and `app-build` both completed successfully.
+  The new focused real-app XCUI evidence-honesty job is not covered by that
+  base run and requires an exact integration-head result after push.
 
-## Valid focused actual-app evidence
+## Partial focused actual-app evidence
 
-- `GT-UF12-001` passed in the real `GuideCompanion` app at tested commit
+- The committed summary for `GT-UF12-001` records a pass in the real
+  `GuideCompanion` app at tested commit
   `0a21ed140f9ebc6211f85b9ddf3636031a9ecf36` through the bounded ambient
   shortcut lane on the M3 on 2026-09-05. It executed one test in 13.624 seconds
   with zero failures or skips, asserted the exact visible malformed-guidance
   cause and recovery action, recorded exactly one allowlisted
   `guidance.plan.malformed` diagnostic, and kept the transcript inspector
-  absent. The retained local bundle is
-  `evidence/issue-13-real-app-UF12-m3-run3.xcresult` (generated and ignored);
-  the committed redacted machine-readable proof is
-  `evidence/issue-13-real-app-UF12-m3-run3-proof.json`; the committed sanitized
-  `xcresulttool` subset is
+  absent. The generated, ignored
+  `evidence/issue-13-real-app-UF12-m3-run3.xcresult` is unavailable in this
+  worktree and no Xcode report screenshot is committed. The committed
+  schema-v2 partial proof is
+  `evidence/issue-13-real-app-UF12-m3-run3-proof.json`; its committed sanitized
+  `xcresulttool` subset is secondary evidence at
   `evidence/issue-13-real-app-UF12-m3-run3-xcresult-sanitized.json`. Process and
-  wrapper-root cleanup passed, with no serpy or XCUI process remaining.
+  wrapper-root cleanup passed, but XCTest-session roots, Launch Services,
+  prompts, network, Keychain, and build-cache dimensions remain unverified.
 - The M3 authenticated to Sentry with the read-only personal token held in
   macOS Keychain and retrieved issue `SERPY-CLICKY-MAC-APP-1` plus exact event
   `139c9b86601e416e9b59db36a6f0e952` through Sentry's API. The issue remained
@@ -138,40 +144,39 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   `evidence/issue-9-sentry-m3-retrieval-proof.json`; the retained mechanically
   sanitized response subset is
   `evidence/issue-9-sentry-m3-api-response-sanitized.json`.
-- `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
+- The committed summary for `GT-UF09-001` records a pass in the real
+  `GuideCompanion` app at tested commit
   `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
   ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
   the transcript inspector or another app, drove the installed
   `GlobalShortcutCallbacks`, and asserted stale evidence, fresh advancement,
   and completion. Every nonempty instruction had exact AX content and an
   expanded ambient frame (at least 300 points wide and taller than the 46-point
-  icon-only state). The retained local bundle is
-  `evidence/issue-13-real-app-UF09-ambient-run11.xcresult` (generated and
-  ignored); the committed redacted machine-readable proof is
-  `evidence/issue-13-real-app-UF09-ambient-run11-proof.json` (one passed, zero
-  failed, with device identifiers removed). The result contains four named
-  1040×194 screenshots cropped to the `guide.ambient` element: Step 1, stale
-  refusal, Step 2, and Done. Process, XCTest-session, wrapper-root, and Launch
-  Services cleanup passed. No private-desktop video or frame was committed.
+  icon-only state). The generated, ignored
+  `evidence/issue-13-real-app-UF09-ambient-run11.xcresult` is unavailable in
+  this worktree and no Xcode report screenshot or destination is committed.
+  `evidence/issue-13-real-app-UF09-ambient-run11-proof.json` is therefore a
+  schema-v2 partial secondary summary, not complete proof. It describes four
+  1040×194 element-only attachments, but those primary attachments are not
+  retained here. Process, XCTest-session, and wrapper-root cleanup passed;
+  Launch Services, prompts, network, Keychain, and build-cache dimensions
+  remain unverified. No private-desktop video or frame was committed.
 
 ## Deliberately red evidence
 
-- With `SERPY_INJECT_GUIDE_FAILURE=1`, the bounded runner executed the normal
-  `GT-UF08-001` journey against the real `GuideCompanion` app on the M3 and the
+- With `SERPY_INJECT_GUIDE_FAILURE=1`, the committed schema-v2 red summary
+  records that the bounded runner executed the normal `GT-UF08-001` journey at
+  exact commit `7bbf43d3732a71a124bc570f076ea17b4b4a8c0d` and that the
   `GuideCompanionGolden` plan reported one executed, one failed, zero passed,
-  and zero skipped. The test timed out after the injected adapter prevented the
-  expected ambient answer from appearing; the retained sanitized failure list
-  records the first failed assertion and the timeout without the private AX
-  tree. This proves an external deterministic Guide adapter failure makes the
-  actual-app lane red rather than being swallowed. The local bundle
-  is `evidence/issue-13-real-app-UF08-injected-red-m3.xcresult` (generated and
-  ignored); the committed redacted summary is
-  `evidence/issue-13-real-app-UF08-injected-red-m3-proof.json`, and the retained
-  sanitized `xcresulttool` subset is
+  and zero skipped. Its committed sanitized `xcresulttool` subset records the
+  failed assertion and one-minute timeout after the injected adapter prevented
+  the expected ambient answer. The generated, ignored primary `.xcresult` is
+  unavailable and no Xcode report screenshot or exact duration is committed,
+  so this remains deliberately red secondary evidence rather than complete
+  proof. See `evidence/issue-13-real-app-UF08-injected-red-m3-proof.json` and
   `evidence/issue-13-real-app-UF08-injected-red-m3-xcresult-sanitized.json`.
-  The post-run
-  checks covered serpy/XCUI processes and wrapper-owned roots only; both were
-  absent.
+  Post-run checks covered serpy/XCUI processes and wrapper-owned roots only;
+  the other seven cleanup dimensions remain unverified.
 
 - The first M3 focused UF-12 attempt is retained locally at
   `evidence/issue-13-real-app-UF12-m3-run1.xcresult` (generated and ignored).
@@ -284,21 +289,23 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   `evidence/issue-13-build-43-m3-install-proof.json`.
 - `golden-ui-tests` is connected to the GitHub repository and configured with
   one required macOS Test action, the `GuideCompanion` scheme, the
-  `GuideCompanionGolden` plan, and one Mac destination. Manual run 1
-  (`a00efbc1-d67b-4f1b-8b02-036f91063ae4`) built the test products at exact
-  commit `15d7056b24f46c25e3be43cb086b1c2a065180c3`, then failed before loading
-  the test bundle because Xcode Cloud's execution host and embedded bundle had
-  different Team IDs while the non-shipping runner inherited production
-  Hardened Runtime library validation. The runner now disables Hardened Runtime
-  only for `GuideCompanionUITests`; Release `SERPy.app` remains hardened. The
-  burn-in stays 0/10 until the corrected cloud run completes.
+  full `GuideCompanionGolden` plan, and one Mac destination. Records for manual
+  runs 1–8 are retained without rewriting their results:
+  `issue-13-xcode-cloud-run1-red-proof.json` through
+  `issue-13-xcode-cloud-run8-focused-green-proof.json`. Runs 1–3 diagnosed
+  bundle loading and cloud identity, run 4 executed the full plan with 3 passes
+  and 15 failures, runs 5–6 timed out at the shared app-launch boundary, run 7
+  narrowed the failure to a transient UF-03 assertion, and run 8 passed only
+  that one-test launch diagnostic. Run 8 is not a complete-plan green result
+  and does not count toward burn-in.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
-- Manual run 3 (`c6c63f70-5245-40d7-b1ea-5e77ee9f8acc`) at `7b7475c`
-  confirmed every cloud identity field matched except the project: Apple
-  provides `GuideCompanion.xcodeproj`. The tests now propagate provisioning
-  errors rather than crashing on absent session roots. Replaying the observed
-  filename in the headless fixture failed with `invalidIdentity` before the
-  comparison was corrected. See `issue-13-xcode-cloud-run3-red-proof.json`.
-  The corrected full cloud plan still needs execution; this is not a green run.
+- No completed full-plan run 9 is recorded at this base. It must remain
+  unclassified and cannot count toward burn-in unless authoritative external
+  state later records completion.
+- `evidence/issue-13-overall-status.json` separately records that Xcode Cloud is
+  configured, build 43 exists as the installed candidate, the complete plan is
+  red, clean runs are 0/10, installed acceptance is red, and Issue #13 remains
+  red. The focused real-app XCUI linter validates that exact overall gate but
+  does not validate the heterogeneous cloud-run or install records themselves.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
   until one exact reviewed artifact is exercised in the installed lane.

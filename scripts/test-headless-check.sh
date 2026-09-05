@@ -49,7 +49,7 @@ print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_REQUIRED
   print -u2 "headless App composition tests require signing"; exit 1
 }
 
-for check_name in core-tests app-build; do
+for check_name in core-tests app-build evidence-contract; do
   fixture_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
   find "$fixture_root" -depth -delete
   set +e
@@ -60,6 +60,14 @@ for check_name in core-tests app-build; do
   [[ $run_status -eq 86 ]] || { print -u2 "$check_name injected failure did not fail predictably"; exit 1; }
   [[ ! -e $fixture_root ]] || { print -u2 "$check_name left its owned temp root behind"; exit 1; }
 done
+
+/usr/bin/grep -Fq 'run: scripts/run-headless-check.sh evidence-contract' .github/workflows/verification.yml || {
+  print -u2 "CI does not use the bounded evidence-contract entrypoint"; exit 1
+}
+if /usr/bin/grep -Eq 'python3 scripts/(test|validate)-issue-13-evidence' .github/workflows/verification.yml; then
+  print -u2 "CI invokes evidence Python outside the bounded runner"
+  exit 1
+fi
 
 phase_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
 find "$phase_root" -depth -delete
