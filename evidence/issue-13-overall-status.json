@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "issue": 13,
+  "overallStatus": "red",
+  "gates": {
+    "completeGoldenPlan": "red",
+    "xcodeCloudConfigured": false,
+    "xcodeCloudCleanRuns": 0,
+    "xcodeCloudRequiredCleanRuns": 10,
+    "installedAcceptance": "red",
+    "installedArtifact": null
+  }
+}

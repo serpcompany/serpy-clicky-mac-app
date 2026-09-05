@@ -34,6 +34,12 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 
 - `ActualAppRuntimeCompositionTests` lock mode-before-composition and the
   production-capability exclusion contract.
+- The bounded `evidence-contract` lane discovers every tracked Issue 13 proof,
+  rejects unsafe cleanup values and contradictory result counts, correlates the
+  tested commit with its actual XCTest method and committed test plan, and
+  accepts complete primary proof only with retained xcresult evidence plus a
+  committed Xcode report screenshot. Its green result means the classifications
+  are honest; `evidence/issue-13-overall-status.json` remains red.
 - Injected `core-tests` and `app-build` failures each exit 86. The combined
   `all` path also stops immediately on an injected core failure (86) or
   completed-core cleanup failure (75), never enters app-build, and removes its
@@ -143,21 +149,23 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   raw event payload, identity, question, transcript, or screenshot was retained.
   The committed redacted proof is
   `evidence/issue-9-sentry-m3-retrieval-proof.json`.
-- `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
+- The committed summary for `GT-UF09-001` records a pass in the real
+  `GuideCompanion` app at tested commit
   `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
-  ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
-  the transcript inspector or another app, drove the installed
-  `GlobalShortcutCallbacks`, and asserted stale evidence, fresh advancement,
-  and completion. Every nonempty instruction had exact AX content and an
-  expanded ambient frame (at least 300 points wide and taller than the 46-point
-  icon-only state). The retained local bundle is
-  `evidence/issue-13-real-app-UF09-ambient-run11.xcresult` (generated and
-  ignored); the committed redacted machine-readable proof is
-  `evidence/issue-13-real-app-UF09-ambient-run11-proof.json` (one passed, zero
-  failed, with device identifiers removed). The result contains four named
-  1040×194 screenshots cropped to the `guide.ambient` element: Step 1, stale
-  refusal, Step 2, and Done. The proof summary records process, XCTest-session,
-  and wrapper-root counts.
+  ambient shortcut lane on 2026-09-05. The summary says the test closed
+  Settings, never opened the transcript inspector or another app, drove the
+  installed `GlobalShortcutCallbacks`, and asserted stale evidence, fresh
+  advancement, and completion. It also records exact AX content for every
+  nonempty instruction and an expanded ambient frame (at least 300 points wide
+  and taller than the 46-point icon-only state). The bundle
+  `evidence/issue-13-real-app-UF09-ambient-run11.xcresult` was generated and
+  ignored but is unavailable in this worktree, and no Xcode report screenshot
+  is committed. The machine-readable summary
+  `evidence/issue-13-real-app-UF09-ambient-run11-proof.json` records one passed
+  and zero failed, plus descriptions of four element-only attachments, but
+  those primary artifacts and the run destination cannot be inspected here.
+  This is partial secondary evidence, not complete proof. The summary records
+  process, XCTest-session, and wrapper-root counts.
   Launch Services registrations, unexpected prompts, network access, Keychain
   access, and build-cache residue were not recorded and remain unverified. No
   private-desktop video or frame was committed.
@@ -237,8 +245,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   remain rejected.
 - The fourth owner-approved real-app attempt is retained at
   `evidence/issue-13-real-app-UF09-run4.xcresult` (generated and ignored). The
-  real app launched, the test method ran, every Talk/Finish action progressed,
-  and cleanup passed. Local-only AX/video inspection showed the transcript
+  real app launched, the test method ran, and every Talk/Finish action progressed.
+  The wrapper reported cleanup, but its individual cleanup dimensions were not
+  retained and therefore remain unverified. Local-only AX/video inspection showed the transcript
   visibly advancing through the combined answer, `Open the File menu.`, and
   `Choose New Window.`. The failures were assertion-only: the combined SwiftUI
   row exposed label `SERPy` and no accessibility value, while the test waited
@@ -248,8 +257,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   and frames contained existing Chrome content and were deleted without being
   committed.
 - The fifth owner-approved real-app attempt at
-  `evidence/issue-13-real-app-UF09-run5.xcresult` is mechanically green (one
-  passed, zero failed, cleanup passed) but rejected as product proof. It drove
+  `evidence/issue-13-real-app-UF09-run5.xcresult` was reported mechanically
+  green (one passed, zero failed) but is rejected as product proof. Its cleanup
+  dimensions were not retained and remain unverified. It drove
   the optional Voice Transcript inspector, while HeyClicky parity requires the
   shortcut-invoked, nonactivating ambient Guide with no conventional Guide work
   window. The golden Guide tests now drive the real `GlobalShortcutCallbacks`

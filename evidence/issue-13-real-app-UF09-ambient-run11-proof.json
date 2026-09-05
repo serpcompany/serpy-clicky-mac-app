@@ -1,10 +1,33 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "issue": 13,
+  "proofRole": "focused-pass",
+  "evidenceStatus": "partial",
+  "missingRequirements": [
+    "artifacts.reportScreenshots",
+    "artifacts.resultEvidence",
+    "cleanup.buildCachesRemaining",
+    "cleanup.keychainAccessObserved",
+    "cleanup.launchServicesRegistrationsRemaining",
+    "cleanup.networkRequestsObserved",
+    "cleanup.unexpectedSystemPromptsObserved",
+    "destination.architecture",
+    "destination.osBuildNumber",
+    "destination.osVersion",
+    "destination.platform"
+  ],
   "testId": "GT-UF09-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep()",
   "testedCommit": "79cd0d216f1f09913d2531b16a69c26b2cfbac63",
-  "resultBundle": "evidence/issue-13-real-app-UF09-ambient-run11.xcresult",
+  "testPlan": "GuideCompanionGolden",
+  "testPlanConfiguration": "Golden UI",
+  "destination": {
+    "platform": null,
+    "architecture": null,
+    "osVersion": null,
+    "osBuildNumber": null
+  },
+  "localUncommittedResultBundle": "evidence/issue-13-real-app-UF09-ambient-run11.xcresult",
   "result": {
     "status": "passed",
     "executed": 1,
@@ -12,6 +35,16 @@
     "failed": 0,
     "skipped": 0,
     "durationSeconds": 54.778
+  },
+  "failures": [],
+  "artifacts": {
+    "resultEvidence": [],
+    "reportScreenshots": [],
+    "secondary": [],
+    "unavailable": [
+      "primary .xcresult",
+      "Xcode report screenshot"
+    ]
   },
   "assertions": {
     "staleEvidenceRefused": true,

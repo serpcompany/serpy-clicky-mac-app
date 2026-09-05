@@ -10,7 +10,7 @@ result proves. The canonical user outcomes remain in
 | --- | --- | --- | --- |
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056b24f46c25e3be43cb086b1c2a065180c3` in run `33930252682` |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056b24f46c25e3be43cb086b1c2a065180c3` in run `33930252682` |
-| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
+| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Not configured; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
@@ -33,6 +33,7 @@ directory afterward.
 Run:
 
 ```sh
+scripts/run-headless-check.sh evidence-contract
 scripts/test-headless-check.sh
 scripts/run-headless-check.sh core-tests
 scripts/run-headless-check.sh app-build
@@ -69,18 +70,24 @@ that the now-rejected standalone host failed to acquire a process ID. It does
 not count as serpy evidence. The first real-app execution on 2026-09-05 stopped
 before the test method because macOS canceled XCTest automation-mode biometric
 authentication. Later runs corrected the session boundary and the rejected
-transcript-window design. The valid run at `79cd0d2` executes `GT-UF09-001`
-through the ambient shortcut path, passes stale/fresh progression and
-completion assertions, and retains its local `.xcresult` plus committed
-redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
+transcript-window design. The committed summary for the run at `79cd0d2`
+records `GT-UF09-001` through the ambient shortcut path with stale/fresh
+progression and completion assertions. Its ignored `.xcresult` is unavailable,
+no Xcode report screenshot is committed, its destination was not recorded, and
+five cleanup dimensions remain unverified. It is partial secondary evidence,
+not complete proof; see `evidence/issue-13-golden-flow-harness.md`.
 
 ## GitHub Actions
 
 `.github/workflows/verification.yml` defines three secret-free, read-only jobs:
 
-- `evidence-contract`: validates the focused proof schema and its own fixtures;
-  a green contract check means incomplete evidence is labeled red or partial,
-  not that the underlying UI journey passed.
+- `evidence-contract`: uses the bounded headless runner to test the validator,
+  discover every tracked Issue 13 proof, correlate commits/test methods/plans,
+  inspect primary artifact types, and verify the explicit overall gate. Its
+  checkout includes history so each claimed tested commit must resolve locally.
+  A green contract check means incomplete evidence is labeled red or partial;
+  the current overall gate remains red and no UI journey is implied to have
+  passed.
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
   adversarially tests the runner, then runs the complete package suite and
   App-owned composition contract.

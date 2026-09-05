@@ -1,9 +1,11 @@
 {
   "schemaVersion": 2,
   "issue": 13,
+  "proofRole": "red-capability",
   "evidenceStatus": "red",
   "missingRequirements": [
-    "artifacts.primary",
+    "artifacts.reportScreenshots",
+    "artifacts.resultEvidence",
     "cleanup.buildCachesRemaining",
     "cleanup.keychainAccessObserved",
     "cleanup.launchServicesRegistrationsRemaining",
@@ -39,7 +41,8 @@
   },
   "failures": [],
   "artifacts": {
-    "primary": [],
+    "resultEvidence": [],
+    "reportScreenshots": [],
     "secondary": [],
     "unavailable": [
       "primary .xcresult",
