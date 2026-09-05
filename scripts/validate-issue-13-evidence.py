@@ -119,6 +119,32 @@ def _strip_swift_comments(source: str) -> str:
     return re.sub(r"//.*$", "", source, flags=re.MULTILINE)
 
 
+def _swift_class_direct_scope(source: str, class_name: str) -> Optional[str]:
+    class_match = re.search(
+        rf"^[ \t]*(?:final[ \t]+)?class[ \t]+{re.escape(class_name)}\b[^{{]*{{",
+        source,
+        flags=re.MULTILINE,
+    )
+    if class_match is None:
+        return None
+    depth = 0
+    direct_scope: list[str] = []
+    for character in source[class_match.end() :]:
+        if character == "{":
+            depth += 1
+            direct_scope.append(" ")
+        elif character == "}":
+            if depth == 0:
+                return "".join(direct_scope)
+            depth -= 1
+            direct_scope.append(" ")
+        elif depth == 0:
+            direct_scope.append(character)
+        else:
+            direct_scope.append("\n" if character == "\n" else " ")
+    return None
+
+
 def _validate_test_source_and_plan(
     document: dict[str, Any], repo_root: Path, tested_commit: str
 ) -> list[str]:
@@ -131,18 +157,15 @@ def _validate_test_source_and_plan(
     source_path = f"GuideCompanionUITests/{class_name}.swift"
     source = _git_text_at_commit(repo_root, tested_commit, source_path)
     executable_source = _strip_swift_comments(source) if source is not None else ""
-    class_pattern = re.compile(
-        rf"^[ \t]*(?:final[ \t]+)?class[ \t]+{re.escape(class_name)}\b",
-        flags=re.MULTILINE,
-    )
+    class_scope = _swift_class_direct_scope(executable_source, class_name)
     method_pattern = re.compile(
         rf"^[ \t]*(?:override[ \t]+)?func[ \t]+{re.escape(method_name)}[ \t]*\(",
         flags=re.MULTILINE,
     )
     expected_token = str(document.get("testId", "")).replace("-", "_")
     if (
-        class_pattern.search(executable_source) is None
-        or method_pattern.search(executable_source) is None
+        class_scope is None
+        or method_pattern.search(class_scope) is None
         or expected_token not in method_name
     ):
         errors.append(
@@ -251,15 +274,49 @@ def _read_retained_xcresult(
     return None
 
 
-def _test_nodes(value: Any):
+def _test_nodes(value: Any, ancestors: tuple[dict[str, Any], ...] = ()):
     if isinstance(value, dict):
         if value.get("nodeType") in {"Test", "Test Case"}:
-            yield value
+            yield value, ancestors
+        child_ancestors = (
+            ancestors + (value,) if _nonempty_string(value.get("nodeType")) else ancestors
+        )
         for child in value.values():
-            yield from _test_nodes(child)
+            yield from _test_nodes(child, child_ancestors)
     elif isinstance(value, list):
         for child in value:
-            yield from _test_nodes(child)
+            yield from _test_nodes(child, ancestors)
+
+
+def _xcresult_node_has_exact_identity(
+    node: dict[str, Any],
+    ancestors: tuple[dict[str, Any], ...],
+    identifier: str,
+    class_name: str,
+    method: str,
+) -> bool:
+    if node.get("nodeIdentifier") in {
+        identifier,
+        f"GuideCompanionUITests/{identifier}",
+    }:
+        return True
+    method_names = {method, f"{method}()"}
+    if (
+        node.get("name") not in method_names
+        and node.get("nodeIdentifier") not in method_names
+    ):
+        return False
+    owns_target = any(
+        ancestor.get("nodeType") in {"UI test bundle", "Unit test bundle"}
+        and ancestor.get("name") == "GuideCompanionUITests"
+        for ancestor in ancestors
+    )
+    owns_class = any(
+        ancestor.get("nodeType") == "Test Suite"
+        and ancestor.get("name") == class_name
+        for ancestor in ancestors
+    )
+    return owns_target and owns_class
 
 
 def validate_xcresult_data(
@@ -280,19 +337,18 @@ def validate_xcresult_data(
     identifier = str(document.get("xcodeTestIdentifier", ""))
     class_name, _, raw_method = identifier.partition("/")
     method = raw_method.removesuffix("()")
-    exact_names = {
-        method,
-        f"{method}()",
-        identifier,
-        f"{class_name}/{method}",
-    }
     expected_result = (
         "Passed" if document.get("result", {}).get("status") == "passed" else "Failed"
     )
     matches = [
         node
-        for node in _test_nodes(tests)
-        if node.get("name") in exact_names and node.get("result") == expected_result
+        for node, ancestors in _test_nodes(tests)
+        if (
+            node.get("result") == expected_result
+            and _xcresult_node_has_exact_identity(
+                node, ancestors, identifier, class_name, method
+            )
+        )
     ]
     if len(matches) != 1:
         errors.append("xcresult does not contain the exact claimed test node and status")
