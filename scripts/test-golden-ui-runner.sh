@@ -89,6 +89,10 @@ if /usr/bin/grep -Fq 'env SERPY_XCUI_PARENT=' scripts/run-golden-ui-test.sh; the
   print -u2 "runner authorization variables bypass TEST_RUNNER_ propagation"
   exit 1
 fi
+if /usr/bin/grep -Fq 'yieldActivation' GuideCompanionUITests/GoldenUITestCase.swift; then
+  print -u2 "golden UI tests must prove product-owned activation without a runner handoff"
+  exit 1
+fi
 
 marker=$(uuidgen)
 result="evidence/issue-13-runner-fixture-$marker.xcresult"

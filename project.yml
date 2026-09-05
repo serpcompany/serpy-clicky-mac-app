@@ -61,6 +61,7 @@ targets:
       testPlans:
         - path: GuideCompanionGolden.xctestplan
           defaultPlan: true
+        - path: GuideCompanionLaunchDiagnostic.xctestplan
       gatherCoverageData: false
   GuideCompanionUITests:
     type: bundle.ui-testing
@@ -84,6 +85,7 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
+      - path: App/LaunchForegroundCoordinator.swift
       - path: App/UITestComposition
       - path: AppCompositionTests
     dependencies:

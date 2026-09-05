@@ -70,11 +70,6 @@ class GoldenUITestCase: XCTestCase {
             "SERPY_TEST_TEMP_ROOT": sessionTemporaryRoot.path,
             "SERPY_XCUI_RUN_TOKEN": runToken,
         ]
-        // Cooperatively hand the runner's activation to the app it launches.
-        // This does not activate the app; its real Settings path still must.
-        if #available(macOS 14.0, *) {
-            NSApplication.shared.yieldActivation(toApplicationWithBundleIdentifier: productBundleIdentifier)
-        }
         application.launch()
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
         let expectedWindow = openTranscript ? "SERPy Voice Transcript" : "SERPy Settings"

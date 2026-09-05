@@ -161,9 +161,12 @@ struct GuideCompanionApp: App {
 
 @MainActor
 final class GuideAppDelegate: NSObject, NSApplicationDelegate {
+    private var launchForegroundCoordinator: LaunchForegroundCoordinator?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyPresence(for: .running(settingsVisible: NSApp.windows.contains(where: \.isVisible)))
         GuideAppComposition.settingsWindow.present()
+        coordinateLaunchForegroundRecovery()
         Task {
             await GuideAppComposition.model.start()
             if CommandLine.arguments.contains("--ui-testing"),
@@ -191,5 +194,37 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
         case .prohibited: .prohibited
         }
         NSApp.setActivationPolicy(activationPolicy)
+    }
+
+    private func coordinateLaunchForegroundRecovery() {
+        let settingsWindowController = GuideAppComposition.settingsWindow
+        let coordinator = LaunchForegroundCoordinator(
+            schedule: LaunchForegroundScheduler.schedule,
+            snapshot: {
+                let settingsWindow = settingsWindowController.window
+                let ownProcessIdentifier = ProcessInfo.processInfo.processIdentifier
+                let frontmostOwner: LaunchForegroundOwner = switch NSWorkspace.shared
+                    .frontmostApplication?.processIdentifier {
+                case ownProcessIdentifier: .currentApplication
+                case let processIdentifier?: .external(processIdentifier)
+                case nil: .none
+                }
+                return LaunchForegroundSnapshot(
+                    applicationIsActive: NSApp.isActive,
+                    frontmostOwner: frontmostOwner,
+                    settingsWindowIsVisible: settingsWindow?.isVisible == true,
+                    settingsWindowIsKey: settingsWindow?.isKeyWindow == true,
+                    activationPolicyIsRegular: NSApp.activationPolicy() == .regular
+                )
+            },
+            retryActivation: {
+                settingsWindowController.present()
+            },
+            finished: { [weak self] _ in
+                self?.launchForegroundCoordinator = nil
+            }
+        )
+        launchForegroundCoordinator = coordinator
+        coordinator.start()
     }
 }

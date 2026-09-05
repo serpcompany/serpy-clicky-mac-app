@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		038E8579A88A34541F278BB2 /* UITestTalkAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54A9FA0DAA494D672AC8BCD /* UITestTalkAdapters.swift */; };
+		0594BCD9E83627CD613A97A4 /* LaunchForegroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C864292F58407B0FA6CC8922 /* LaunchForegroundCoordinator.swift */; };
 		09512350E3754A3515E14576 /* GuideUITestComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106F1DB7AE3F4A1EC01F0BC0 /* GuideUITestComposition.swift */; };
 		1AD332644E140F0C6EE38032 /* UITestGuideAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189A7F361E4A08406A8EEE14 /* UITestGuideAdapters.swift */; };
 		33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11CF664193125A6D4EDC0FAF /* GuideUI */; };
@@ -23,9 +24,11 @@
 		9A199FF62B52AF13590211E3 /* GuideMac in Frameworks */ = {isa = PBXBuildFile; productRef = C8B324BF2E72E10DE2B43148 /* GuideMac */; };
 		9FDCD85439B52AF22561A60D /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = E878CF5435BA1D7276BA94B8 /* GuideCore */; };
 		A43AB18100053D8501993DEC /* UITestDictationAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F1EF0CC62F43266430A846 /* UITestDictationAdapters.swift */; };
+		A9F73219646C017CB3FFC912 /* LaunchForegroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C864292F58407B0FA6CC8922 /* LaunchForegroundCoordinator.swift */; };
 		AEFFCDA2C7C5AA88E325301C /* UITestGuideAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189A7F361E4A08406A8EEE14 /* UITestGuideAdapters.swift */; };
 		D3C5773A9B528E220036EB96 /* UITestDictationAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F1EF0CC62F43266430A846 /* UITestDictationAdapters.swift */; };
 		D8299C12368CBD5EC775AC9F /* GuideUITestComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106F1DB7AE3F4A1EC01F0BC0 /* GuideUITestComposition.swift */; };
+		DF5A5535AD980A1B9B94E99F /* LaunchForegroundCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AC363F6EDC76CFB6B69B027 /* LaunchForegroundCoordinatorTests.swift */; };
 		E98C786B1C00C0EF08B0E22F /* GoldenDictationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D90639FE6C002C325CBBBA /* GoldenDictationUITests.swift */; };
 		EC5B6B3502E591824DA037B6 /* GoldenPermissionsAndLifecycleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B5A59E59D09E17D90B28F0B /* GoldenPermissionsAndLifecycleUITests.swift */; };
 		FF400FA0636D88205DE2D8EA /* GuideMac in Frameworks */ = {isa = PBXBuildFile; productRef = FFB5392BB48DD619D30AAD3A /* GuideMac */; };
@@ -50,12 +53,14 @@
 		3F61D8657750A3BC5FE004B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		402E6AB6BF038ED9D42B35CD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GuideCompanion.entitlements; sourceTree = "<group>"; };
+		6AC363F6EDC76CFB6B69B027 /* LaunchForegroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchForegroundCoordinatorTests.swift; sourceTree = "<group>"; };
 		7B5A59E59D09E17D90B28F0B /* GoldenPermissionsAndLifecycleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenPermissionsAndLifecycleUITests.swift; sourceTree = "<group>"; };
 		87D90639FE6C002C325CBBBA /* GoldenDictationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenDictationUITests.swift; sourceTree = "<group>"; };
 		9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionApp.swift; sourceTree = "<group>"; };
 		92111BF32FF7B211722A39EC /* GuideCompanionCompositionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GuideCompanionCompositionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		92ABEB16055301DBFF398885 /* SERPy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SERPy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B54A9FA0DAA494D672AC8BCD /* UITestTalkAdapters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestTalkAdapters.swift; sourceTree = "<group>"; };
+		C864292F58407B0FA6CC8922 /* LaunchForegroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchForegroundCoordinator.swift; sourceTree = "<group>"; };
 		CFE0EE746FCFB1B0120F94B3 /* GoldenGuideUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenGuideUITests.swift; sourceTree = "<group>"; };
 		DA1572F19C3E0D8130EEF6A4 /* GuideModules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GuideModules; path = Packages/GuideModules; sourceTree = SOURCE_ROOT; };
 		DF3B79B032DC10A17370A76D /* GuideAppCompositionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideAppCompositionContractTests.swift; sourceTree = "<group>"; };
@@ -141,6 +146,7 @@
 				665C8D6E0E14FBB9A760BDE5 /* GuideCompanion.entitlements */,
 				9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */,
 				3F61D8657750A3BC5FE004B3 /* Info.plist */,
+				C864292F58407B0FA6CC8922 /* LaunchForegroundCoordinator.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -168,6 +174,7 @@
 			isa = PBXGroup;
 			children = (
 				DF3B79B032DC10A17370A76D /* GuideAppCompositionContractTests.swift */,
+				6AC363F6EDC76CFB6B69B027 /* LaunchForegroundCoordinatorTests.swift */,
 			);
 			path = AppCompositionTests;
 			sourceTree = "<group>";
@@ -304,6 +311,8 @@
 			files = (
 				8207B8192F94EBD5537149B1 /* GuideAppCompositionContractTests.swift in Sources */,
 				09512350E3754A3515E14576 /* GuideUITestComposition.swift in Sources */,
+				0594BCD9E83627CD613A97A4 /* LaunchForegroundCoordinator.swift in Sources */,
+				DF5A5535AD980A1B9B94E99F /* LaunchForegroundCoordinatorTests.swift in Sources */,
 				A43AB18100053D8501993DEC /* UITestDictationAdapters.swift in Sources */,
 				AEFFCDA2C7C5AA88E325301C /* UITestGuideAdapters.swift in Sources */,
 				038E8579A88A34541F278BB2 /* UITestTalkAdapters.swift in Sources */,
@@ -327,6 +336,7 @@
 			files = (
 				4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */,
 				D8299C12368CBD5EC775AC9F /* GuideUITestComposition.swift in Sources */,
+				A9F73219646C017CB3FFC912 /* LaunchForegroundCoordinator.swift in Sources */,
 				D3C5773A9B528E220036EB96 /* UITestDictationAdapters.swift in Sources */,
 				1AD332644E140F0C6EE38032 /* UITestGuideAdapters.swift in Sources */,
 				443C3FEBF813992B2FE19BA8 /* UITestTalkAdapters.swift in Sources */,
