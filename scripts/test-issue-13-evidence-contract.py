@@ -230,6 +230,23 @@ class EvidenceContractTests(unittest.TestCase):
             self.validate(document),
         )
 
+    def test_claimed_method_must_be_owned_by_the_exact_swift_class(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "final class GoldenGuideUITests {}\n"
+            "final class OtherTests {\n"
+            "  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "move test method")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
     def test_unrelated_xcresult_text_cannot_match_the_claimed_test(self) -> None:
         summary = {
             "totalTestCount": 1,
@@ -279,6 +296,45 @@ class EvidenceContractTests(unittest.TestCase):
             evidence_contract.validate_xcresult_data(summary, tests, document),
         )
 
+    def test_xcresult_bare_method_under_wrong_target_and_class_is_rejected(self) -> None:
+        summary = {
+            "totalTestCount": 1,
+            "passedTests": 1,
+            "failedTests": 0,
+            "skippedTests": 0,
+        }
+        tests = {
+            "testNodes": [
+                {
+                    "nodeType": "Test Plan",
+                    "name": "GuideCompanionGolden",
+                    "children": [
+                        {
+                            "nodeType": "Unit test bundle",
+                            "name": "OtherUITests",
+                            "children": [
+                                {
+                                    "nodeType": "Test Suite",
+                                    "name": "OtherTests",
+                                    "children": [
+                                        {
+                                            "nodeType": "Test Case",
+                                            "name": "test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
+                                            "result": "Passed",
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        self.assertIn(
+            "xcresult does not contain the exact claimed test node and status",
+            evidence_contract.validate_xcresult_data(summary, tests, self.complete),
+        )
+
     def test_failed_result_requires_stage_cause_and_recovery(self) -> None:
         document = deepcopy(self.complete)
         document["proofRole"] = "red-capability"
@@ -317,6 +373,29 @@ class EvidenceContractTests(unittest.TestCase):
             evidence_contract.resolve_proof_path(
                 self.repo_root, str(self.repo_root / "absolute-proof.json")
             )
+
+    def test_cli_rejects_an_out_of_tree_symlink_proof_argument(self) -> None:
+        scripts = self.repo_root / "scripts"
+        scripts.mkdir()
+        validator = scripts / SCRIPT.name
+        validator.write_text(SCRIPT.read_text())
+        with tempfile.TemporaryDirectory() as outside_directory:
+            outside_proof = Path(outside_directory) / "outside-proof.json"
+            outside_proof.write_text("{}")
+            proof_link = self.repo_root / "evidence" / "issue-13-symlink-proof.json"
+            proof_link.symlink_to(outside_proof)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(validator),
+                    proof_link.relative_to(self.repo_root).as_posix(),
+                ],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 64)
+        self.assertIn("ERROR: proof path must be beneath repo evidence", result.stderr)
 
     def test_overall_gate_cannot_be_green_before_cloud_burn_in_and_installed_pass(self) -> None:
         overall = {
