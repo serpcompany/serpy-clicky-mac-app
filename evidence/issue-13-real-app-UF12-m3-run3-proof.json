@@ -11,7 +11,8 @@
     "cleanup.launchServicesRegistrationsRemaining",
     "cleanup.networkRequestsObserved",
     "cleanup.unexpectedSystemPromptsObserved",
-    "cleanup.xctestSessionRootsRemaining"
+    "cleanup.xctestSessionRootsRemaining",
+    "external.livePrimaryArtifactVerification"
   ],
   "testId": "GT-UF12-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",

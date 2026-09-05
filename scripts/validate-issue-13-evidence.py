@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import zlib
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
@@ -113,6 +114,11 @@ def _git_text_at_commit(repo_root: Path, commit: str, path: str) -> Optional[str
     return result.stdout if result.returncode == 0 else None
 
 
+def _strip_swift_comments(source: str) -> str:
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
+    return re.sub(r"//.*$", "", source, flags=re.MULTILINE)
+
+
 def _validate_test_source_and_plan(
     document: dict[str, Any], repo_root: Path, tested_commit: str
 ) -> list[str]:
@@ -124,11 +130,23 @@ def _validate_test_source_and_plan(
     class_name, method_name = match.groups()
     source_path = f"GuideCompanionUITests/{class_name}.swift"
     source = _git_text_at_commit(repo_root, tested_commit, source_path)
-    method_pattern = re.compile(rf"\bfunc\s+{re.escape(method_name)}\s*\(")
+    executable_source = _strip_swift_comments(source) if source is not None else ""
+    class_pattern = re.compile(
+        rf"^[ \t]*(?:final[ \t]+)?class[ \t]+{re.escape(class_name)}\b",
+        flags=re.MULTILINE,
+    )
+    method_pattern = re.compile(
+        rf"^[ \t]*(?:override[ \t]+)?func[ \t]+{re.escape(method_name)}[ \t]*\(",
+        flags=re.MULTILINE,
+    )
     expected_token = str(document.get("testId", "")).replace("-", "_")
-    if source is None or method_pattern.search(source) is None or expected_token not in method_name:
+    if (
+        class_pattern.search(executable_source) is None
+        or method_pattern.search(executable_source) is None
+        or expected_token not in method_name
+    ):
         errors.append(
-            "xcodeTestIdentifier does not map to a GuideCompanionUITests method"
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method"
         )
 
     plan_name = document.get("testPlan")
@@ -183,9 +201,9 @@ def _validate_tracked_artifact(
     return path, errors
 
 
-def _read_xcresult_summary(path: Path) -> Optional[dict[str, Any]]:
+def _read_xcresult_json(path: Path, view: str) -> Optional[dict[str, Any]]:
     result = subprocess.run(
-        ["xcrun", "xcresulttool", "get", "test-results", "summary", "--path", str(path)],
+        ["xcrun", "xcresulttool", "get", "test-results", view, "--path", str(path)],
         capture_output=True,
         text=True,
     )
@@ -198,7 +216,17 @@ def _read_xcresult_summary(path: Path) -> Optional[dict[str, Any]]:
     return summary if isinstance(summary, dict) and summary else None
 
 
-def _read_retained_xcresult(path: Path) -> Optional[dict[str, Any]]:
+def _read_xcresult_views(path: Path) -> Optional[Tuple[dict[str, Any], dict[str, Any]]]:
+    summary = _read_xcresult_json(path, "summary")
+    tests = _read_xcresult_json(path, "tests")
+    if summary is None or tests is None:
+        return None
+    return summary, tests
+
+
+def _read_retained_xcresult(
+    path: Path,
+) -> Optional[Tuple[dict[str, Any], dict[str, Any]]]:
     if path.name.endswith(".xcresult.zip") and path.is_file():
         if not zipfile.is_zipfile(path):
             return None
@@ -217,14 +245,25 @@ def _read_retained_xcresult(path: Path) -> Optional[dict[str, Any]]:
             with tempfile.TemporaryDirectory(prefix="serpy-xcresult-inspect.") as temporary:
                 archive.extractall(temporary)
                 extracted = Path(temporary) / roots.pop()
-                return _read_xcresult_summary(extracted)
+                return _read_xcresult_views(extracted)
     if path.name.endswith(".xcresult") and path.is_dir():
-        return _read_xcresult_summary(path)
+        return _read_xcresult_views(path)
     return None
 
 
-def _validate_xcresult_summary(
-    summary: dict[str, Any], document: dict[str, Any]
+def _test_nodes(value: Any):
+    if isinstance(value, dict):
+        if value.get("nodeType") in {"Test", "Test Case"}:
+            yield value
+        for child in value.values():
+            yield from _test_nodes(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _test_nodes(child)
+
+
+def validate_xcresult_data(
+    summary: dict[str, Any], tests: dict[str, Any], document: dict[str, Any]
 ) -> list[str]:
     errors: list[str] = []
     result = document.get("result", {})
@@ -238,27 +277,62 @@ def _validate_xcresult_summary(
             errors.append(
                 f"xcresult {summary_field} does not match result.{proof_field}"
             )
-    serialized = json.dumps(summary, sort_keys=True)
     identifier = str(document.get("xcodeTestIdentifier", ""))
-    method = identifier.split("/", 1)[-1].removesuffix("()")
-    if not method or method not in serialized:
-        errors.append("xcresult does not contain the claimed XCTest method")
-    configuration = str(document.get("testPlanConfiguration", ""))
-    if not configuration or configuration not in serialized:
-        errors.append("xcresult does not contain the claimed test-plan configuration")
+    class_name, _, raw_method = identifier.partition("/")
+    method = raw_method.removesuffix("()")
+    exact_names = {
+        method,
+        f"{method}()",
+        identifier,
+        f"{class_name}/{method}",
+    }
+    expected_result = (
+        "Passed" if document.get("result", {}).get("status") == "passed" else "Failed"
+    )
+    matches = [
+        node
+        for node in _test_nodes(tests)
+        if node.get("name") in exact_names and node.get("result") == expected_result
+    ]
+    if len(matches) != 1:
+        errors.append("xcresult does not contain the exact claimed test node and status")
     return errors
 
 
-def _is_xcode_report_png(path: Path, test_id: str) -> bool:
+def _is_xcode_report_png(path: Path) -> bool:
     if not path.name.endswith("-xcode-report.png") or not path.is_file():
         return False
-    data = path.read_bytes()[:24]
-    if len(data) < 24 or data[: len(PNG_SIGNATURE)] != PNG_SIGNATURE:
+    data = path.read_bytes()
+    if not data.startswith(PNG_SIGNATURE):
         return False
-    width = int.from_bytes(data[16:20], "big")
-    height = int.from_bytes(data[20:24], "big")
-    flow_token = test_id.split("-")[1] if re.fullmatch(r"GT-UF\d{2}-\d{3}", test_id) else ""
-    return bool(flow_token) and flow_token in path.name and width >= 400 and height >= 200
+    position = len(PNG_SIGNATURE)
+    seen_ihdr = False
+    seen_idat = False
+    seen_iend = False
+    while position + 12 <= len(data):
+        length = int.from_bytes(data[position : position + 4], "big")
+        chunk_end = position + 12 + length
+        if chunk_end > len(data):
+            return False
+        chunk_type = data[position + 4 : position + 8]
+        payload = data[position + 8 : position + 8 + length]
+        expected_crc = int.from_bytes(data[position + 8 + length : chunk_end], "big")
+        actual_crc = zlib.crc32(chunk_type + payload) & 0xFFFFFFFF
+        if expected_crc != actual_crc:
+            return False
+        if chunk_type == b"IHDR":
+            if seen_ihdr or position != len(PNG_SIGNATURE) or length != 13:
+                return False
+            seen_ihdr = True
+        elif chunk_type == b"IDAT":
+            seen_idat = True
+        elif chunk_type == b"IEND":
+            if length != 0 or chunk_end != len(data):
+                return False
+            seen_iend = True
+            break
+        position = chunk_end
+    return seen_ihdr and seen_idat and seen_iend
 
 
 def validate_document(
@@ -273,6 +347,12 @@ def validate_document(
         errors.append("issue must be 13")
     if document.get("proofRole") not in {"focused-pass", "red-capability"}:
         errors.append("proofRole must be focused-pass or red-capability")
+    if document.get("proofRole") == "focused-pass":
+        missing.append("external.livePrimaryArtifactVerification")
+    if document.get("evidenceStatus") == "complete":
+        errors.append(
+            "complete evidence requires live primary-artifact verification and reviewer approval"
+        )
     if not re.fullmatch(r"GT-UF\d{2}-\d{3}", str(document.get("testId", ""))):
         errors.append("testId must be a GT-UF test ID")
     if not _nonempty_string(document.get("xcodeTestIdentifier")):
@@ -331,6 +411,15 @@ def validate_document(
                 errors.append("passed result must include at least one passed test")
             if result_status == "failed-as-injected" and counts["failed"] < 1:
                 errors.append("failed-as-injected result must have failed>0")
+            if result_status == "failed-as-injected" and (
+                counts["executed"],
+                counts["passed"],
+                counts["failed"],
+                counts["skipped"],
+            ) != (1, 0, 1, 0):
+                errors.append(
+                    "failed-as-injected requires executed=1, passed=0, failed=1, skipped=0"
+                )
             failed = counts["failed"]
         duration = result.get("durationSeconds")
         if duration is None:
@@ -341,8 +430,12 @@ def validate_document(
     failures = document.get("failures")
     if not isinstance(failures, list):
         errors.append("failures must be an array")
-    elif not all(isinstance(item, dict) and item for item in failures):
-        errors.append("each failures entry must be a nonempty object")
+    elif not all(
+        isinstance(item, dict)
+        and all(_nonempty_string(item.get(field)) for field in ("stage", "cause", "recovery"))
+        for item in failures
+    ):
+        errors.append("each failure requires nonempty stage, cause, and recovery")
     elif failed and not failures:
         missing.append("failures")
 
@@ -373,18 +466,16 @@ def validate_document(
                 if artifact_errors or path is None:
                     continue
                 if field == "resultEvidence":
-                    summary = _read_retained_xcresult(path)
-                    if summary is None:
+                    views = _read_retained_xcresult(path)
+                    if views is None:
                         errors.append(
                             "artifacts.resultEvidence is not an inspectable xcresult"
                         )
                     else:
-                        errors.extend(_validate_xcresult_summary(summary, document))
-                if field == "reportScreenshots" and not _is_xcode_report_png(
-                    path, str(document.get("testId", ""))
-                ):
+                        errors.extend(validate_xcresult_data(*views, document))
+                if field == "reportScreenshots" and not _is_xcode_report_png(path):
                     errors.append(
-                        "artifacts.reportScreenshots is not a correlated Xcode report image"
+                        "artifacts.reportScreenshots is not a well-formed Xcode report PNG"
                     )
 
     cleanup = document.get("cleanup")
@@ -432,13 +523,7 @@ def validate_document(
             + json.dumps(expected_missing)
         )
 
-    expected_status = (
-        "red"
-        if result_status == "failed-as-injected"
-        else "partial"
-        if expected_missing
-        else "complete"
-    )
+    expected_status = "red" if result_status == "failed-as-injected" else "partial"
     if document.get("evidenceStatus") != expected_status:
         errors.append(f"evidenceStatus must be {expected_status}")
     expected_role = "red-capability" if result_status == "failed-as-injected" else "focused-pass"
@@ -456,26 +541,22 @@ def validate_overall_status(document: dict[str, Any]) -> list[str]:
     gates = document.get("gates")
     if not isinstance(gates, dict):
         return errors + ["overall gates must be an object"]
-    required = gates.get("xcodeCloudRequiredCleanRuns")
-    clean = gates.get("xcodeCloudCleanRuns")
-    if not isinstance(required, int) or isinstance(required, bool) or required < 10:
-        errors.append("xcodeCloudRequiredCleanRuns must be at least 10")
-    if not isinstance(clean, int) or isinstance(clean, bool) or clean < 0:
-        errors.append("xcodeCloudCleanRuns must be a nonnegative integer")
-    complete = (
-        gates.get("completeGoldenPlan") == "green"
-        and gates.get("xcodeCloudConfigured") is True
-        and isinstance(clean, int)
-        and not isinstance(clean, bool)
-        and isinstance(required, int)
-        and not isinstance(required, bool)
-        and clean >= required
-        and gates.get("installedAcceptance") == "green"
-        and _nonempty_string(gates.get("installedArtifact"))
-    )
-    expected = "green" if complete else "red"
-    if document.get("overallStatus") != expected:
-        errors.append(f"overallStatus must be {expected}")
+    expected_gates = {
+        "completeGoldenPlan": "red",
+        "xcodeCloudConfigured": False,
+        "xcodeCloudCleanRuns": 0,
+        "xcodeCloudRequiredCleanRuns": 10,
+        "installedAcceptance": "red",
+        "installedArtifact": None,
+    }
+    if gates != expected_gates:
+        errors.append("overall gates must match the current externally unverified red state")
+    if document.get("overallStatus") == "green":
+        errors.append(
+            "overall green requires external live verification and is not accepted by this linter"
+        )
+    if document.get("overallStatus") != "red":
+        errors.append("overallStatus must be red")
     return errors
 
 
@@ -541,9 +622,10 @@ def main() -> int:
     if failed:
         return 1
     print(
-        "Issue 13 evidence contract integrity: PASS "
+        "Issue 13 evidence honesty lint: PASS "
         f"({counts['complete']} complete, {counts['partial']} partial, {counts['red']} red); "
-        f"Issue 13 overall: {overall['overallStatus'].upper()}"
+        f"Issue 13 overall: {overall['overallStatus'].upper()}; "
+        "completion authority: EXTERNAL-ONLY"
     )
     return 0
 

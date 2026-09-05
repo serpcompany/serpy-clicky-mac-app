@@ -51,6 +51,16 @@ class EvidenceContractTests(unittest.TestCase):
             archive.writestr("fixture.xcresult/Info.plist", "fixture")
             archive.writestr("fixture.xcresult/Data/data", "fixture")
         (self.repo_root / "evidence" / "fixture-xcode-report.png").write_bytes(PNG_1X1)
+        forged = (
+            b"\x89PNG\r\n\x1a\n"
+            + (13).to_bytes(4, "big")
+            + b"IHDR"
+            + (1200).to_bytes(4, "big")
+            + (800).to_bytes(4, "big")
+        )
+        (self.repo_root / "evidence" / "issue-13-UF12-forged-xcode-report.png").write_bytes(
+            forged
+        )
         (self.repo_root / "evidence" / "notes.txt").write_text("not result evidence")
         self.git("init", "-q")
         self.git("config", "user.name", "Evidence Test")
@@ -128,11 +138,22 @@ class EvidenceContractTests(unittest.TestCase):
     def test_manufactured_primary_files_cannot_make_a_complete_proof(self) -> None:
         errors = self.validate(self.complete)
         self.assertIn(
-            "artifacts.resultEvidence is not an inspectable xcresult", errors
+            "complete evidence requires live primary-artifact verification and reviewer approval",
+            errors,
         )
         self.assertIn(
-            "artifacts.reportScreenshots is not a correlated Xcode report image",
-            errors,
+            "artifacts.resultEvidence is not an inspectable xcresult", errors
+        )
+
+    def test_copied_artifact_at_a_different_commit_still_cannot_be_complete(self) -> None:
+        (self.repo_root / "copy-marker.txt").write_text("later commit")
+        self.git("add", "copy-marker.txt")
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "later")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "complete evidence requires live primary-artifact verification and reviewer approval",
+            self.validate(document),
         )
 
     def test_passed_status_rejects_failed_count(self) -> None:
@@ -148,6 +169,10 @@ class EvidenceContractTests(unittest.TestCase):
         document["result"].update(status="failed-as-injected", passed=0, failed=0)
         self.assertIn(
             "failed-as-injected result must have failed>0", self.validate(document)
+        )
+        self.assertIn(
+            "failed-as-injected requires executed=1, passed=0, failed=1, skipped=0",
+            self.validate(document),
         )
 
     def test_unsafe_measured_cleanup_is_rejected_for_every_status(self) -> None:
@@ -172,6 +197,10 @@ class EvidenceContractTests(unittest.TestCase):
             self.validate(document),
         )
 
+    def test_forged_twenty_four_byte_png_is_not_a_report_image(self) -> None:
+        forged = self.repo_root / "evidence" / "issue-13-UF12-forged-xcode-report.png"
+        self.assertFalse(evidence_contract._is_xcode_report_png(forged))
+
     def test_tested_commit_must_resolve(self) -> None:
         document = deepcopy(self.complete)
         document["testedCommit"] = "f" * 40
@@ -181,7 +210,85 @@ class EvidenceContractTests(unittest.TestCase):
         document = deepcopy(self.complete)
         document["xcodeTestIdentifier"] = "GoldenGuideUITests/test_does_not_exist()"
         self.assertIn(
-            "xcodeTestIdentifier does not map to a GuideCompanionUITests method",
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_commented_out_swift_function_is_not_an_executable_test(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "final class GoldenGuideUITests {\n"
+            "  // func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "comment test")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_unrelated_xcresult_text_cannot_match_the_claimed_test(self) -> None:
+        summary = {
+            "totalTestCount": 1,
+            "passedTests": 1,
+            "failedTests": 0,
+            "skippedTests": 0,
+        }
+        tests = {
+            "testNodes": [
+                {
+                    "nodeType": "Test Case",
+                    "name": "test_unrelated()",
+                    "result": "Passed",
+                    "details": self.complete["xcodeTestIdentifier"],
+                }
+            ]
+        }
+        self.assertIn(
+            "xcresult does not contain the exact claimed test node and status",
+            evidence_contract.validate_xcresult_data(summary, tests, self.complete),
+        )
+
+    def test_injected_failure_requires_the_exact_failed_test_node(self) -> None:
+        document = deepcopy(self.complete)
+        document["proofRole"] = "red-capability"
+        document["evidenceStatus"] = "red"
+        document["result"].update(
+            status="failed-as-injected", executed=1, passed=0, failed=1, skipped=0
+        )
+        summary = {
+            "totalTestCount": 1,
+            "passedTests": 0,
+            "failedTests": 1,
+            "skippedTests": 0,
+        }
+        tests = {
+            "testNodes": [
+                {
+                    "nodeType": "Test Case",
+                    "name": "test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
+                    "result": "Passed",
+                }
+            ]
+        }
+        self.assertIn(
+            "xcresult does not contain the exact claimed test node and status",
+            evidence_contract.validate_xcresult_data(summary, tests, document),
+        )
+
+    def test_failed_result_requires_stage_cause_and_recovery(self) -> None:
+        document = deepcopy(self.complete)
+        document["proofRole"] = "red-capability"
+        document["evidenceStatus"] = "red"
+        document["result"].update(
+            status="failed-as-injected", executed=1, passed=0, failed=1, skipped=0
+        )
+        document["failures"] = [{"x": 1}]
+        self.assertIn(
+            "each failure requires nonempty stage, cause, and recovery",
             self.validate(document),
         )
 
@@ -227,6 +334,25 @@ class EvidenceContractTests(unittest.TestCase):
         }
         self.assertIn(
             "overallStatus must be red",
+            evidence_contract.validate_overall_status(overall),
+        )
+
+    def test_invented_all_green_overall_gate_is_rejected_unconditionally(self) -> None:
+        overall = {
+            "schemaVersion": 1,
+            "issue": 13,
+            "overallStatus": "green",
+            "gates": {
+                "completeGoldenPlan": "green",
+                "xcodeCloudConfigured": True,
+                "xcodeCloudCleanRuns": 10,
+                "xcodeCloudRequiredCleanRuns": 10,
+                "installedAcceptance": "green",
+                "installedArtifact": "invented.dmg",
+            },
+        }
+        self.assertIn(
+            "overall green requires external live verification and is not accepted by this linter",
             evidence_contract.validate_overall_status(overall),
         )
 

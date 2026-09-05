@@ -14,15 +14,15 @@ permissions:
   contents: read
 
 jobs:
-  evidence-contract:
-    name: evidence-contract
+  evidence-honesty:
+    name: evidence-honesty (cannot prove completion)
     runs-on: macos-26
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Test and validate evidence contract
+      - name: Lint red or partial evidence only (cannot prove completion)
         run: scripts/run-headless-check.sh evidence-contract
 
   core-tests:

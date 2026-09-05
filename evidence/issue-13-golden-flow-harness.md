@@ -36,10 +36,12 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   production-capability exclusion contract.
 - The bounded `evidence-contract` lane discovers every tracked Issue 13 proof,
   rejects unsafe cleanup values and contradictory result counts, correlates the
-  tested commit with its actual XCTest method and committed test plan, and
-  accepts complete primary proof only with retained xcresult evidence plus a
-  committed Xcode report screenshot. Its green result means the classifications
-  are honest; `evidence/issue-13-overall-status.json` remains red.
+  tested commit with an executable XCTest declaration and committed test plan,
+  and checks structured result fields when an xcresult is available. It is an
+  honesty linter only: screenshot checks are secondary file-shape hygiene, and
+  it categorically rejects repository-declared complete proof or overall green.
+  Live primary-artifact verification and reviewer approval remain external;
+  `evidence/issue-13-overall-status.json` stays red.
 - Injected `core-tests` and `app-build` failures each exit 86. The combined
   `all` path also stops immediately on an injected core failure (86) or
   completed-core cleanup failure (75), never enters app-build, and removes its

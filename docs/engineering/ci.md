@@ -39,10 +39,11 @@ scripts/run-headless-check.sh core-tests
 scripts/run-headless-check.sh app-build
 ```
 
-The first command deliberately injects individual and combined-phase failures
-and proves fail-closed sequencing, path rejection, timeout, interruption,
-descendant termination, and cleanup. `app-build` compiles the production app
-and golden UI test bundle without executing them.
+The second command, `scripts/test-headless-check.sh`, deliberately injects
+individual and combined-phase failures and proves fail-closed sequencing, path
+rejection, timeout, interruption, descendant termination, and cleanup. The
+first command only runs the bounded evidence-honesty linter. `app-build`
+compiles the production app and golden UI test bundle without executing them.
 
 ### Debugging one UI journey locally
 
@@ -81,13 +82,14 @@ not complete proof; see `evidence/issue-13-golden-flow-harness.md`.
 
 `.github/workflows/verification.yml` defines three secret-free, read-only jobs:
 
-- `evidence-contract`: uses the bounded headless runner to test the validator,
+- `evidence-honesty (cannot prove completion)`: uses the bounded
+  `evidence-contract` lane to test the linter,
   discover every tracked Issue 13 proof, correlate commits/test methods/plans,
-  inspect primary artifact types, and verify the explicit overall gate. Its
-  checkout includes history so each claimed tested commit must resolve locally.
-  A green contract check means incomplete evidence is labeled red or partial;
-  the current overall gate remains red and no UI journey is implied to have
-  passed.
+  check referenced artifact shape, and enforce the exact current red overall
+  gate. Its checkout includes history so each claimed tested commit must resolve
+  locally. A green lint result means only that incomplete evidence is honestly
+  labeled red or partial. It cannot authenticate artifacts, approve a proof as
+  complete, or imply that a UI journey passed.
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
   adversarially tests the runner, then runs the complete package suite and
   App-owned composition contract.

@@ -41,9 +41,11 @@ products inside the repository.
 Each future harness invocation must own one unique directory below the operating
 system temporary directory, impose time and disk limits, and remove that
 directory on success, failure, or interruption. Use
-`scripts/run-headless-check.sh evidence-contract` for the static Issue 13 proof
-schema, source/plan correlation, committed-artifact checks, and explicit overall
-red gate; its Python temporary files remain inside the owned harness root. Use
+`scripts/run-headless-check.sh evidence-contract` for the static Issue 13
+honesty linter. It accepts only red or partial proof classifications, rejects
+all repository-declared completion, and keeps its Python temporary files inside
+the owned harness root. Artifact file-shape checks are secondary hygiene; only
+live primary-artifact inspection and reviewer approval can prove completion. Use
 `scripts/run-headless-check.sh core-tests` for the package suite and
 the App-owned composition contract, and `scripts/run-headless-check.sh
 app-build` for unsigned production-app and golden-UI-bundle compilation.

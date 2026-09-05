@@ -14,7 +14,8 @@
     "destination.architecture",
     "destination.osBuildNumber",
     "destination.osVersion",
-    "destination.platform"
+    "destination.platform",
+    "external.livePrimaryArtifactVerification"
   ],
   "testId": "GT-UF09-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep()",
