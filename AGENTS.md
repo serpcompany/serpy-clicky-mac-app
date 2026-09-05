@@ -118,6 +118,15 @@ above for explicitly configured internal test artifacts, not general releases.
 - A synthetic transcript is not proof of microphone capture.
 - A preview is not proof of packaged overlay behavior.
 - Only the exact signed artifact may satisfy installed-observed acceptance rows.
+- **Internal telemetry:** before enabling reporting, read
+  `docs/releases/build-45-diagnostics-rejected.md`. Validate the stored server
+  event, not just the outgoing scrubber: server-inferred IP/geo and SDK-added
+  trace context caused the installed privacy failure. Keep reporting off until
+  the stored event satisfies the approved allowlist.
+- **Local Guide pointing:** read `evidence/local-guide-pointing.md` before
+  changing target selection or claiming menu walkthrough parity. OCR uses
+  bottom-left bounds; overlays use top-left points, and window capture excludes
+  the system menu bar.
 - Record unsupported applications and failure states rather than generalizing
   from one successful text field.
 
