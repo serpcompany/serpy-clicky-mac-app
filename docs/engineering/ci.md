@@ -29,6 +29,12 @@ The next diagnostic should narrow the launch reproduction rather than repeat
 the full suite unchanged. The underlying app versus XCTest activation cause
 is still unproven.
 
+`GuideCompanionLaunchDiagnostic.xctestplan` is a temporary diagnosis-only
+selection of the first failing UF-03 test with identical runtime options and
+timeouts. The default full golden plan is unchanged. Diagnostic runs never
+count toward the ten-run acceptance burn-in. Select this plan only for a named
+cloud diagnostic, then restore the workflow to `GuideCompanionGolden`.
+
 ## What developers run
 
 ### While coding

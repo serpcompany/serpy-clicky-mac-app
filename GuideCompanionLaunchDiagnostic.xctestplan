@@ -1,0 +1,45 @@
+{
+  "configurations" : [
+    {
+      "id" : "07A27F80-85E3-4E23-B5F1-8BEFB84D9161",
+      "name" : "Launch diagnostic - not acceptance",
+      "options" : {
+        "commandLineArgumentEntries" : [
+          { "argument" : "--ui-testing", "enabled" : true }
+        ],
+        "environmentVariableEntries" : [
+          { "key" : "SENTRY_DSN", "value" : "" },
+          { "key" : "SERPY_NETWORK_DISABLED", "value" : "1" },
+          { "key" : "SERPY_STORAGE_MODE", "value" : "memory" }
+        ]
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "defaultTestExecutionTimeAllowance" : 60,
+    "maximumTestExecutionTimeAllowance" : 120,
+    "codeCoverage" : false,
+    "systemAttachmentLifetime" : "deleteOnSuccess",
+    "testTimeoutsEnabled" : true,
+    "userAttachmentLifetime" : "deleteOnSuccess",
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:GuideCompanion.xcodeproj",
+      "identifier" : "C72578BA9BADD56511A59773",
+      "name" : "GuideCompanion"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "selectedTests" : [
+        "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()"
+      ],
+      "target" : {
+        "containerPath" : "container:GuideCompanion.xcodeproj",
+        "identifier" : "85C699F9ABBAC335777CC339",
+        "name" : "GuideCompanionUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
