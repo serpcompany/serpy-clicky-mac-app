@@ -159,6 +159,52 @@ class EvidenceContractTests(unittest.TestCase):
             tracked_paths=self.tracked_paths,
         )
 
+    def write_valid_cli_inputs(self) -> Path:
+        scripts = self.repo_root / "scripts"
+        scripts.mkdir(exist_ok=True)
+        validator = scripts / SCRIPT.name
+        validator.write_text(SCRIPT.read_text())
+
+        proof = deepcopy(self.complete)
+        proof["evidenceStatus"] = "partial"
+        proof["missingRequirements"] = [
+            "artifacts.resultEvidence",
+            "external.livePrimaryArtifactVerification",
+        ]
+        proof["artifacts"]["resultEvidence"] = []
+        proof_path = (
+            self.repo_root / "evidence" / "issue-13-real-app-UF12-auto-proof.json"
+        )
+        proof_path.write_text(json.dumps(proof))
+
+        overall_path = self.repo_root / evidence_contract.OVERALL_STATUS_PATH
+        overall_path.write_text(
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "issue": 13,
+                    "overallStatus": "red",
+                    "gates": {
+                        "completeGoldenPlan": "red",
+                        "xcodeCloudConfigured": True,
+                        "xcodeCloudCleanRuns": 0,
+                        "xcodeCloudRequiredCleanRuns": 10,
+                        "installedAcceptance": "red",
+                        "installedArtifact": "evidence/issue-13-build-43-m3-install-proof.json",
+                    },
+                }
+            )
+        )
+        self.git(
+            "add",
+            "-f",
+            validator.relative_to(self.repo_root).as_posix(),
+            proof_path.relative_to(self.repo_root).as_posix(),
+            overall_path.relative_to(self.repo_root).as_posix(),
+        )
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "valid CLI inputs")
+        return overall_path
+
     def test_manufactured_primary_files_cannot_make_a_complete_proof(self) -> None:
         errors = self.validate(self.complete)
         self.assertIn(
@@ -688,6 +734,56 @@ class EvidenceContractTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn(
             "evidence/issue-13-xcode-cloud-run99-auto-proof.json: "
+            "ERROR: proof path must be beneath repo evidence",
+            result.stderr,
+        )
+
+    def test_default_discovery_rejects_dirty_external_overall_status_symlink(
+        self,
+    ) -> None:
+        overall_path = self.write_valid_cli_inputs()
+        with tempfile.TemporaryDirectory() as outside_directory:
+            outside_status = Path(outside_directory) / "overall-status.json"
+            outside_status.write_text(overall_path.read_text())
+            overall_path.unlink()
+            overall_path.symlink_to(outside_status)
+            result = subprocess.run(
+                [sys.executable, str(self.repo_root / "scripts" / SCRIPT.name)],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "evidence/issue-13-overall-status.json: "
+            "ERROR: proof path must be beneath repo evidence",
+            result.stderr,
+        )
+
+    def test_default_discovery_rejects_tracked_same_tree_overall_status_symlink(
+        self,
+    ) -> None:
+        overall_path = self.write_valid_cli_inputs()
+        target = self.repo_root / "evidence" / "overall-status-target.json"
+        target.write_text(overall_path.read_text())
+        overall_path.unlink()
+        overall_path.symlink_to(target.name)
+        self.git(
+            "add",
+            "-f",
+            target.relative_to(self.repo_root).as_posix(),
+            overall_path.relative_to(self.repo_root).as_posix(),
+        )
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "tracked status link")
+        result = subprocess.run(
+            [sys.executable, str(self.repo_root / "scripts" / SCRIPT.name)],
+            cwd=self.repo_root,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "evidence/issue-13-overall-status.json: "
             "ERROR: proof path must be beneath repo evidence",
             result.stderr,
         )

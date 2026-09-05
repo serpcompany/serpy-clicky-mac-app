@@ -21,6 +21,9 @@ CLOUD_PROOF_PATTERN = re.compile(
     r"^evidence/issue-13-xcode-cloud-run(?:1[3-9]|[2-9][0-9]+).*proof\.json$"
 )
 OVERALL_STATUS_PATH = "evidence/issue-13-overall-status.json"
+OVERALL_STATUS_PATTERN = re.compile(
+    rf"^{re.escape(OVERALL_STATUS_PATH)}$"
+)
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 REQUIRED_CLEANUP_DIMENSIONS = frozenset(
@@ -906,13 +909,17 @@ def main() -> int:
         else:
             print(f"{cloud_path}: CLOUD SUMMARY VALID")
 
-    overall_path = repo_root / OVERALL_STATUS_PATH
     if OVERALL_STATUS_PATH not in tracked_paths:
         print(f"{OVERALL_STATUS_PATH}: ERROR: status input is not committed", file=sys.stderr)
         failed = True
     try:
+        overall_path = resolve_proof_path(
+            repo_root,
+            OVERALL_STATUS_PATH,
+            expected_pattern=OVERALL_STATUS_PATTERN,
+        )
         overall = json.loads(overall_path.read_text())
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, json.JSONDecodeError, ValueError) as error:
         print(f"{OVERALL_STATUS_PATH}: ERROR: {error}", file=sys.stderr)
         failed = True
         overall = {}
