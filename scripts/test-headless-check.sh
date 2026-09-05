@@ -74,6 +74,10 @@ done
 /usr/bin/grep -Fq 'run: scripts/run-headless-check.sh evidence-contract' .github/workflows/verification.yml || {
   print -u2 "CI does not use the bounded evidence-contract entrypoint"; exit 1
 }
+core_ci_job=$(/usr/bin/sed -n '/^  core-tests:/,/^  app-build:/p' .github/workflows/verification.yml)
+print -r -- "$core_ci_job" | /usr/bin/grep -Fq 'fetch-depth: 0' || {
+  print -u2 "CI core-tests requires full Git history for evidence commit correlation"; exit 1
+}
 if /usr/bin/grep -Eq 'python3 scripts/(test|validate)-issue-13-evidence' .github/workflows/verification.yml; then
   print -u2 "CI invokes evidence Python outside the bounded runner"
   exit 1
