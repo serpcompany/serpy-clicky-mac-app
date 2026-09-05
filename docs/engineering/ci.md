@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 5 failed during app launch before validating the flow corrections; exact-source run 6 requested; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Runs 5 and 6 both timed out during launch before validating flow corrections; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
 Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
@@ -21,10 +21,13 @@ its first failure was inside `application.launch`, with the app remaining
 selector corrections passed or failed. The sanitized result is retained in
 `evidence/issue-13-xcode-cloud-run5-red-proof.json`.
 
-Run 6 (`99fcbeee-f0e4-41d1-a0c1-e88906a9ffda`) retries the exact same source
-without changing timeouts or production code to distinguish a transient cloud
-session failure from a repeatable startup defect. Inspect its terminal result
-before starting another attempt; an observation timeout is not a failed run.
+Run 6 (`99fcbeee-f0e4-41d1-a0c1-e88906a9ffda`) retried the exact same source
+without changing timeouts or production code. It finished FAILED with 18
+one-minute timeouts; the first test again stopped inside application launch
+before flow assertions. See `evidence/issue-13-xcode-cloud-run6-red-proof.json`.
+The next diagnostic should narrow the launch reproduction rather than repeat
+the full suite unchanged. The underlying app versus XCTest activation cause
+is still unproven.
 
 ## What developers run
 

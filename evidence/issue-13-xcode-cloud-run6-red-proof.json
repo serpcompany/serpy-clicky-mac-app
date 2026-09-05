@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "runId": "99fcbeee-f0e4-41d1-a0c1-e88906a9ffda",
+  "sourceCommit": "b8153b7cb69f24ee03e28a43bf4522921f4cbdf0",
+  "result": "FAILED",
+  "startedAt": "2026-09-05T01:41:24.578Z",
+  "finishedAt": "2026-09-05T02:04:01.245Z",
+  "passedTests": 0,
+  "failedTests": 18,
+  "skippedTests": 0,
+  "reportedTimeouts": 18,
+  "firstTest": "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()",
+  "firstFailure": "One-minute timeout inside Launch com.serpcompany.guidecompanion.internal before any flow assertion",
+  "resultArtifactId": "3e43e3b5-6a51-45cb-96b5-7be6588d227a",
+  "diagnosis": "Exact-source retry repeated the launch-boundary failure; underlying app versus XCTest activation cause remains unproven",
+  "nextExperiment": "Narrow the cloud reproduction to one launch journey and inspect targeted startup evidence before another full-suite attempt",
+  "consecutiveCleanRuns": 0
+}
