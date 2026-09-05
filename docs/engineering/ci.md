@@ -116,7 +116,7 @@ redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
 `.github/workflows/verification.yml` defines two secret-free, read-only jobs:
 
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
-  adversarially tests the runner, then runs the complete package suite and
+  adversarially tests both bounded runners without launching an app, then runs the complete package suite and
   App-owned composition contract.
 - `app-build`: compiles the production app and golden UI bundle without launch.
 
