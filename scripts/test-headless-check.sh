@@ -38,6 +38,16 @@ fi
 /usr/bin/grep -Fq 'triggerShortcut("guide-pressed")' GuideCompanionUITests/GoldenGuideUITests.swift || {
   print -u2 "golden Guide tests do not enter through the shortcut driver"; exit 1
 }
+uf11_test=$(/usr/bin/sed -n '/func test_GT_UF11_001_/,/^    }/p' GuideCompanionUITests/GoldenGuideUITests.swift)
+print -r -- "$uf11_test" | /usr/bin/grep -Fq 'application.switches["talk.disclosure"]' || {
+  print -u2 "UF-11 does not query the disclosure through its real AX Switch role"; exit 1
+}
+if print -r -- "$uf11_test" | /usr/bin/grep -Fq 'application.checkBoxes["talk.disclosure"]'; then
+  print -u2 "UF-11 still queries the disclosure through the nonexistent AX CheckBox role"; exit 1
+fi
+print -r -- "$uf11_test" | /usr/bin/grep -Fq 'let disclosure = try XCTUnwrap(' || {
+  print -u2 "UF-11 does not stop after a missing disclosure control"; exit 1
+}
 /usr/bin/grep -Fq 'triggerShortcut("dictation-pressed")' GuideCompanionUITests/GoldenDictationUITests.swift || {
   print -u2 "golden Dictation tests do not enter through the shortcut driver"; exit 1
 }
