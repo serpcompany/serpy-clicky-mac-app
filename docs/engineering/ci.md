@@ -8,11 +8,23 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056` in run `33930252682` |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `15d7056` in run `33930252682` |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 4 executed 18 tests: 3 passed, 15 failed; selector and timing corrections under verification; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 5 failed during app launch before validating the flow corrections; exact-source run 6 requested; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
+
+Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
+fixture timing were corrected in `b8153b7`. Run 5 then reported 18 timeouts;
+its first failure was inside `application.launch`, with the app remaining
+`Running Background`, before flow assertions. This is not evidence that the
+selector corrections passed or failed. The sanitized result is retained in
+`evidence/issue-13-xcode-cloud-run5-red-proof.json`.
+
+Run 6 (`99fcbeee-f0e4-41d1-a0c1-e88906a9ffda`) retries the exact same source
+without changing timeouts or production code to distinguish a transient cloud
+session failure from a repeatable startup defect. Inspect its terminal result
+before starting another attempt; an observation timeout is not a failed run.
 
 ## What developers run
 
