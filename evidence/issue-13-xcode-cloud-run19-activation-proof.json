@@ -1,8 +1,33 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "runId": "bddcf4bc-4e33-4348-9873-3e9f8be06055",
   "sourceCommit": "45b4742ba30ccec627adc657ec23edb0947a572b",
   "result": "FAILED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "action": "GuideCompanionLaunchDiagnostic - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "startedAt": "2026-09-05T04:53:41.353Z",
+  "finishedAt": "2026-09-05T04:56:08.056Z",
+  "durationSeconds": 146.703,
+  "passedTests": 0,
+  "failedTests": 2,
+  "skippedTests": 0,
+  "failures": [
+    {
+      "count": 1,
+      "durationSecondsEach": 5.572394013,
+      "summary": "UF-03 failed fast because the UI runner could not acquire activation before yielding to the product"
+    },
+    {
+      "count": 1,
+      "durationSecondsEach": 5.109398007,
+      "summary": "UF-11 failed fast because the UI runner could not acquire activation before yielding to the product"
+    }
+  ],
   "logArtifactId": "a15f87a8-1c0d-48e3-b086-fd0b4deda9c9",
   "resultArtifactId": "16daad23-90a8-4d34-8f39-160701cddda0",
   "observed": "Runner changed from prohibited to regular but remained inactive; both tests stopped before product launch",

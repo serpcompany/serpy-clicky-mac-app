@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "runId": "4203f1cf-30f1-49a8-a62b-76aca859cbc3",
+  "sourceCommit": "e71d99995c7a6a7d3d995f1dcd042cc29e1b89c8",
+  "result": "FAILED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "action": "GuideCompanionLaunchDiagnostic - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "startedAt": "2026-09-05T06:45:39.679Z",
+  "finishedAt": "2026-09-05T06:50:18.423Z",
+  "durationSeconds": 278.744,
+  "passedTests": 0,
+  "failedTests": 2,
+  "skippedTests": 0,
+  "failures": [
+    {
+      "count": 2,
+      "durationSecondsEach": 60,
+      "summary": "UF-03 and UF-11 timed out inside application.launch while XCTest reported the production app as Running Background"
+    }
+  ],
+  "resultArtifactId": "852999f0-e0c1-43f9-be9e-bc07642183b5",
+  "logArtifactId": "9db4a67e-f295-4f7e-9985-05803efcb89b",
+  "observed": "Both selected tests remained blocked at the XCUIApplication launch boundary; neither test flow initialized or executed an assertion.",
+  "interpretation": "The delayed activate-regardless coordinator did not stabilize Xcode Cloud foreground launch. This is a platform-runner failure and does not prove a product-flow failure.",
+  "cleanup": "The falsified product-side launch coordinator and both activation variants were removed from staging.",
+  "nextEvidenceNeeded": "Keep Xcode Cloud manual and non-required; use the bounded focused local lane after the owner accepts macOS UI-testing authentication, then validate the exact installed artifact separately.",
+  "consecutiveCleanRuns": 0
+}

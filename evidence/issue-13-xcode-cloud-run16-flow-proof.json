@@ -1,16 +1,33 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "runId": "9cf37d97-17c0-47d7-b2a5-222f86b30a77",
   "sourceCommit": "fb33621af95d9ee450e051436c536663935b7110",
   "result": "FAILED",
+  "plan": "GuideCompanionGolden",
+  "action": "GuideCompanionGolden - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "startedAt": "2026-09-05T04:09:27.928Z",
+  "finishedAt": "2026-09-05T04:16:13.955Z",
+  "durationSeconds": 406.027,
   "passedTests": 17,
   "failedTests": 1,
   "skippedTests": 0,
+  "failures": [
+    {
+      "count": 1,
+      "durationSecondsEach": 47.23,
+      "summary": "GT-UF11-001 queried talk.disclosure as CheckBox while the captured native accessibility control was Switch; the remaining UF-11 failures cascaded from that failed lookup"
+    }
+  ],
   "resultArtifactId": "b33235f5-4381-474f-a72b-7a3c7d49a11b",
-  "failedTest": "GoldenGuideUITests/test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization()",
-  "firstFailure": "Test queried talk.disclosure as CheckBox; captured accessibility hierarchy exposes Switch with value 0",
-  "correction": "Query the observed native Switch type; preserve real disclosure interaction",
-  "passedScope": "All other golden tests, including dictation, recovery, lifecycle, Guide speech ordering, progression, cancellation and malformed-plan handling",
+  "resultArtifactBytes": 11687957,
+  "resultArtifactSHA256": "c171a25b589613f32eaba8d24a9c541afe0b6828359f0805f32d5eac6c2c8e42",
+  "passedScope": "All other golden tests, including dictation, recovery, lifecycle, Guide speech ordering, progression, cancellation, and malformed-plan handling",
+  "correctionState": "The stronger throwing Switch lookup is present in staging but has not yet been proven by Xcode Cloud",
   "consecutiveCleanRuns": 0,
   "installedAcceptance": "Not established by deterministic cloud fixtures"
 }

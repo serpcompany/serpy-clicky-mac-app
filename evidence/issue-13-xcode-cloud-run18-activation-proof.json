@@ -1,9 +1,30 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "runId": "270ed0be-5c02-4130-9367-07f4a4943db7",
   "sourceCommit": "80fb7024a43b4e0bdaeaa3d27ecc8c8d73aded50",
   "result": "FAILED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "action": "GuideCompanionLaunchDiagnostic - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "startedAt": "2026-09-05T04:44:42.518Z",
+  "finishedAt": "2026-09-05T04:49:19.426Z",
+  "durationSeconds": 276.908,
+  "passedTests": 0,
+  "failedTests": 2,
+  "skippedTests": 0,
+  "failures": [
+    {
+      "count": 2,
+      "durationSecondsEach": 60,
+      "summary": "UF-03 and UF-11 timed out inside application.launch while the product remained inactive and another application stayed frontmost"
+    }
+  ],
   "logArtifactId": "e5cde167-786c-4d6f-ae23-2442e2ea87e6",
+  "resultArtifactId": "0ada80fb-9900-4fba-b630-1eb3c6020ce2",
   "observationsInBothTests": {
     "beforeLaunch": "foreground=other; runnerActive=false; runnerPolicy=prohibited; product absent",
     "afterLaunchTimeout": "foreground=other; runnerActive=false; runnerPolicy=prohibited; product present, regular, finished launching, not hidden, inactive"

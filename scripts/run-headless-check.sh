@@ -3,7 +3,7 @@ set -euo pipefail
 
 check_name=${1:-all}
 case "$check_name" in
-  core-tests|app-build|all) ;;
+  evidence-contract|core-tests|app-build|all) ;;
   *) print -u2 "unknown check: $check_name"; exit 64 ;;
 esac
 
@@ -187,6 +187,19 @@ run_core_tests() {
     REGISTER_APP_WITH_LAUNCH_SERVICES=NO || return $?
 }
 
+run_evidence_contract() {
+  local python_temp="$run_root/python-tmp"
+  mkdir "$python_temp"
+  run_bounded /usr/bin/env \
+    TMPDIR="$python_temp" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    /usr/bin/python3 scripts/test-issue-13-evidence-contract.py || return $?
+  run_bounded /usr/bin/env \
+    TMPDIR="$python_temp" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    /usr/bin/python3 scripts/validate-issue-13-evidence.py || return $?
+}
+
 run_app_build() {
   if [[ ${SERPY_RUNNER_FIXTURE:-} == all-core-fails || ${SERPY_RUNNER_FIXTURE:-} == all-cleanup-fails ]]; then
     [[ -z ${SERPY_PHASE_MARKER:-} ]] || print app-build-ran > "$SERPY_PHASE_MARKER"
@@ -194,6 +207,13 @@ run_app_build() {
   fi
   if [[ ${SERPY_RUNNER_FIXTURE:-} == all-phase-footprint ]]; then
     if [[ -d "$run_root/swiftpm" || -d "$run_root/composition-derived-data" || -d "$run_root/composition-source-packages" ]]; then
+      for retained_core_product in \
+        "$run_root/swiftpm" \
+        "$run_root/composition-derived-data" \
+        "$run_root/composition-source-packages"; do
+        [[ -e "$retained_core_product" ]] || continue
+        print -u2 "retained core path: ${retained_core_product:t}"
+      done
       print -u2 "completed core build products survived into app-build"
       return 75
     fi
@@ -267,9 +287,11 @@ remove_completed_core_products() {
 
 run_selected_check() {
   case "$check_name" in
+    evidence-contract) run_evidence_contract ;;
     core-tests) run_core_tests ;;
     app-build) run_app_build ;;
     all)
+      run_evidence_contract || return $?
       run_core_tests || return $?
       remove_completed_core_products || return $?
       run_app_build || return $?

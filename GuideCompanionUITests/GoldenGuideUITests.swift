@@ -72,8 +72,11 @@ final class GoldenGuideUITests: GoldenUITestCase {
         try await launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
         selectSettingsTab("Guidance")
         application.radioButtons["OpenAI multimodal"].click()
-        let disclosure = application.switches["talk.disclosure"]
-        XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
+        let disclosureQuery = application.switches["talk.disclosure"]
+        let disclosure = try XCTUnwrap(
+            disclosureQuery.waitForExistence(timeout: 5) ? disclosureQuery : nil,
+            "OpenAI Talk disclosure switch did not appear in the real Settings window."
+        )
         disclosure.click()
         let credential = application.secureTextFields["talk.credential"]
         XCTAssertTrue(credential.waitForExistence(timeout: 5))

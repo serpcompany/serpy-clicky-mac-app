@@ -38,6 +38,16 @@ fi
 /usr/bin/grep -Fq 'triggerShortcut("guide-pressed")' GuideCompanionUITests/GoldenGuideUITests.swift || {
   print -u2 "golden Guide tests do not enter through the shortcut driver"; exit 1
 }
+uf11_test=$(/usr/bin/sed -n '/func test_GT_UF11_001_/,/^    }/p' GuideCompanionUITests/GoldenGuideUITests.swift)
+print -r -- "$uf11_test" | /usr/bin/grep -Fq 'application.switches["talk.disclosure"]' || {
+  print -u2 "UF-11 does not query the disclosure through its real AX Switch role"; exit 1
+}
+if print -r -- "$uf11_test" | /usr/bin/grep -Fq 'application.checkBoxes["talk.disclosure"]'; then
+  print -u2 "UF-11 still queries the disclosure through the nonexistent AX CheckBox role"; exit 1
+fi
+print -r -- "$uf11_test" | /usr/bin/grep -Fq 'let disclosure = try XCTUnwrap(' || {
+  print -u2 "UF-11 does not stop after a missing disclosure control"; exit 1
+}
 /usr/bin/grep -Fq 'triggerShortcut("dictation-pressed")' GuideCompanionUITests/GoldenDictationUITests.swift || {
   print -u2 "golden Dictation tests do not enter through the shortcut driver"; exit 1
 }
@@ -49,7 +59,7 @@ print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_REQUIRED
   print -u2 "headless App composition tests require signing"; exit 1
 }
 
-for check_name in core-tests app-build; do
+for check_name in core-tests app-build evidence-contract; do
   fixture_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
   find "$fixture_root" -depth -delete
   set +e
@@ -61,14 +71,49 @@ for check_name in core-tests app-build; do
   [[ ! -e $fixture_root ]] || { print -u2 "$check_name left its owned temp root behind"; exit 1; }
 done
 
+/usr/bin/grep -Fq 'run: scripts/run-headless-check.sh evidence-contract' .github/workflows/verification.yml || {
+  print -u2 "CI does not use the bounded evidence-contract entrypoint"; exit 1
+}
+core_checkout_has_full_history() {
+  local job_text=$1
+  local checkout_block
+  checkout_block=$(print -r -- "$job_text" | /usr/bin/sed -n \
+    '/^[[:space:]]*- uses: actions\/checkout@/,/^[[:space:]]*- name: Prove runner can fail/p')
+  print -r -- "$checkout_block" \
+    | /usr/bin/grep -Eq '^[[:space:]]+fetch-depth:[[:space:]]*0[[:space:]]*$'
+}
+
+core_ci_job=$(/usr/bin/sed -n '/^  core-tests:/,/^  app-build:/p' .github/workflows/verification.yml)
+core_checkout_has_full_history "$core_ci_job" || {
+  print -u2 "CI core-tests requires full Git history for evidence commit correlation"; exit 1
+}
+forged_core_ci_job=$(print -r -- "$core_ci_job" \
+  | /usr/bin/sed '/^[[:space:]]*fetch-depth:[[:space:]]*0[[:space:]]*$/d')
+forged_core_ci_job+=$'\n      # fetch-depth: 0 intentionally removed'
+if core_checkout_has_full_history "$forged_core_ci_job"; then
+  print -u2 "CI full-history guard accepts comments without a checkout setting"
+  exit 1
+fi
+if /usr/bin/grep -Eq 'python3 scripts/(test|validate)-issue-13-evidence' .github/workflows/verification.yml; then
+  print -u2 "CI invokes evidence Python outside the bounded runner"
+  exit 1
+fi
+
 phase_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
 find "$phase_root" -depth -delete
+phase_log=$(mktemp "$temp_parent/serpy-headless-phase-log.XXXXXX")
 set +e
 SERPY_HARNESS_ROOT=$phase_root SERPY_RUNNER_FIXTURE=all-phase-footprint \
-  scripts/run-headless-check.sh all >/dev/null 2>&1
+  scripts/run-headless-check.sh all >"$phase_log" 2>&1
 phase_status=$?
 set -e
-[[ $phase_status -eq 0 ]] || { print -u2 "all retained completed core products during app-build"; exit 1; }
+if [[ $phase_status -ne 0 ]]; then
+  print -u2 "all retained completed core products during app-build"
+  /bin/cat "$phase_log" >&2
+  find "$phase_log" -delete
+  exit 1
+fi
+find "$phase_log" -delete
 [[ ! -e $phase_root ]] || { print -u2 "all-phase fixture root survived"; exit 1; }
 
 for failure_case in all-core-fails:86 all-cleanup-fails:75; do

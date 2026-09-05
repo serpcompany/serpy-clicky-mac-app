@@ -8,92 +8,75 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152`, including both runner safety suites |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152` |
-| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 17 returned to 18 launch timeouts; launch is intermittent; burn-in is 0/10 |
-| Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
+| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual and non-required | Runs 21-22 falsified cooperative and activate-regardless product retries; Cloud foreground launch is platform-unreliable; burn-in is 0/10 |
+| Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 is recorded as the installed signed/notarized candidate; user-flow acceptance remains red |
 
-Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
-fixture timing were corrected in `b8153b7`. Run 5 then reported 18 timeouts;
-its first failure was inside `application.launch`, with the app remaining
-`Running Background`, before flow assertions. This is not evidence that the
-selector corrections passed or failed. The sanitized result is retained in
-`evidence/issue-13-xcode-cloud-run5-red-proof.json`.
-
-Run 6 (`99fcbeee-f0e4-41d1-a0c1-e88906a9ffda`) retried the exact same source
-without changing timeouts or production code. It finished FAILED with 18
-one-minute timeouts; the first test again stopped inside application launch
-before flow assertions. See `evidence/issue-13-xcode-cloud-run6-red-proof.json`.
-The focused UF-03 diagnostic subsequently passed in run 8, but full run 9
-again timed out during launch. Run 11's temporary startup receipts showed app
-initialization completed while XCTest still reported `Running Background`.
-The runner now yields activation to the product before launch. With that
-experiment, run 12 reached flow assertions in all 18 tests. This is useful
-evidence, not yet proof that cloud launch is stable.
-
-Run 12's remaining failures identified an ambiguous Settings menu selector,
-numeric radio-control values, and Guide remaining in its thinking presentation
-while speaking a structured step. Selector corrections are in `3fc2bdc`.
-The production speech-order correction in `1dccc86` has a red-to-green Swift
-Testing regression: the step must be presented before speech starts and spoken
-exactly once. Temporary startup instrumentation was removed. See
-`evidence/issue-13-xcode-cloud-run12-flow-proof.json`.
+Runs 1-7 established and narrowed cloud signing, project-identity, selector,
+fixture-timing, and launch failures. Run 8 passed only the one-test
+`GuideCompanionLaunchDiagnostic` plan; it does not count toward acceptance.
+Run 9 returned to the complete `GuideCompanionGolden` plan and reproduced the
+launch timeout. Run 10's temporary startup probe crashed before producing the
+needed receipts. Run 11 proved app initialization and launch callbacks returned,
+while XCTest foreground activation still failed. Run 12 executed the complete
+plan: 11 tests passed and 7 failed at flow assertions. Its failures were
+classified as Settings selector ambiguity, three UF-05 numeric radio-value
+assertions, UF-08 Guide timing, UF-10 speaking timing, and UF-11 selector/cascade
+failures. The current source removes temporary launch probes, corrects the
+native selectors, and presents structured Guide steps before speech.
 
 Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) tested `1dccc86`
-and failed with 18 launch timeouts. Its first test again reported
-`Running Background` inside `application.launch`. The activation handoff alone
-is therefore insufficient, and the flow corrections remain unvalidated in
-the full UI lane. See `evidence/issue-13-xcode-cloud-run13-red-proof.json`.
-Focused run 14 tested deferred Settings presentation and failed at the same
-launch boundary; that timing change was removed. Run 15 then used the current
-`NSApplication.activate()` call and passed UF-03 with zero failures or skips,
-including teardown. See
-`evidence/issue-13-xcode-cloud-run15-focused-green-proof.json`. Full run 16
-(`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tests that exact same `fb33621`
-source. Run 16 reached all flows: 17 passed and UF-11 failed because its
-disclosure selector requested a checkbox while the captured native control was
-a switch. See `evidence/issue-13-xcode-cloud-run16-flow-proof.json`.
-The selector is corrected without changing product behavior. Launch and all
-other flow assertions passed this run; stable full-suite acceptance still
-requires consecutive clean runs.
+and failed with 18 one-minute launch timeouts. Focused run 14 tested deferred
+Settings presentation and failed at the same launch boundary; that timing
+experiment was removed and synchronous presentation restored. Focused run 15
+used the current `NSApplication.activate()` call and passed UF-03 with zero
+failures or skips, including teardown. Full run 16
+(`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tested the same `fb33621` source and
+reached every flow: 17 passed and UF-11 failed because the test queried the
+native Talk disclosure switch as a checkbox. The stronger throwing Switch
+lookup is present in staging but has not yet been proven by Xcode Cloud. The
+complete-plan gate remains red and burn-in remains 0/10.
 Run 17 then returned to launch timeouts in all 18 tests, before validating
 the disclosure correction. See `evidence/issue-13-xcode-cloud-run17-red-proof.json`.
-The next diagnostic records only runner/product activation flags before and
-after launch, without changing production behavior.
 Run 18 captured the failure in both selected tests: the runner remained
 inactive with prohibited activation policy, while the product was regular,
 finished launching, not hidden, and inactive. See
-`evidence/issue-13-xcode-cloud-run18-activation-proof.json`. The next experiment
-requires the runner to become active before yielding, with a five-second
-fail-fast check and restoration of its original policy during teardown.
+`evidence/issue-13-xcode-cloud-run18-activation-proof.json`.
 Run 19 changed the runner to regular but it still could not activate; the
-requirement was removed. Its recording showed an unlocked cloud desktop with
-System Settings frontmost. A related Apple DTS discussion is linked in
+requirement was removed. A related Apple DTS discussion is linked in
 `evidence/issue-13-xcode-cloud-run19-activation-proof.json`; it supports an
-OS-level hypothesis but does not prove equivalence. The next comparison uses
-Sequoia 15.6 with Xcode 26.3. Because both OS and toolchain differ, that
-diagnostic cannot establish a Tahoe fix or replace current-runtime acceptance.
-Run 20 confirmed the same launch failure on Sequoia 15.6. See
+OS-level hypothesis but does not prove equivalence. Run 20 confirmed the same
+launch failure on Sequoia 15.6. See
 `evidence/issue-13-xcode-cloud-run20-comparison-proof.json`. Temporary activation
-logging and the ineffective runner yield have been removed; no production
-timing workaround remains. The focused local UF-11 comparison at `9944e06`
+logging and the ineffective runner yield have been removed. The focused local
+UF-11 comparison at `9944e06`
 passed on M3 macOS 26.5.2: one test, zero failures or skips. Its result is
 `evidence/issue-13-real-app-UF11-post-auth.xcresult`; the bounded runner exited
 zero, removed its owned build root, and left no app or XCTest runner process.
 This validates the corrected native Switch selector locally, not cloud launch
-stability. Further cloud retries remain paused for launch diagnosis.
+stability.
 The installed app now reports Microphone, Speech Recognition, and Accessibility
 Granted after Refresh; relaunch also reports the shortcut Registered. The cloud
-workflow is restored to the current runtime and full plan; burn-in remains 0/10.
+workflow is restored to the current runtime and full plan. Run 21 proved that
+four bounded retries using ordinary `NSApplication.activate()` still left both
+selected tests blocked in `application.launch`; see
+`evidence/issue-13-xcode-cloud-run21-red-proof.json`. Run 22 repeated the exact
+UF-03 and UF-11 diagnostic selection with delayed activate-regardless recovery
+and returned the same Running Background launch timeouts; see
+`evidence/issue-13-xcode-cloud-run22-red-proof.json`. Both product-side
+coordinator variants were falsified and removed. Xcode Cloud remains a manual,
+non-required diagnostic lane because foreground launch is platform-unreliable;
+burn-in remains 0/10.
 Neither cloud fixtures nor headless success satisfy installed
-microphone, insertion, focus, audible speech, or permission acceptance.
+microphone, insertion, focus, audible speech, permission, or click-through
+acceptance.
 
 `GuideCompanionLaunchDiagnostic.xctestplan` is a temporary diagnosis-only
 selection of UF-03 and the remaining UF-11 flow with identical runtime options and
 timeouts. The default full golden plan is unchanged. Diagnostic runs never
-count toward the ten-run acceptance burn-in. Select this plan only for a named
-cloud diagnostic, then restore the workflow to `GuideCompanionGolden`.
+count toward the ten-run acceptance burn-in.
 
 ## What developers run
 
@@ -114,15 +97,17 @@ directory afterward.
 Run:
 
 ```sh
+scripts/run-headless-check.sh evidence-contract
 scripts/test-headless-check.sh
 scripts/run-headless-check.sh core-tests
 scripts/run-headless-check.sh app-build
 ```
 
-The first command deliberately injects individual and combined-phase failures
-and proves fail-closed sequencing, path rejection, timeout, interruption,
-descendant termination, and cleanup. `app-build` compiles the production app
-and golden UI test bundle without executing them.
+The second command, `scripts/test-headless-check.sh`, deliberately injects
+individual and combined-phase failures and proves fail-closed sequencing, path
+rejection, timeout, interruption, descendant termination, and cleanup. The
+first command only runs the bounded evidence-honesty linter. `app-build`
+compiles the production app and golden UI test bundle without executing them.
 
 ### Debugging one UI journey locally
 
@@ -141,6 +126,14 @@ Save an `.xcresult` for every claimed run. A compile-only result is not a test
 result. After execution, confirm serpy and the XCTest runner terminated
 and the temporary build directory was removed.
 
+The exact local UF-03 attempt retained at
+`evidence/issue-13-local-UF03-force-recovery.xcresult` stopped before test-flow
+initialization because the owner canceled macOS UI-testing authentication. Its
+result bundle records one XCTest-runner initialization failure, not a product
+assertion. No serpy or XCTest runner process, wrapper root, or owned XCTest
+session remained after teardown. This does not prove a product failure or a
+UF-03 result.
+
 `scripts/test-golden-ui-runner.sh` exercises timeout, TERM-to-KILL process-group
 cleanup, result isolation, temporary-root removal, and an approved XCTest root
 that disappears before cleanup without launching an app.
@@ -150,15 +143,26 @@ that the now-rejected standalone host failed to acquire a process ID. It does
 not count as serpy evidence. The first real-app execution on 2026-09-05 stopped
 before the test method because macOS canceled XCTest automation-mode biometric
 authentication. Later runs corrected the session boundary and the rejected
-transcript-window design. The valid run at `79cd0d2` executes `GT-UF09-001`
-through the ambient shortcut path, passes stale/fresh progression and
-completion assertions, and retains its local `.xcresult` plus committed
-redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
+transcript-window design. The committed summary for the run at `79cd0d2`
+records `GT-UF09-001` through the ambient shortcut path with stale/fresh
+progression and completion assertions. Its ignored `.xcresult` is unavailable,
+no Xcode report screenshot is committed, its destination was not recorded, and
+five cleanup dimensions remain unverified. It is partial secondary evidence,
+not complete proof; see `evidence/issue-13-golden-flow-harness.md`.
 
 ## GitHub Actions
 
-`.github/workflows/verification.yml` defines two secret-free, read-only jobs:
+`.github/workflows/verification.yml` defines three secret-free, read-only jobs:
 
+- `evidence-honesty (cannot prove completion)`: uses the bounded
+  `evidence-contract` lane to test the linter,
+  discover every tracked focused real-app Issue 13 proof, correlate
+  commits/test methods/plans,
+  check referenced artifact shape, and enforce the exact current red overall
+  gate. Its checkout includes history so each claimed tested commit must resolve
+  locally. A green lint result means only that incomplete evidence is honestly
+  labeled red or partial. It cannot authenticate artifacts, approve a proof as
+  complete, or imply that a UI journey passed.
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
   adversarially tests both bounded runners without launching an app, then runs the complete package suite and
   App-owned composition contract.
@@ -168,8 +172,12 @@ Workflow actions are pinned to reviewed full commit SHAs. The checkout pin is
 official `actions/checkout` v7.0.1, which uses the Node 24 action runtime.
 
 The workflow runs for pull requests, merge queue candidates, and pushes to
-`main`. For PR #14 at `15d7056`, both jobs passed in
-[GitHub Actions run 33930252682](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33930252682).
+`main`. For PR #14 at earlier source
+`1dccc860b83a14231b1c6138a031d78aa3f8c278`, `core-tests` and `app-build`
+both passed in
+[GitHub Actions run 33942146377](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33942146377).
+The evidence-honesty job is new in this integration and needs its own exact-head
+GitHub result before it can be claimed green.
 Use stable job names when configuring required branch checks.
 
 ## Xcode Cloud account requirements
@@ -196,14 +204,21 @@ Primary references:
 - https://developer.apple.com/documentation/xcode/configuring-your-first-xcode-cloud-workflow
 - https://developer.apple.com/documentation/xcode/configuring-your-xcode-cloud-workflow-s-actions
 
-## One-time Xcode Cloud setup
+## Xcode Cloud configuration and burn-in
+
+The repository is connected and the `golden-ui-tests` workflow is configured
+with the `GuideCompanion` scheme, complete `GuideCompanionGolden` plan, one Mac
+destination, and no secrets. The action is required inside the workflow because
+Apple requires at least one required action, but the cloud check is not a
+required branch-protection gate during burn-in.
+
+The configuration checklist is:
 
 1. Open `GuideCompanion.xcodeproj` in Xcode while signed into the correct Apple
    Developer team.
-2. Start Xcode Cloud configuration and connect the GitHub repository when Xcode
-   requests source access.
+2. Confirm Xcode Cloud remains connected to the GitHub repository.
 3. Select `GuideCompanion` as the product/scheme.
-4. Create a workflow named `golden-ui-tests`.
+4. Select the workflow named `golden-ui-tests`.
 5. Add one macOS Test action using the `GuideCompanionGolden` test plan.
 6. Use one macOS destination and sequential test execution.
 7. Supply no secrets or production environment values.
