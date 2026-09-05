@@ -8,8 +8,8 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `1dccc86` in run `33942146377` |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `1dccc86` in run `33942146377` |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152`, including both runner safety suites |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 13 again timed out during launch in all 18 tests; launch remains unresolved; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
@@ -45,8 +45,13 @@ and failed with 18 launch timeouts. Its first test again reported
 `Running Background` inside `application.launch`. The activation handoff alone
 is therefore insufficient, and the flow corrections remain unvalidated in
 the full UI lane. See `evidence/issue-13-xcode-cloud-run13-red-proof.json`.
-The next focused experiment defers the existing Settings presentation until
-after the launch notification, without changing test timeouts or flow fixtures.
+Focused run 14 tested deferred Settings presentation and failed at the same
+launch boundary; that timing change was removed. Run 15 then used the current
+`NSApplication.activate()` call and passed UF-03 with zero failures or skips,
+including teardown. See
+`evidence/issue-13-xcode-cloud-run15-focused-green-proof.json`. Full run 16
+(`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tests that exact same `fb33621`
+source. One focused success is not proof of stable full-suite launch.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 
