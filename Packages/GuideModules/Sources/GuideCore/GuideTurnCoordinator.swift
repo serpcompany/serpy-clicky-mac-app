@@ -189,6 +189,8 @@ public final class GuideTurnCoordinator {
     private var finishContinuation: AsyncStream<Void>.Continuation?
     private var activePlan: GuidancePlan?
     private var activeStepIndex = 0
+    private var stepBaselineText: String?
+    private var stepBaselineTarget: GuideWindowTarget?
     private var lastReadablePresentation: GuideTurnPresentation?
 
     public init(
@@ -250,6 +252,8 @@ public final class GuideTurnCoordinator {
         speech.stop()
         activePlan = nil
         activeStepIndex = 0
+        stepBaselineText = nil
+        stepBaselineTarget = nil
         lastReadablePresentation = nil
         overlay.dismissResponse()
         phase = .idle
@@ -271,6 +275,8 @@ public final class GuideTurnCoordinator {
         conversation.removeAll(keepingCapacity: false)
         activePlan = nil
         activeStepIndex = 0
+        stepBaselineText = nil
+        stepBaselineTarget = nil
         phase = .idle
         lastReadablePresentation = nil
         overlay.dismissResponse()
@@ -381,6 +387,8 @@ public final class GuideTurnCoordinator {
             if !generated.plan.steps.isEmpty {
                 activePlan = generated.plan
                 activeStepIndex = 0
+                stepBaselineText = context.promptText
+                stepBaselineTarget = target
             }
             let activeStep = generated.plan.steps.first
             let visibleResponse = activeStep?.text ?? completeAnswer
@@ -546,7 +554,12 @@ public final class GuideTurnCoordinator {
         let decision = GuideProgressionPolicy().evaluate(
             plan: plan,
             activeStepIndex: activeStepIndex,
-            observation: .init(visibleText: context.promptText)
+            observation: .init(
+                visibleText: context.promptText,
+                baselineVisibleText: stepBaselineTarget?.processIdentifier == target.processIdentifier
+                    && stepBaselineTarget?.windowIdentifier == target.windowIdentifier
+                    ? stepBaselineText : nil
+            )
         )
         let statusText: String
         let responseText: String
@@ -555,6 +568,8 @@ public final class GuideTurnCoordinator {
         switch decision {
         case let .advance(to: index):
             activeStepIndex = index
+            stepBaselineText = context.promptText
+            stepBaselineTarget = target
             let step = plan.steps[index]
             statusText = "Step \(index + 1) of \(plan.steps.count)"
             responseText = step.text
@@ -575,6 +590,8 @@ public final class GuideTurnCoordinator {
             stepNumber = nil
             activePlan = nil
             activeStepIndex = 0
+            stepBaselineText = nil
+            stepBaselineTarget = nil
         }
         conversation.append(.init(role: .user, content: question))
         conversation.append(.init(role: .guide, content: responseText, contextLabel: target.identity.compactLabel))

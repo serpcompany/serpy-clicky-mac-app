@@ -36,3 +36,15 @@ evidence of a semantic weakness, not a successful prompt-only fix. The current
 progression policy matches substrings in fresh OCR but does not distinguish
 preexisting labels from newly observed outcomes; that boundary needs a
 regression before changing progression behavior.
+
+The new `preexistingLabelCannotAdvance` regression failed when an unchanged
+File label advanced. The policy now rejects completion labels already satisfied
+in the step's same-window baseline. The coordinator supplies that baseline on
+initial presentation and after advancement, and clears it on cancel/reset/done.
+Cross-window transitions retain the previous behavior and still need installed
+verification; this change does not prove window creation or Guide parity.
+
+The red run also exposed an intermittent, unrelated `DictationStopTailTests`
+cancellation assertion (expected a thrown error, received none). It passed on
+the subsequent package run without a stop-tail change, so it is not considered
+fixed. Package output on that run reports 93 Swift Testing tests passing.

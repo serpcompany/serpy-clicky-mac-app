@@ -2,9 +2,11 @@ import Foundation
 
 public struct GuideProgressionObservation: Equatable, Sendable {
     public let visibleText: String
+    public let baselineVisibleText: String?
 
-    public init(visibleText: String) {
+    public init(visibleText: String, baselineVisibleText: String? = nil) {
         self.visibleText = visibleText
+        self.baselineVisibleText = baselineVisibleText
     }
 }
 
@@ -44,6 +46,15 @@ public struct GuideProgressionPolicy: Sendable {
         }
         guard satisfied else {
             return .stay(reason: "The expected result for Step \(activeStepIndex + 1) is not visible yet.")
+        }
+        if let baseline = observation.baselineVisibleText {
+            let prior = baseline.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            let alreadySatisfied = step.completionEvidence.allSatisfy {
+                prior.contains($0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current))
+            }
+            guard !alreadySatisfied else {
+                return .stay(reason: "These labels were already visible before this step. Press Escape and ask for a walkthrough with clearer completion evidence.")
+            }
         }
         return activeStepIndex == plan.steps.count - 1
             ? .complete

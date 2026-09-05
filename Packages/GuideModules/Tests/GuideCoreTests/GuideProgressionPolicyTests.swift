@@ -3,6 +3,20 @@ import Testing
 
 @Suite("Explicit Guide progression")
 struct GuideProgressionPolicyTests {
+    @Test("preexisting completion labels do not prove a step happened")
+    func preexistingLabelCannotAdvance() {
+        let plan = GuidancePlan(answer: "Open File", confidence: 0.9, steps: [
+            GuidanceStep(id: 1, text: "Open File", completionEvidence: ["File"]),
+            GuidanceStep(id: 2, text: "Choose New Window", completionEvidence: ["New Tab"])
+        ])
+        let result = GuideProgressionPolicy().evaluate(plan: plan, activeStepIndex: 0,
+            observation: .init(visibleText: "File Edit View", baselineVisibleText: "File Edit View"))
+        guard case .stay = result else {
+            Issue.record("An unchanged menu label incorrectly advanced the walkthrough")
+            return
+        }
+    }
+
     private let plan = GuidancePlan(
         answer: "Open a new Chrome window.",
         confidence: 0.9,
