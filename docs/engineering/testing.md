@@ -41,10 +41,18 @@ products inside the repository.
 Each future harness invocation must own one unique directory below the operating
 system temporary directory, impose time and disk limits, and remove that
 directory on success, failure, or interruption. Use
+`scripts/run-headless-check.sh evidence-contract` for the static focused
+real-app XCUI evidence-honesty linter. It auto-discovers only tracked
+`issue-13-real-app-*-proof.json` contracts, accepts only red or partial proof
+classifications, checks the separate overall gate, rejects all
+repository-declared completion, and keeps its Python temporary files inside the
+owned harness root. Heterogeneous Xcode Cloud and installed-build records are
+outside this linter. Artifact file-shape checks are secondary hygiene; only live
+primary-artifact inspection and reviewer approval can prove completion. Use
 `scripts/run-headless-check.sh core-tests` for the package suite and
 the App-owned composition contract, and `scripts/run-headless-check.sh
 app-build` for unsigned production-app and golden-UI-bundle compilation.
-`scripts/run-headless-check.sh all` runs those lanes in order and removes the
+`scripts/run-headless-check.sh all` runs all three lanes in order and removes the
 completed core lane's owned SwiftPM, composition DerivedData, and cloned-package
 directories before app-build. This keeps the same 8 GiB fail-closed disk bound
 meaningful on machines where Sentry's binary artifacts expand differently.

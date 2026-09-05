@@ -8,11 +8,12 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
-| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Runs 5 and 6 both timed out during launch before validating flow corrections; burn-in is 0/10 |
-| Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
+| `evidence-honesty` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | New integration check; validates only tracked focused real-app XCUI proof contracts and the separate red overall gate |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for exact base `1901f81a0b0504821801fa98634e017fba9bf114` in run `33938651169` |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for exact base `1901f81a0b0504821801fa98634e017fba9bf114` in run `33938651169` |
+| Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** summaries record real-app UF-09 and UF-12 passes, but retained primary bundles/report screenshots and some cleanup dimensions are unavailable |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Configured; run 8 passed the one-test launch diagnostic, not the complete plan; burn-in is 0/10 |
+| Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 identity, notarization, installation, launch, and permission recovery recorded; product-flow acceptance remains red |
 
 Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
 fixture timing were corrected in `b8153b7`. Run 5 then reported 18 timeouts;
@@ -35,6 +36,24 @@ timeouts. The default full golden plan is unchanged. Diagnostic runs never
 count toward the ten-run acceptance burn-in. Select this plan only for a named
 cloud diagnostic, then restore the workflow to `GuideCompanionGolden`.
 
+Runs 1–3 retained the bundle-loading and cloud-identity failures that led to
+the UI-test-only Hardened Runtime correction and exact project-filename check.
+Run 4 loaded the suite and executed 18 tests (3 passed, 15 failed). Runs 5–6
+then reproduced a shared launch-boundary timeout. Diagnostic run 7 proved that
+launch completed and exposed a transient success-message assertion. Diagnostic
+run 8 passed that one corrected UF-03 journey at `096af3b`; it does not execute
+the complete golden plan and does not count toward burn-in. Full-plan run 9 at
+exact commit `1901f81a0b0504821801fa98634e017fba9bf114` returned to 18
+one-minute application-launch timeouts before flow assertions, despite the same
+UF-03 journey passing in focused run 8. Run 9 is red and the underlying app
+startup versus XCTest activation cause remains unproven. Commit `29baaed` adds
+bounded DEBUG-only fixed-name launch-stage receipts in the owned test session
+and XCTest probes at 5, 15, and 30 seconds; that instrumentation has not yet
+produced a run result. The heterogeneous run records remain under
+`evidence/issue-13-xcode-cloud-run*-proof.json`; the focused real-app XCUI
+evidence-honesty linter does not validate those external records. No run 10 is
+recorded or claimed, and burn-in remains 0/10.
+
 ## What developers run
 
 ### While coding
@@ -54,12 +73,16 @@ directory afterward.
 Run:
 
 ```sh
+scripts/run-headless-check.sh evidence-contract
 scripts/test-headless-check.sh
 scripts/run-headless-check.sh core-tests
 scripts/run-headless-check.sh app-build
 ```
 
-The first command deliberately injects individual and combined-phase failures
+The first command runs only the bounded focused real-app XCUI evidence-honesty
+linter and separate overall red gate. It does not validate heterogeneous Xcode
+Cloud or installed-build records and cannot prove completion. The second
+command deliberately injects individual and combined-phase failures
 and proves fail-closed sequencing, path rejection, timeout, interruption,
 descendant termination, and cleanup. `app-build` compiles the production app
 and golden UI test bundle without executing them.
@@ -90,14 +113,25 @@ that the now-rejected standalone host failed to acquire a process ID. It does
 not count as serpy evidence. The first real-app execution on 2026-09-05 stopped
 before the test method because macOS canceled XCTest automation-mode biometric
 authentication. Later runs corrected the session boundary and the rejected
-transcript-window design. The valid run at `79cd0d2` executes `GT-UF09-001`
-through the ambient shortcut path, passes stale/fresh progression and
-completion assertions, and retains its local `.xcresult` plus committed
-redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
+transcript-window design. The committed summary for the run at `79cd0d2`
+records `GT-UF09-001` through the ambient shortcut path with stale/fresh
+progression and completion assertions. Its primary `.xcresult`, Xcode report
+screenshot, destination, and unmeasured cleanup dimensions are unavailable,
+so this is partial secondary evidence; see
+`evidence/issue-13-golden-flow-harness.md`.
 
 ## GitHub Actions
 
-`.github/workflows/verification.yml` defines two secret-free, read-only jobs:
+`.github/workflows/verification.yml` defines three secret-free, read-only jobs:
+
+- `evidence-honesty (focused real-app XCUI; cannot prove completion)`: uses the
+  bounded `evidence-contract` lane to test the linter, auto-discover every
+  tracked `issue-13-real-app-*-proof.json`, correlate its commit/test method/test
+  plan, check referenced artifact shape, and enforce the exact current red
+  overall gate. A green result means only that these focused proof contracts
+  are honestly labeled red or partial. It does not validate the heterogeneous
+  Xcode Cloud/install records, authenticate artifacts, approve a proof as
+  complete, or imply that a UI journey passed.
 
 - `core-tests`: runs the safety scripts with a system-only macOS `PATH`,
   adversarially tests the runner, then runs the complete package suite and
@@ -108,8 +142,12 @@ Workflow actions are pinned to reviewed full commit SHAs. The checkout pin is
 official `actions/checkout` v7.0.1, which uses the Node 24 action runtime.
 
 The workflow runs for pull requests, merge queue candidates, and pushes to
-`main`. For PR #14 at `15d7056`, both jobs passed in
-[GitHub Actions run 33930252682](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33930252682).
+`main`. For PR #14 at exact base
+`1901f81a0b0504821801fa98634e017fba9bf114`, `core-tests` and `app-build`
+both passed in
+[GitHub Actions run 33938651169](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33938651169).
+That run predates the new evidence-honesty job; the integration branch requires
+its own exact-head CI result after push.
 Use stable job names when configuring required branch checks.
 
 ## Xcode Cloud account requirements
