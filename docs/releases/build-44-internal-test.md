@@ -47,4 +47,19 @@ Built and installed on M3 on 2026-09-05. This is not a V1-ready or public releas
   red. Xcode Cloud launch instability and ten-run burn-in remain unresolved.
 - User-facing lowercase naming awaits the accepted functional baseline.
 
+## Owner Dictation checkpoint
+
+After the owner reported testing, installed diagnostics showed a shortcut
+activation, `Confirmed via paste`, and an available Last Dictation recovery
+record. Existing content-free target logs for both observed attempts identify
+`com.openai.codex`, not TextEdit. No transcript content is retained in this
+evidence. This is a partial installed result for Codex, not acceptance of the
+required TextEdit/Chrome workflows or exact transcript fidelity.
+
+The owner also enabled Screen Recording. Guide remains selected as On-device;
+its last failure reports the local Apple model unavailable. System Settings
+shows Apple Intelligence enabled, `100% complete…`, and an explicit notice that
+assets still need to finish downloading. Percentage alone is not readiness.
+No Apple Intelligence setting was changed by the agent in this check.
+
 No public release or live paid API test was performed.
