@@ -48,11 +48,16 @@ one-minute application-launch timeouts before flow assertions, despite the same
 UF-03 journey passing in focused run 8. Run 9 is red and the underlying app
 startup versus XCTest activation cause remains unproven. Commit `29baaed` adds
 bounded DEBUG-only fixed-name launch-stage receipts in the owned test session
-and XCTest probes at 5, 15, and 30 seconds; that instrumentation has not yet
-produced a run result. The heterogeneous run records remain under
+and XCTest probes at 5, 15, and 30 seconds. Full-plan run 10 at exact commit
+`29baaedbea835d8939bcf2a6177309924dd798b9` failed because the temporary
+diagnostic `DispatchWorkItem` inherited MainActor isolation and trapped on its
+background queue before logging any receipts. This proves the probe defect,
+not the original app-startup cause. The current branch replaces it with a
+runtime-covered detached scheduler; that correction has no cloud result yet.
+The heterogeneous run records remain under
 `evidence/issue-13-xcode-cloud-run*-proof.json`; the focused real-app XCUI
-evidence-honesty linter does not validate those external records. No run 10 is
-recorded or claimed, and burn-in remains 0/10.
+evidence-honesty linter does not validate those external records. Burn-in
+remains 0/10.
 
 ## What developers run
 

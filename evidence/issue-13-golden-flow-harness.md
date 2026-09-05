@@ -293,9 +293,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 - `golden-ui-tests` is connected to the GitHub repository and configured with
   one required macOS Test action, the `GuideCompanion` scheme, the
   full `GuideCompanionGolden` plan, and one Mac destination. Records for manual
-  runs 1–9 are retained without rewriting their results:
+  runs 1–10 are retained without rewriting their results:
   `issue-13-xcode-cloud-run1-red-proof.json` through
-  `issue-13-xcode-cloud-run9-red-proof.json`. Runs 1–3 diagnosed
+  `issue-13-xcode-cloud-run10-probe-red-proof.json`. Runs 1–3 diagnosed
   bundle loading and cloud identity, run 4 executed the full plan with 3 passes
   and 15 failures, runs 5–6 timed out at the shared app-launch boundary, run 7
   narrowed the failure to a transient UF-03 assertion, and run 8 passed only
@@ -311,9 +311,15 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 - Commit `29baaedbea835d8939bcf2a6177309924dd798b9` adds bounded test-only
   launch instrumentation without changing the product flow: DEBUG UI-test mode
   writes only six fixed stage-name receipts inside the validated owned session,
-  and XCTest reports which receipts exist after 5, 15, and 30 seconds without
-  reading their contents. No cloud execution of that instrumentation is
-  recorded here, and no run 10 result is claimed.
+  and XCTest probes which receipts exist after 5, 15, and 30 seconds without
+  reading their contents. Full-plan run 10
+  (`16eb5e0b-1f00-4743-bcca-9bbaca8c7a6d`) at that exact commit failed because
+  the temporary diagnostic `DispatchWorkItem` inherited MainActor isolation
+  and trapped on its background queue before logging receipts. This proves the
+  probe defect, not the original app-startup cause. See
+  `evidence/issue-13-xcode-cloud-run10-probe-red-proof.json`. The current branch
+  replaces that probe with a runtime-covered detached scheduler; the correction
+  has no cloud result yet.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
 - `evidence/issue-13-overall-status.json` separately records that Xcode Cloud is
   configured, build 43 exists as the installed candidate, the complete plan is
