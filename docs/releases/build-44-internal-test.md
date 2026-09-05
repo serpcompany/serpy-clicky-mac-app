@@ -37,6 +37,11 @@ Built and installed on M3 on 2026-09-05. This is not a V1-ready or public releas
   recovery guidance for unconfirmed paste. The attempted TextEdit focus switch
   was interrupted by stale computer-use state; this is not valid successful
   cross-app insertion evidence.
+- A subsequent fresh-control retry still captured SERPy's own `AXWindow` in
+  the existing insertion log, despite TextEdit reporting a focused text area
+  through computer use. Hiding SERPy then captured Finder's `AXGroup`, not
+  TextEdit. Stop synthetic retries until the owner directly focuses the
+  intended field; per-app accessibility focus is not system frontmost focus.
 - Real microphone capture, TextEdit and Chrome insertion, clipboard preservation,
   cancellation/recovery, installed Guide walkthrough and audible speech remain
   red. Xcode Cloud launch instability and ten-run burn-in remain unresolved.
