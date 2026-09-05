@@ -72,7 +72,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
         try await launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
         selectSettingsTab("Guidance")
         application.radioButtons["OpenAI multimodal"].click()
-        let disclosure = application.checkBoxes["talk.disclosure"]
+        let disclosure = application.switches["talk.disclosure"]
         XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
         disclosure.click()
         let credential = application.secureTextFields["talk.credential"]

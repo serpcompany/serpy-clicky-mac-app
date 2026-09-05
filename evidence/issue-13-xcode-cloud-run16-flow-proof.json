@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "runId": "9cf37d97-17c0-47d7-b2a5-222f86b30a77",
+  "sourceCommit": "fb33621af95d9ee450e051436c536663935b7110",
+  "result": "FAILED",
+  "passedTests": 17,
+  "failedTests": 1,
+  "skippedTests": 0,
+  "resultArtifactId": "b33235f5-4381-474f-a72b-7a3c7d49a11b",
+  "failedTest": "GoldenGuideUITests/test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization()",
+  "firstFailure": "Test queried talk.disclosure as CheckBox; captured accessibility hierarchy exposes Switch with value 0",
+  "correction": "Query the observed native Switch type; preserve real disclosure interaction",
+  "passedScope": "All other golden tests, including dictation, recovery, lifecycle, Guide speech ordering, progression, cancellation and malformed-plan handling",
+  "consecutiveCleanRuns": 0,
+  "installedAcceptance": "Not established by deterministic cloud fixtures"
+}

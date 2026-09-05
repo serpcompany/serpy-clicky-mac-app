@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152`, including both runner safety suites |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 13 again timed out during launch in all 18 tests; launch remains unresolved; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 16: 17 passed, 1 failed at Talk disclosure selector; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
 Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
@@ -51,7 +51,12 @@ launch boundary; that timing change was removed. Run 15 then used the current
 including teardown. See
 `evidence/issue-13-xcode-cloud-run15-focused-green-proof.json`. Full run 16
 (`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tests that exact same `fb33621`
-source. One focused success is not proof of stable full-suite launch.
+source. Run 16 reached all flows: 17 passed and UF-11 failed because its
+disclosure selector requested a checkbox while the captured native control was
+a switch. See `evidence/issue-13-xcode-cloud-run16-flow-proof.json`.
+The selector is corrected without changing product behavior. Launch and all
+other flow assertions passed this run; stable full-suite acceptance still
+requires consecutive clean runs.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 
