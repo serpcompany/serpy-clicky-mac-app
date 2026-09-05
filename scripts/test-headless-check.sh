@@ -74,10 +74,26 @@ done
 /usr/bin/grep -Fq 'run: scripts/run-headless-check.sh evidence-contract' .github/workflows/verification.yml || {
   print -u2 "CI does not use the bounded evidence-contract entrypoint"; exit 1
 }
+core_checkout_has_full_history() {
+  local job_text=$1
+  local checkout_block
+  checkout_block=$(print -r -- "$job_text" | /usr/bin/sed -n \
+    '/^[[:space:]]*- uses: actions\/checkout@/,/^[[:space:]]*- name: Prove runner can fail/p')
+  print -r -- "$checkout_block" \
+    | /usr/bin/grep -Eq '^[[:space:]]+fetch-depth:[[:space:]]*0[[:space:]]*$'
+}
+
 core_ci_job=$(/usr/bin/sed -n '/^  core-tests:/,/^  app-build:/p' .github/workflows/verification.yml)
-print -r -- "$core_ci_job" | /usr/bin/grep -Fq 'fetch-depth: 0' || {
+core_checkout_has_full_history "$core_ci_job" || {
   print -u2 "CI core-tests requires full Git history for evidence commit correlation"; exit 1
 }
+forged_core_ci_job=$(print -r -- "$core_ci_job" \
+  | /usr/bin/sed '/^[[:space:]]*fetch-depth:[[:space:]]*0[[:space:]]*$/d')
+forged_core_ci_job+=$'\n      # fetch-depth: 0 intentionally removed'
+if core_checkout_has_full_history "$forged_core_ci_job"; then
+  print -u2 "CI full-history guard accepts comments without a checkout setting"
+  exit 1
+fi
 if /usr/bin/grep -Eq 'python3 scripts/(test|validate)-issue-13-evidence' .github/workflows/verification.yml; then
   print -u2 "CI invokes evidence Python outside the bounded runner"
   exit 1
