@@ -75,6 +75,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.uitests
         GENERATE_INFOPLIST_FILE: YES
+        # Xcode Cloud signs the execution host separately from the embedded
+        # non-shipping test bundle. Hardened library validation on the runner
+        # rejects that documented split-Team test arrangement before XCTest
+        # can load. Keep the production app hardened; relax only this runner.
+        ENABLE_HARDENED_RUNTIME: NO
   GuideCompanionCompositionTests:
     type: bundle.unit-test
     platform: macOS

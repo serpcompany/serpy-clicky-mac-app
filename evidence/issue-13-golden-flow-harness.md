@@ -282,8 +282,16 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   launched. This proves artifact identity and launch only; installed product
   flows remain red. The machine-readable record is
   `evidence/issue-13-build-43-m3-install-proof.json`.
-- `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
-  and execute the complete dedicated scheme/test plan.
+- `golden-ui-tests` is connected to the GitHub repository and configured with
+  one required macOS Test action, the `GuideCompanion` scheme, the
+  `GuideCompanionGolden` plan, and one Mac destination. Manual run 1
+  (`a00efbc1-d67b-4f1b-8b02-036f91063ae4`) built the test products at exact
+  commit `15d7056b24f46c25e3be43cb086b1c2a065180c3`, then failed before loading
+  the test bundle because Xcode Cloud's execution host and embedded bundle had
+  different Team IDs while the non-shipping runner inherited production
+  Hardened Runtime library validation. The runner now disables Hardened Runtime
+  only for `GuideCompanionUITests`; Release `SERPy.app` remains hardened. The
+  burn-in stays 0/10 until the corrected cloud run completes.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
   until one exact reviewed artifact is exercised in the installed lane.

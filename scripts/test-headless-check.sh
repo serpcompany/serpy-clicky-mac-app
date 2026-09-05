@@ -14,6 +14,16 @@ done
 /usr/bin/grep -Fq 'GuideCompanionCompositionTests' project.yml || {
   print -u2 "App composition contract target is missing"; exit 1
 }
+ui_test_target=$(/usr/bin/sed -n '/^  GuideCompanionUITests:/,/^  GuideCompanionCompositionTests:/p' project.yml)
+print -r -- "$ui_test_target" | /usr/bin/grep -Fq 'ENABLE_HARDENED_RUNTIME: NO' || {
+  print -u2 "non-shipping UI-test runner must disable hardened library validation for Xcode Cloud split signing"; exit 1
+}
+/usr/bin/grep -Fq 'ENABLE_HARDENED_RUNTIME = NO;' GuideCompanion.xcodeproj/project.pbxproj || {
+  print -u2 "generated project lost the UI-test runner hardened-runtime override"; exit 1
+}
+/usr/bin/grep -Fq 'ENABLE_HARDENED_RUNTIME: YES' project.yml || {
+  print -u2 "production app lost hardened runtime"; exit 1
+}
 /usr/bin/grep -Fq 'precondition(mode == .production, "UI-test composition is unavailable in Release builds")' App/GuideCompanionApp.swift || {
   print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
 }
