@@ -8,10 +8,10 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for earlier source `1dccc860b83a14231b1c6138a031d78aa3f8c278` in run `33942146377`; current staging head is unverified in GitHub Actions |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for earlier source `1dccc860b83a14231b1c6138a031d78aa3f8c278` in run `33942146377`; current staging head is unverified in GitHub Actions |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Configured; run 12 reached the complete plan and finished 11 passed / 7 failed; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 13 timed out during launch in all 18 tests; run 15 passed only focused UF-03; full run 16 is not claimed; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 is recorded as the installed signed/notarized candidate; user-flow acceptance remains red |
 
 Runs 1-7 established and narrowed cloud signing, project-identity, selector,
@@ -19,17 +19,30 @@ fixture-timing, and launch failures. Run 8 passed only the one-test
 `GuideCompanionLaunchDiagnostic` plan; it does not count toward acceptance.
 Run 9 returned to the complete `GuideCompanionGolden` plan and reproduced the
 launch timeout. Run 10's temporary startup probe crashed before producing the
-needed receipts. Run 11 then proved app initialization and launch callbacks
-returned, while XCTest foreground activation still failed. Run 12 executed the
-complete plan: 11 tests passed and 7 failed at flow assertions. Its seven
-remaining failures were classified as Settings selector ambiguity, three UF-05
-numeric radio-value assertions, UF-08 Guide timing, UF-10 speaking timing, and
-UF-11 selector/cascade failures. The current source removes the temporary launch
-probes, corrects the native selectors, and presents structured Guide steps before
-speech. Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) was started against
-`1dccc86`, but no terminal result is claimed here. Neither its existence nor
-headless success changes the complete-plan gate: it remains red and burn-in
-remains 0/10.
+needed receipts. Run 11 proved app initialization and launch callbacks returned,
+while XCTest foreground activation still failed. Run 12 executed the complete
+plan: 11 tests passed and 7 failed at flow assertions. Its failures were
+classified as Settings selector ambiguity, three UF-05 numeric radio-value
+assertions, UF-08 Guide timing, UF-10 speaking timing, and UF-11 selector/cascade
+failures. The current source removes temporary launch probes, corrects the
+native selectors, and presents structured Guide steps before speech.
+
+Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) tested `1dccc86`
+and failed with 18 one-minute launch timeouts. Focused run 14 tested deferred
+Settings presentation and failed at the same launch boundary; that timing
+experiment was removed and synchronous presentation restored. Focused run 15
+used the current `NSApplication.activate()` call and passed UF-03 with zero
+failures or skips, including teardown. Full run 16
+(`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tests the same `fb33621` source, but
+no terminal result is claimed here. One focused success is not proof of stable
+full-suite launch. The complete-plan gate remains red and burn-in remains 0/10.
+Neither cloud fixtures nor headless success satisfy installed microphone,
+insertion, focus, audible speech, permission, or click-through acceptance.
+
+`GuideCompanionLaunchDiagnostic.xctestplan` is a temporary diagnosis-only
+selection of the first failing UF-03 test with identical runtime options and
+timeouts. The default full golden plan is unchanged. Diagnostic runs never
+count toward the ten-run acceptance burn-in.
 
 ## What developers run
 
