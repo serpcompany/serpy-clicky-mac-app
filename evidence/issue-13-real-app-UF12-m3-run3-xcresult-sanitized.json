@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "sourceCommand": "xcrun xcresulttool get test-results tests --path evidence/issue-13-real-app-UF12-m3-run3.xcresult --compact",
+  "testPlan": {
+    "name": "GuideCompanionGolden",
+    "result": "Passed"
+  },
+  "testTarget": {
+    "name": "GuideCompanionUITests",
+    "result": "Passed"
+  },
+  "testClass": {
+    "name": "GoldenGuideUITests",
+    "result": "Passed"
+  },
+  "test": {
+    "nodeIdentifier": "GoldenGuideUITests/test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
+    "name": "test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
+    "result": "Passed",
+    "duration": "13s"
+  },
+  "redaction": "Only test names, hierarchy, status, and rounded duration were retained; device and attachment fields were omitted."
+}

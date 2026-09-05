@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sourceCommand": "xcrun xcresulttool get test-results tests --path evidence/issue-13-real-app-UF08-injected-red-m3.xcresult --compact",
+  "testPlan": {
+    "name": "GuideCompanionGolden",
+    "result": "Failed"
+  },
+  "testTarget": {
+    "name": "GuideCompanionUITests",
+    "result": "Failed"
+  },
+  "testClass": {
+    "name": "GoldenGuideUITests",
+    "result": "Failed"
+  },
+  "test": {
+    "nodeIdentifier": "GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+    "name": "test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+    "result": "Failed",
+    "duration": "1m",
+    "sanitizedFailures": [
+      "GoldenUITestCase.swift:103: XCTAssertTrue failed",
+      "Test exceeded execution time allowance of 1 minute"
+    ]
+  },
+  "redaction": "The private accessibility-tree failure payload, device fields, and attachments were omitted."
+}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "issue": 13,
+  "verifiedAt": "2026-09-05",
+  "sourceCommit": "15d7056b24f46c25e3be43cb086b1c2a065180c3",
+  "artifact": {
+    "path": "dist/SERPy-0.1.0-43.dmg",
+    "sha256": "39d0bf3e75758e25e51bf127dcf6e7e4f5974353f8a2bd11ef6037fa0b7e0c17",
+    "version": "0.1.0",
+    "build": "43",
+    "architecture": "arm64"
+  },
+  "notarization": {
+    "submissionId": "881f81b2-945f-4124-8b6e-6c60b7d6b65e",
+    "status": "accepted-and-stapled",
+    "gatekeeperAssessment": "accepted for DMG and mounted app"
+  },
+  "signature": {
+    "bundleIdentifier": "com.serpcompany.guidecompanion.internal",
+    "teamIdentifier": "847HR8U8D9",
+    "authority": "Developer ID Application: Matthew Schumacher (847HR8U8D9)"
+  },
+  "installation": {
+    "path": "/Applications/SERPy.app",
+    "executableSha256": "b869bfdc5ecfd038cc2b7fe8c822d12b9d68c5a23f1506475a271725fe58414c",
+    "matchesReleaseExecutable": true,
+    "launchObserved": true,
+    "permissionAndProductFlowsComplete": false
+  },
+  "scope": "Artifact identity, signing, notarization, installation, and launch only. User-flow acceptance remains red until separately observed."
+}

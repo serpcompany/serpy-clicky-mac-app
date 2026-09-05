@@ -4,6 +4,10 @@
   "purpose": "prove the actual-app golden lane reports an injected external-adapter failure as red",
   "testId": "GT-UF08-001",
   "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+  "sourceState": {
+    "baseCommit": "7bbf43d",
+    "note": "executed before the fail-closed runner changes were committed; the tested application product sources were unchanged by commit 15d7056"
+  },
   "injection": "SERPY_INJECT_GUIDE_FAILURE=1",
   "testPlan": "GuideCompanionGolden",
   "testPlanConfiguration": "Golden UI",
@@ -19,9 +23,16 @@
     "executed": 1,
     "passed": 0,
     "failed": 1,
-    "skipped": 0
+    "skipped": 0,
+    "duration": "1m",
+    "sanitizedFailures": [
+      "GoldenUITestCase.swift:103: XCTAssertTrue failed",
+      "Test exceeded execution time allowance of 1 minute"
+    ],
+    "attachmentsIncluded": false
   },
   "cleanup": {
+    "scope": ["serpy and UI-test processes", "wrapper-owned roots"],
     "serpyAndUITestProcessesRemaining": 0,
     "wrapperRootsRemaining": 0,
     "status": "passed"

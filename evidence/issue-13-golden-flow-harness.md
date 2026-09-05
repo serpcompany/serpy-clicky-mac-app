@@ -109,9 +109,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 ## GitHub Actions results
 
 - PR #14 verification run
-  [33921232918](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33921232918)
-  passed for exact commit `81bb5de09a6db91b0ca9737d01f0caadc57c4941`:
-  `core-tests` in 4m09s and `app-build` in 3m43s.
+  [33930252682](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33930252682)
+  passed for exact commit `15d7056b24f46c25e3be43cb086b1c2a065180c3`:
+  `core-tests` and `app-build` both completed successfully.
 
 ## Valid focused actual-app evidence
 
@@ -124,8 +124,10 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   absent. The retained local bundle is
   `evidence/issue-13-real-app-UF12-m3-run3.xcresult` (generated and ignored);
   the committed redacted machine-readable proof is
-  `evidence/issue-13-real-app-UF12-m3-run3-proof.json`. Process and wrapper-root
-  cleanup passed, with no serpy or XCUI process remaining.
+  `evidence/issue-13-real-app-UF12-m3-run3-proof.json`; the committed sanitized
+  `xcresulttool` subset is
+  `evidence/issue-13-real-app-UF12-m3-run3-xcresult-sanitized.json`. Process and
+  wrapper-root cleanup passed, with no serpy or XCUI process remaining.
 - The M3 authenticated to Sentry with the read-only personal token held in
   macOS Keychain and retrieved issue `SERPY-CLICKY-MAC-APP-1` plus exact event
   `139c9b86601e416e9b59db36a6f0e952` through Sentry's API. The issue remained
@@ -133,7 +135,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   Cocoa error for `com.serpcompany.guidecompanion.internal@0.1.0+42`. No token,
   raw event payload, identity, question, transcript, or screenshot was retained.
   The committed redacted proof is
-  `evidence/issue-9-sentry-m3-retrieval-proof.json`.
+  `evidence/issue-9-sentry-m3-retrieval-proof.json`; the retained mechanically
+  sanitized response subset is
+  `evidence/issue-9-sentry-m3-api-response-sanitized.json`.
 - `GT-UF09-001` passed in the real `GuideCompanion` app at tested commit
   `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
   ambient shortcut lane on 2026-09-05. The test closed Settings, never opened
@@ -155,12 +159,19 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
 - With `SERPY_INJECT_GUIDE_FAILURE=1`, the bounded runner executed the normal
   `GT-UF08-001` journey against the real `GuideCompanion` app on the M3 and the
   `GuideCompanionGolden` plan reported one executed, one failed, zero passed,
-  and zero skipped. This proves an external deterministic Guide adapter failure
-  makes the actual-app lane red rather than being swallowed. The local bundle
+  and zero skipped. The test timed out after the injected adapter prevented the
+  expected ambient answer from appearing; the retained sanitized failure list
+  records the first failed assertion and the timeout without the private AX
+  tree. This proves an external deterministic Guide adapter failure makes the
+  actual-app lane red rather than being swallowed. The local bundle
   is `evidence/issue-13-real-app-UF08-injected-red-m3.xcresult` (generated and
   ignored); the committed redacted summary is
-  `evidence/issue-13-real-app-UF08-injected-red-m3-proof.json`. Cleanup left no
-  serpy/XCUI process or wrapper root.
+  `evidence/issue-13-real-app-UF08-injected-red-m3-proof.json`, and the retained
+  sanitized `xcresulttool` subset is
+  `evidence/issue-13-real-app-UF08-injected-red-m3-xcresult-sanitized.json`.
+  The post-run
+  checks covered serpy/XCUI processes and wrapper-owned roots only; both were
+  absent.
 
 - The first M3 focused UF-12 attempt is retained locally at
   `evidence/issue-13-real-app-UF12-m3-run1.xcresult` (generated and ignored).
@@ -260,6 +271,17 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   fail-open combined-runner defect was found. That candidate is rejected and
   must not be installed or cited: its DMG, checksum, manifest, staging output,
   and Release derived data are removed before rebuilding from the reviewed fix.
+- Build 43 was rebuilt from exact commit
+  `15d7056b24f46c25e3be43cb086b1c2a065180c3`, notarized and stapled under
+  submission `881f81b2-945f-4124-8b6e-6c60b7d6b65e`, and installed at
+  `/Applications/SERPy.app`. The DMG SHA-256 is
+  `39d0bf3e75758e25e51bf127dcf6e7e4f5974353f8a2bd11ef6037fa0b7e0c17`;
+  the installed executable matches the reviewed Release executable at
+  `b869bfdc5ecfd038cc2b7fe8c822d12b9d68c5a23f1506475a271725fe58414c`.
+  Gatekeeper accepted both the DMG and mounted app, and the installed app
+  launched. This proves artifact identity and launch only; installed product
+  flows remain red. The machine-readable record is
+  `evidence/issue-13-build-43-m3-install-proof.json`.
 - `golden-ui-tests` has not run in Xcode Cloud. Xcode Cloud must be connected
   and execute the complete dedicated scheme/test plan.
 - The ten-run isolated burn-in is 0/10 and the check must not be required.
