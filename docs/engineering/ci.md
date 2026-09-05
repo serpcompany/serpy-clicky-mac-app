@@ -77,9 +77,14 @@ diagnostic cannot establish a Tahoe fix or replace current-runtime acceptance.
 Run 20 confirmed the same launch failure on Sequoia 15.6. See
 `evidence/issue-13-xcode-cloud-run20-comparison-proof.json`. Temporary activation
 logging and the ineffective runner yield have been removed; no production
-timing workaround remains. Further cloud retries are paused pending a focused
-local comparison. The owner's Mac authentication sheet must be completed
-directly by the owner before installed acceptance can proceed. The cloud
+timing workaround remains. The focused local UF-11 comparison at `9944e06`
+passed on M3 macOS 26.5.2: one test, zero failures or skips. Its result is
+`evidence/issue-13-real-app-UF11-post-auth.xcresult`; the bounded runner exited
+zero, removed its owned build root, and left no app or XCTest runner process.
+This validates the corrected native Switch selector locally, not cloud launch
+stability. Further cloud retries remain paused for launch diagnosis.
+The installed app now reports Microphone, Speech Recognition, and Accessibility
+Granted after Refresh; relaunch also reports the shortcut Registered. The cloud
 workflow is restored to the current runtime and full plan; burn-in remains 0/10.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.

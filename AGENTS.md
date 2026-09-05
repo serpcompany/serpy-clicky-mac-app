@@ -92,6 +92,12 @@ screenshots, document content, identity, or arbitrary error strings.
   authentication must be completed by the owner directly; never request their
   password or bypass a computer-use safety restriction. Resume authorized
   controls after authentication rather than asking for approval again.
+  On this host, computer use can open `Use Password…`, but the protected
+  `com.apple.LocalAuthenticationRemoteService` rejects password entry with an
+  explicit safety error. Hand that step to the owner even if they supply a
+  password; retain no credential in source or evidence. After the dialog
+  clears, use the app's Refresh control to verify grants before diagnosing
+  stale permission or shortcut status.
 - Keep Settings a normal non-floating window and overlays nonactivating unless
   a documented interaction requires activation.
 - Redact dictated text, screenshots, application document content, usernames,

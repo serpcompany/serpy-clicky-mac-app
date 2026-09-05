@@ -860,11 +860,19 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                     "SERPy insertion test.",
                     into: target
                 )
-                lastDictationStage = "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
-                statusMessage = "The insertion test succeeded."
+                let confirmed = lastInsertionMethod?.isConfirmed == true
+                lastDictationStage = confirmed
+                    ? "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                    : "Insertion test unconfirmed"
+                statusMessage = confirmed
+                    ? "The insertion test succeeded."
+                    : "Paste sent, but the destination could not be verified."
+                recoveryMessage = confirmed
+                    ? ""
+                    : "Check the destination. Run the test again only if the text is missing."
                 lastFailureMessage = "None"
-                presentation.mode = .success
-                presentation.caption = "Insertion works"
+                presentation.mode = confirmed ? .success : .error
+                presentation.caption = confirmed ? "Insertion works" : "Verify paste"
                 companionController.refresh()
             } catch {
                 lastDictationStage = "Insertion test failed"
