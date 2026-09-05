@@ -2,8 +2,8 @@ import XCTest
 
 @MainActor
 final class GoldenGuideUITests: GoldenUITestCase {
-    func test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion() async {
-        await launch(flow: "UF-08", extraArguments: ["--stepwise-guide"])
+    func test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion() async throws {
+        try await launch(flow: "UF-08", extraArguments: ["--stepwise-guide"])
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
         expectAmbient(labelContains: "SERPy is listening", value: "Fixture Browser — Fixture Window")
@@ -22,8 +22,8 @@ final class GoldenGuideUITests: GoldenUITestCase {
         assertAmbientSurfaceOnly()
     }
 
-    func test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep() async {
-        await launch(flow: "UF-09")
+    func test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep() async throws {
+        try await launch(flow: "UF-09")
         closeSettingsForAmbientGuide()
         askAmbientGuide()
         expectAmbient(labelContains: "Step 1 of 2", value: "Open the File menu.")
@@ -40,36 +40,36 @@ final class GoldenGuideUITests: GoldenUITestCase {
         assertAmbientSurfaceOnly()
     }
 
-    func test_GT_UF10_001_shortcutCancelClearsAmbientListening() async {
-        await launch(flow: "UF-10")
+    func test_GT_UF10_001_shortcutCancelClearsAmbientListening() async throws {
+        try await launch(flow: "UF-10")
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
         expectAmbient(labelContains: "Open a new window", value: "Fixture Browser — Fixture Window")
         cancelAmbientGuide()
     }
 
-    func test_GT_UF10_002_shortcutCancelClearsAmbientCapture() async {
-        await assertAmbientCancellation(extraArgument: "--block-guide-capture", label: "Reading this screen", lateAdapter: "capture")
+    func test_GT_UF10_002_shortcutCancelClearsAmbientCapture() async throws {
+        try await assertAmbientCancellation(extraArgument: "--block-guide-capture", label: "Reading this screen", lateAdapter: "capture")
     }
 
-    func test_GT_UF10_003_shortcutCancelClearsAmbientThinking() async {
-        await assertAmbientCancellation(extraArgument: "--block-guide-generation", label: "Thinking locally", lateAdapter: "generation")
+    func test_GT_UF10_003_shortcutCancelClearsAmbientThinking() async throws {
+        try await assertAmbientCancellation(extraArgument: "--block-guide-generation", label: "Thinking locally", lateAdapter: "generation")
     }
 
-    func test_GT_UF10_004_shortcutCancelClearsAmbientSpeaking() async {
-        await assertAmbientCancellation(extraArgument: "--block-guide-speech", label: "Step 1 of 2", lateAdapter: "speech")
+    func test_GT_UF10_004_shortcutCancelClearsAmbientSpeaking() async throws {
+        try await assertAmbientCancellation(extraArgument: "--block-guide-speech", label: "Step 1 of 2", lateAdapter: "speech")
     }
 
-    func test_GT_UF10_005_shortcutCancelClearsAmbientFollowUp() async {
-        await launch(flow: "UF-10")
+    func test_GT_UF10_005_shortcutCancelClearsAmbientFollowUp() async throws {
+        try await launch(flow: "UF-10")
         closeSettingsForAmbientGuide()
         askAmbientGuide()
         expectAmbient(labelContains: "Step 1 of 2", value: "Open the File menu.")
         cancelAmbientGuide()
     }
 
-    func test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization() async {
-        await launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
+    func test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization() async throws {
+        try await launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
         tap("Guidance")
         tap("OpenAI multimodal")
         let disclosure = application.checkBoxes["talk.disclosure"]
@@ -98,8 +98,8 @@ final class GoldenGuideUITests: GoldenUITestCase {
         expectAmbient(labelContains: "Cancelled", value: "")
     }
 
-    func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() async {
-        await launch(flow: "UF-12")
+    func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() async throws {
+        try await launch(flow: "UF-12")
         closeSettingsForAmbientGuide()
         askAmbientGuide()
         expectAmbient(
@@ -122,8 +122,8 @@ final class GoldenGuideUITests: GoldenUITestCase {
         triggerShortcut("guide-released")
     }
 
-    private func assertAmbientCancellation(extraArgument: String, label: String, lateAdapter: String) async {
-        await launch(flow: "UF-10", extraArguments: [extraArgument])
+    private func assertAmbientCancellation(extraArgument: String, label: String, lateAdapter: String) async throws {
+        try await launch(flow: "UF-10", extraArguments: [extraArgument])
         closeSettingsForAmbientGuide()
         triggerShortcut("guide-pressed")
         expectAmbient(labelContains: "Open a new window", value: "Fixture Browser — Fixture Window")

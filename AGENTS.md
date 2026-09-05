@@ -81,6 +81,14 @@ screenshots, document content, identity, or arbitrary error strings.
 - Use stable signing identity and bundle ID for interactive TCC testing.
 - Run Xcode-launched permission tests against one stable build identity; do not
   churn temporary command-line identities.
+- **Permission UI:** use available computer use to handle authorized macOS
+  permission controls. Inspect the live UI before claiming a prompt requires
+  a human click. On the M3, enabling SERPy in System Settings → Privacy &
+  Security → Microphone, then choosing Quit & Reopen, was verified to produce
+  `Microphone Granted` in the installed app. Reuse existing specific user
+  authorization; verify the resulting app status after any restart. If a
+  control is inaccessible or an approval review blocks it, report that actual
+  limitation and the exact remaining user action.
 - Keep Settings a normal non-floating window and overlays nonactivating unless
   a documented interaction requires activation.
 - Redact dictated text, screenshots, application document content, usernames,

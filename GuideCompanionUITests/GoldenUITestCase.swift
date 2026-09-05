@@ -18,7 +18,7 @@ class GoldenUITestCase: XCTestCase {
         openTranscript: Bool = false,
         recoveryVariant: String? = nil,
         extraArguments: [String] = []
-    ) async {
+    ) async throws {
         preexistingProcessIDs = Set(NSRunningApplication.runningApplications(
             withBundleIdentifier: productBundleIdentifier
         ).map(\.processIdentifier))
@@ -36,8 +36,25 @@ class GoldenUITestCase: XCTestCase {
                 sessionID = session.sessionID
                 sessionRoot = session.root
             } catch {
-                XCTFail("could not provision an authorized isolated UI-test session: \(error)")
-                return
+                // Temporary cloud probe: report only fixed classifications, never values.
+                let environment = ProcessInfo.processInfo.environment
+                let expected = [
+                    "CI": "TRUE",
+                    "CI_XCODE_CLOUD": "TRUE",
+                    "CI_WORKFLOW": "golden-ui-tests",
+                    "CI_XCODE_PROJECT": "GuideCompanion",
+                    "CI_XCODE_SCHEME": "GuideCompanion",
+                    "CI_XCODEBUILD_ACTION": "test-without-building",
+                ]
+                let classifications = expected.keys.sorted().map { key in
+                    let classification = environment[key] == nil ? "missing"
+                        : environment[key] == expected[key] ? "matched" : "different"
+                    return "\(key)=\(classification)"
+                }.joined(separator: ",")
+                let projectHasExtension = environment["CI_XCODE_PROJECT"] == "GuideCompanion.xcodeproj"
+                let hasBuildID = environment["CI_BUILD_ID"]?.isEmpty == false
+                XCTFail("[DEBUG-cloud-identity] \(classifications); projectFilename=\(projectHasExtension); buildIDPresent=\(hasBuildID)")
+                throw error
             }
         }
         addTeardownBlock {

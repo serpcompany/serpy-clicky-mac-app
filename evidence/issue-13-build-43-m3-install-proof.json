@@ -27,5 +27,13 @@
     "launchObserved": true,
     "permissionAndProductFlowsComplete": false
   },
-  "scope": "Artifact identity, signing, notarization, installation, and launch only. User-flow acceptance remains red until separately observed."
+  "microphonePermissionRecovery": {
+    "observedAt": "2026-09-05",
+    "initialAppStatus": "Denied",
+    "action": "Computer use enabled SERPy.app in System Settings Microphone and selected Quit & Reopen",
+    "systemSettingsAfterRestart": "on",
+    "appStatusAfterRestart": "Microphone Granted",
+    "realMicrophoneCaptureProven": false
+  },
+  "scope": "Artifact identity, signing, notarization, installation, launch, and microphone denial recovery. Full user-flow acceptance remains red until separately observed."
 }
