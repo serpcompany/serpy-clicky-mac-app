@@ -254,6 +254,48 @@ class EvidenceContractTests(unittest.TestCase):
             self.validate(document),
         )
 
+    def test_swift_string_literals_cannot_forge_an_executable_test(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "final class GoldenGuideUITests {\n"
+            "  let inline = \"func "
+            "test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\"\n"
+            "  let multiline = \"\"\"\n"
+            "  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "  \"\"\"\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "string test")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_raw_and_interpolated_swift_strings_cannot_forge_a_test(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            'final class GoldenGuideUITests {\n'
+            '  let raw = ##"""\n'
+            '  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n'
+            '  """##\n'
+            '  let interpolated = """\n'
+            '  \\(render("nested string with } and \\\"quotes\\\""))\n'
+            '  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n'
+            '  """\n'
+            '}\n'
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "raw string test")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
     def test_claimed_method_must_be_owned_by_the_exact_swift_class(self) -> None:
         source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
         source.write_text(
@@ -474,6 +516,81 @@ class EvidenceContractTests(unittest.TestCase):
             )
         self.assertEqual(result.returncode, 64)
         self.assertIn("ERROR: proof path must be beneath repo evidence", result.stderr)
+
+    def test_resolver_rejects_a_symlink_even_when_its_target_is_in_evidence(self) -> None:
+        target = (
+            self.repo_root / "evidence" / "issue-13-real-app-UF12-target-proof.json"
+        )
+        target.write_text("{}")
+        proof_link = (
+            self.repo_root / "evidence" / "issue-13-real-app-UF12-link-proof.json"
+        )
+        proof_link.symlink_to(target)
+        with self.assertRaisesRegex(ValueError, "proof path must be beneath repo evidence"):
+            evidence_contract.resolve_proof_path(
+                self.repo_root, proof_link.relative_to(self.repo_root).as_posix()
+            )
+
+    def test_default_discovery_rejects_an_out_of_tree_symlink_proof(self) -> None:
+        scripts = self.repo_root / "scripts"
+        scripts.mkdir()
+        validator = scripts / SCRIPT.name
+        validator.write_text(SCRIPT.read_text())
+        with tempfile.TemporaryDirectory() as outside_directory:
+            outside_proof = Path(outside_directory) / "outside-proof.json"
+            outside_proof.write_text("{}")
+            proof_link = (
+                self.repo_root
+                / "evidence"
+                / "issue-13-real-app-UF12-auto-proof.json"
+            )
+            proof_link.symlink_to(outside_proof)
+            self.git("add", "-f", proof_link.relative_to(self.repo_root).as_posix())
+            result = subprocess.run(
+                [sys.executable, str(validator)],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "evidence/issue-13-real-app-UF12-auto-proof.json: "
+            "ERROR: proof path must be beneath repo evidence",
+            result.stderr,
+        )
+
+    def test_default_discovery_rejects_an_out_of_tree_symlink_cloud_summary(self) -> None:
+        scripts = self.repo_root / "scripts"
+        scripts.mkdir()
+        validator = scripts / SCRIPT.name
+        validator.write_text(SCRIPT.read_text())
+        ordinary_proof = (
+            self.repo_root / "evidence" / "issue-13-real-app-UF12-auto-proof.json"
+        )
+        ordinary_proof.write_text("{}")
+        self.git("add", "-f", ordinary_proof.relative_to(self.repo_root).as_posix())
+        with tempfile.TemporaryDirectory() as outside_directory:
+            outside_summary = Path(outside_directory) / "outside-summary.json"
+            outside_summary.write_text("{}")
+            cloud_link = (
+                self.repo_root
+                / "evidence"
+                / "issue-13-xcode-cloud-run99-auto-proof.json"
+            )
+            cloud_link.symlink_to(outside_summary)
+            self.git("add", "-f", cloud_link.relative_to(self.repo_root).as_posix())
+            result = subprocess.run(
+                [sys.executable, str(validator)],
+                cwd=self.repo_root,
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "evidence/issue-13-xcode-cloud-run99-auto-proof.json: "
+            "ERROR: proof path must be beneath repo evidence",
+            result.stderr,
+        )
 
     def test_overall_gate_cannot_be_green_before_cloud_burn_in_and_installed_pass(self) -> None:
         overall = {

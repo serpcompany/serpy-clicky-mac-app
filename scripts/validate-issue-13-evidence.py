@@ -92,10 +92,21 @@ def _resolve_beneath_evidence(repo_root: Path, supplied_path: str) -> Path:
     return resolved
 
 
-def resolve_proof_path(repo_root: Path, proof_path: str) -> Path:
-    """Resolve one CLI proof path without permitting escape from evidence/."""
+def resolve_proof_path(
+    repo_root: Path,
+    proof_path: str,
+    *,
+    expected_pattern: re.Pattern[str] = PROOF_PATTERN,
+) -> Path:
+    """Resolve one proof path to a regular file without permitting escape."""
+    candidate = repo_root / proof_path
     resolved = _resolve_beneath_evidence(repo_root, proof_path)
-    if not PROOF_PATTERN.fullmatch(resolved.relative_to(repo_root.resolve()).as_posix()):
+    relative = resolved.relative_to(repo_root.resolve()).as_posix()
+    if (
+        candidate.is_symlink()
+        or not expected_pattern.fullmatch(relative)
+        or not resolved.is_file()
+    ):
         raise ValueError("proof path must be beneath repo evidence")
     return resolved
 
@@ -122,9 +133,105 @@ def _git_text_at_commit(repo_root: Path, commit: str, path: str) -> Optional[str
     return result.stdout if result.returncode == 0 else None
 
 
-def _strip_swift_comments(source: str) -> str:
-    source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
-    return re.sub(r"//.*$", "", source, flags=re.MULTILINE)
+def _strip_swift_noncode(source: str) -> str:
+    """Blank Swift comments and string literals while preserving line structure."""
+    output = list(source)
+    length = len(source)
+
+    def blank(start: int, end: int) -> None:
+        for index in range(start, min(end, length)):
+            if output[index] != "\n":
+                output[index] = " "
+
+    def string_delimiter(index: int) -> Optional[tuple[int, int, int]]:
+        cursor = index
+        hashes = 0
+        while cursor < length and source[cursor] == "#":
+            hashes += 1
+            cursor += 1
+        if cursor >= length or source[cursor] != '"':
+            return None
+        if hashes == 0 and index != cursor:
+            return None
+        quotes = 3 if source.startswith('"""', cursor) else 1
+        return hashes, quotes, cursor + quotes
+
+    def consume_line_comment(index: int) -> int:
+        cursor = index + 2
+        while cursor < length and source[cursor] != "\n":
+            cursor += 1
+        blank(index, cursor)
+        return cursor
+
+    def consume_block_comment(index: int) -> int:
+        cursor = index + 2
+        depth = 1
+        while cursor < length and depth:
+            if source.startswith("/*", cursor):
+                depth += 1
+                cursor += 2
+            elif source.startswith("*/", cursor):
+                depth -= 1
+                cursor += 2
+            else:
+                cursor += 1
+        blank(index, cursor)
+        return cursor
+
+    def consume_interpolation(index: int) -> int:
+        cursor = index
+        depth = 1
+        while cursor < length and depth:
+            if source.startswith("//", cursor):
+                cursor = consume_line_comment(cursor)
+                continue
+            if source.startswith("/*", cursor):
+                cursor = consume_block_comment(cursor)
+                continue
+            delimiter = string_delimiter(cursor)
+            if delimiter is not None:
+                cursor = consume_string(cursor, delimiter)
+                continue
+            if source[cursor] == "(":
+                depth += 1
+            elif source[cursor] == ")":
+                depth -= 1
+            cursor += 1
+        return cursor
+
+    def consume_string(index: int, delimiter: tuple[int, int, int]) -> int:
+        hashes, quotes, cursor = delimiter
+        interpolation = "\\" + ("#" * hashes) + "("
+        closing = ('"' * quotes) + ("#" * hashes)
+        while cursor < length:
+            if source.startswith(closing, cursor):
+                cursor += len(closing)
+                blank(index, cursor)
+                return cursor
+            if source.startswith(interpolation, cursor):
+                cursor = consume_interpolation(cursor + len(interpolation))
+                continue
+            if hashes == 0 and source[cursor] == "\\":
+                cursor += min(2, length - cursor)
+                continue
+            cursor += 1
+        blank(index, cursor)
+        return cursor
+
+    cursor = 0
+    while cursor < length:
+        if source.startswith("//", cursor):
+            cursor = consume_line_comment(cursor)
+            continue
+        if source.startswith("/*", cursor):
+            cursor = consume_block_comment(cursor)
+            continue
+        delimiter = string_delimiter(cursor)
+        if delimiter is not None:
+            cursor = consume_string(cursor, delimiter)
+            continue
+        cursor += 1
+    return "".join(output)
 
 
 def _swift_class_direct_scope(source: str, class_name: str) -> Optional[str]:
@@ -164,7 +271,7 @@ def _validate_test_source_and_plan(
     class_name, method_name = match.groups()
     source_path = f"GuideCompanionUITests/{class_name}.swift"
     source = _git_text_at_commit(repo_root, tested_commit, source_path)
-    executable_source = _strip_swift_comments(source) if source is not None else ""
+    executable_source = _strip_swift_noncode(source) if source is not None else ""
     class_scope = _swift_class_direct_scope(executable_source, class_name)
     method_pattern = re.compile(
         rf"^[ \t]*(?:override[ \t]+)?func[ \t]+{re.escape(method_name)}[ \t]*\(",
@@ -743,10 +850,12 @@ def main() -> int:
     counts = {"complete": 0, "partial": 0, "red": 0}
     failed = False
     for proof_path in proof_paths:
-        path = repo_root / proof_path
         try:
+            path = resolve_proof_path(
+                repo_root, proof_path, expected_pattern=PROOF_PATTERN
+            )
             document = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError) as error:
+        except (OSError, json.JSONDecodeError, ValueError) as error:
             print(f"{proof_path}: ERROR: {error}", file=sys.stderr)
             failed = True
             continue
@@ -760,10 +869,12 @@ def main() -> int:
             print(f"{proof_path}: {document['evidenceStatus'].upper()}")
 
     for cloud_path in discover_cloud_proofs(tracked_paths):
-        path = repo_root / cloud_path
         try:
+            path = resolve_proof_path(
+                repo_root, cloud_path, expected_pattern=CLOUD_PROOF_PATTERN
+            )
             document = json.loads(path.read_text())
-        except (OSError, json.JSONDecodeError) as error:
+        except (OSError, json.JSONDecodeError, ValueError) as error:
             print(f"{cloud_path}: ERROR: {error}", file=sys.stderr)
             failed = True
             continue

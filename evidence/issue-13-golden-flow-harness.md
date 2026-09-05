@@ -328,9 +328,27 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   11 tests passed and 7 failed at flow assertions. The remaining failure classes
   were Settings selector ambiguity, three UF-05 numeric radio-value assertions,
   UF-08 Guide timing, UF-10 speaking timing, and UF-11 selector/cascade failures.
-  The current source removes the probes, corrects the native selectors, and
-  presents the structured Guide step before speaking. No run 13 result is
-  claimed for those corrections.
+  The subsequent source removed the probes, corrected the native selectors, and
+  presented the structured Guide step before speaking.
+- Run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) at exact commit
+  `1dccc860b83a14231b1c6138a031d78aa3f8c278` executed the complete plan but
+  passed 0 of 18 tests: every test timed out for 60 seconds in
+  `application.launch` while XCTest reported the app as Running Background.
+- Focused run 14 (`5009e334-3c09-4fe1-a547-3cd5d692d1cf`) at exact commit
+  `9b40897bbb1653d3a8aa3439bb3a7cb186a8166c` passed 0 of 1 UF-03 test and
+  reproduced the same 60-second launch timeout. That run falsified the deferred
+  Settings-presentation timing experiment; the experiment was removed and the
+  original synchronous presentation restored.
+- Focused run 15 (`2e5e8f93-4d7c-4ce9-863c-81f690ce0a58`) at exact commit
+  `fb33621af95d9ee450e051436c536663935b7110` passed the one selected UF-03
+  deterministic test in 8.48 seconds with zero failures or skips. It proves only
+  that focused fixture flow and does not count as a clean complete-plan run.
+- Run 16 (`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) used the complete plan at
+  the same exact `fb33621af95d9ee450e051436c536663935b7110` commit: 17 of 18
+  tests passed. The sole failing test, UF-11, queried the native
+  `talk.disclosure` Switch as a CheckBox; its remaining assertions cascaded from
+  that failed lookup. The stronger throwing Switch lookup with `XCTUnwrap` is
+  present in staging but has not yet been proven by Xcode Cloud.
 - The complete-plan gate remains red. The ten-run isolated burn-in is 0/10 and
   the check must not be required.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
