@@ -649,6 +649,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public func requestAccessibility() {
         statusMessage = "Accessibility lets SERPy place your transcript in the field you selected."
+        recoveryMessage = "Open Settings beside Accessibility, enable SERPy, then return here and click Refresh."
         _ = permissionService.requestAccessibility()
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))

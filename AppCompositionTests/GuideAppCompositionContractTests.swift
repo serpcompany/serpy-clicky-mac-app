@@ -8,6 +8,20 @@ extension KeychainTalkCredentialStore: @retroactive DeterministicUITestAdapter {
 
 @MainActor
 final class GuideAppCompositionContractTests: XCTestCase {
+    func testAccessibilityRequestShowsItsOwnRecoveryRoute() throws {
+        let owned = try makeOwnedSessionRoot()
+        defer { owned.remove() }
+        let model = try GuideUITestComposition.makeModel(
+            arguments: ["serpy", "--ui-testing", "--golden-flow=UF-01"],
+            environment: owned.environment
+        )
+
+        model.requestAccessibility()
+
+        XCTAssertEqual(model.recoveryMessage,
+            "Open Settings beside Accessibility, enable SERPy, then return here and click Refresh.")
+    }
+
     func testActualAppCompositionConstructsOnlyTheExactAllowlistedAdapterTypes() throws {
         let owned = try makeOwnedSessionRoot()
         defer { owned.remove() }
