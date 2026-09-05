@@ -88,7 +88,10 @@ screenshots, document content, identity, or arbitrary error strings.
   `Microphone Granted` in the installed app. Reuse existing specific user
   authorization; verify the resulting app status after any restart. If a
   control is inaccessible or an approval review blocks it, report that actual
-  limitation and the exact remaining user action.
+  limitation and the exact remaining user action. Password and Touch ID
+  authentication must be completed by the owner directly; never request their
+  password or bypass a computer-use safety restriction. Resume authorized
+  controls after authentication rather than asking for approval again.
 - Keep Settings a normal non-floating window and overlays nonactivating unless
   a documented interaction requires activation.
 - Redact dictated text, screenshots, application document content, usernames,

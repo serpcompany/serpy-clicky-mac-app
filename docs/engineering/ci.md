@@ -8,10 +8,10 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `b8153b7` in run `33935667345` |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `1dccc86` in run `33942146377` |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `1dccc86` in run `33942146377` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Runs 5 and 6 both timed out during launch before validating flow corrections; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 12 reached all 18 tests: 11 passed, 7 failed; corrections are under test in run 13; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
 Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
@@ -25,9 +25,25 @@ Run 6 (`99fcbeee-f0e4-41d1-a0c1-e88906a9ffda`) retried the exact same source
 without changing timeouts or production code. It finished FAILED with 18
 one-minute timeouts; the first test again stopped inside application launch
 before flow assertions. See `evidence/issue-13-xcode-cloud-run6-red-proof.json`.
-The next diagnostic should narrow the launch reproduction rather than repeat
-the full suite unchanged. The underlying app versus XCTest activation cause
-is still unproven.
+The focused UF-03 diagnostic subsequently passed in run 8, but full run 9
+again timed out during launch. Run 11's temporary startup receipts showed app
+initialization completed while XCTest still reported `Running Background`.
+The runner now yields activation to the product before launch. With that
+experiment, run 12 reached flow assertions in all 18 tests. This is useful
+evidence, not yet proof that cloud launch is stable.
+
+Run 12's remaining failures identified an ambiguous Settings menu selector,
+numeric radio-control values, and Guide remaining in its thinking presentation
+while speaking a structured step. Selector corrections are in `3fc2bdc`.
+The production speech-order correction in `1dccc86` has a red-to-green Swift
+Testing regression: the step must be presented before speech starts and spoken
+exactly once. Temporary startup instrumentation was removed. See
+`evidence/issue-13-xcode-cloud-run12-flow-proof.json`.
+
+Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) tests `1dccc86`.
+Its terminal result must be inspected before claiming these corrections pass
+the UI lane. Neither cloud fixtures nor headless success satisfy installed
+microphone, insertion, focus, audible speech, or permission acceptance.
 
 `GuideCompanionLaunchDiagnostic.xctestplan` is a temporary diagnosis-only
 selection of the first failing UF-03 test with identical runtime options and
