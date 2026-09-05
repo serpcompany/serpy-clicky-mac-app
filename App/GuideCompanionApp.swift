@@ -163,7 +163,12 @@ struct GuideCompanionApp: App {
 final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyPresence(for: .running(settingsVisible: NSApp.windows.contains(where: \.isVisible)))
-        GuideAppComposition.settingsWindow.present()
+        // Present after AppKit/SwiftUI finish processing the launch notification.
+        // An activation requested inside that notification can be superseded by
+        // the menu-bar scene's initial activation-policy setup.
+        DispatchQueue.main.async {
+            GuideAppComposition.settingsWindow.present()
+        }
         Task {
             await GuideAppComposition.model.start()
             if CommandLine.arguments.contains("--ui-testing"),

@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `1dccc86` in run `33942146377` |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `1dccc86` in run `33942146377` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 12 reached all 18 tests: 11 passed, 7 failed; corrections are under test in run 13; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 13 again timed out during launch in all 18 tests; launch remains unresolved; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
 Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
@@ -40,9 +40,14 @@ Testing regression: the step must be presented before speech starts and spoken
 exactly once. Temporary startup instrumentation was removed. See
 `evidence/issue-13-xcode-cloud-run12-flow-proof.json`.
 
-Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) tests `1dccc86`.
-Its terminal result must be inspected before claiming these corrections pass
-the UI lane. Neither cloud fixtures nor headless success satisfy installed
+Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) tested `1dccc86`
+and failed with 18 launch timeouts. Its first test again reported
+`Running Background` inside `application.launch`. The activation handoff alone
+is therefore insufficient, and the flow corrections remain unvalidated in
+the full UI lane. See `evidence/issue-13-xcode-cloud-run13-red-proof.json`.
+The next focused experiment defers the existing Settings presentation until
+after the launch notification, without changing test timeouts or flow fixtures.
+Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 
 `GuideCompanionLaunchDiagnostic.xctestplan` is a temporary diagnosis-only
