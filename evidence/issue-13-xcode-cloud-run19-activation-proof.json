@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "runId": "bddcf4bc-4e33-4348-9873-3e9f8be06055",
+  "sourceCommit": "45b4742ba30ccec627adc657ec23edb0947a572b",
+  "result": "FAILED",
+  "logArtifactId": "a15f87a8-1c0d-48e3-b086-fd0b4deda9c9",
+  "resultArtifactId": "16daad23-90a8-4d34-8f39-160701cddda0",
+  "observed": "Runner changed from prohibited to regular but remained inactive; both tests stopped before product launch",
+  "recordingObserved": "Unlocked cloud desktop with System Settings General frontmost; no authentication dialog",
+  "cleanup": "Unsuccessful runner-activation requirement removed",
+  "relatedPrimarySource": "https://developer.apple.com/forums/thread/807805",
+  "sourceCaveat": "Apple DTS discusses similar intermittent system-app activation failures; equivalence to this XCTest failure is not proven",
+  "consecutiveCleanRuns": 0
+}

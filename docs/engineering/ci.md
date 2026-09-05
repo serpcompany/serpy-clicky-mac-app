@@ -67,6 +67,13 @@ finished launching, not hidden, and inactive. See
 `evidence/issue-13-xcode-cloud-run18-activation-proof.json`. The next experiment
 requires the runner to become active before yielding, with a five-second
 fail-fast check and restoration of its original policy during teardown.
+Run 19 changed the runner to regular but it still could not activate; the
+requirement was removed. Its recording showed an unlocked cloud desktop with
+System Settings frontmost. A related Apple DTS discussion is linked in
+`evidence/issue-13-xcode-cloud-run19-activation-proof.json`; it supports an
+OS-level hypothesis but does not prove equivalence. The next comparison uses
+Sequoia 15.6 with Xcode 26.3. Because both OS and toolchain differ, that
+diagnostic cannot establish a Tahoe fix or replace current-runtime acceptance.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 
