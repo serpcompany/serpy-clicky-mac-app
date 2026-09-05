@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "d56d5d21-65d7-4a66-8962-0dc59f37cd9f",
+  "sourceCommit": "22cd47e1c4afcf6fc2d2710878eaef022d7ee976",
+  "result": "FAILED",
+  "reportedTimeouts": 18,
+  "logArtifactId": "d5c94436-805a-448c-972f-74338b05ef04",
+  "resultArtifactId": "d0aed728-6f02-4872-98ec-1826cd924105",
+  "firstFailure": "UF-03 timed out inside application.launch with current state Running Background",
+  "interpretation": "Launch remains intermittent after runner yield and current app activation API. Run 16's 17 passing flows do not establish stable launch. The disclosure selector correction remains unvalidated.",
+  "nextDiagnostic": "State-only runner/product activation flags before and after launch; no production timing change",
+  "consecutiveCleanRuns": 0
+}

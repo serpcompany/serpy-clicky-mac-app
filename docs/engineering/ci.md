@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152`, including both runner safety suites |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for `fb33621` in run `33943616152` |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | Valid ambient `GT-UF09-001` passed against the real app at `79cd0d2`; cleanup passed |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 16: 17 passed, 1 failed at Talk disclosure selector; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 17 returned to 18 launch timeouts; launch is intermittent; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Manual evidence only |
 
 Run 4 executed 18 tests (3 passed, 15 failed). Native-control selectors and
@@ -57,11 +57,15 @@ a switch. See `evidence/issue-13-xcode-cloud-run16-flow-proof.json`.
 The selector is corrected without changing product behavior. Launch and all
 other flow assertions passed this run; stable full-suite acceptance still
 requires consecutive clean runs.
+Run 17 then returned to launch timeouts in all 18 tests, before validating
+the disclosure correction. See `evidence/issue-13-xcode-cloud-run17-red-proof.json`.
+The next diagnostic records only runner/product activation flags before and
+after launch, without changing production behavior.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 
 `GuideCompanionLaunchDiagnostic.xctestplan` is a temporary diagnosis-only
-selection of the first failing UF-03 test with identical runtime options and
+selection of UF-03 and the remaining UF-11 flow with identical runtime options and
 timeouts. The default full golden plan is unchanged. Diagnostic runs never
 count toward the ten-run acceptance burn-in. Select this plan only for a named
 cloud diagnostic, then restore the workflow to `GuideCompanionGolden`.

@@ -72,10 +72,12 @@ class GoldenUITestCase: XCTestCase {
         ]
         // Cooperatively hand the runner's activation to the app it launches.
         // This does not activate the app; its real Settings path still must.
+        recordLaunchState("before-yield")
         if #available(macOS 14.0, *) {
             NSApplication.shared.yieldActivation(toApplicationWithBundleIdentifier: productBundleIdentifier)
         }
         application.launch()
+        recordLaunchState("after-launch")
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
         let expectedWindow = openTranscript ? "SERPy Voice Transcript" : "SERPy Settings"
         XCTAssertTrue(application.windows[expectedWindow].waitForExistence(timeout: 5))
@@ -84,6 +86,20 @@ class GoldenUITestCase: XCTestCase {
                 .filter { !preexistingProcessIDs.contains($0.processIdentifier) }.count,
             1
         )
+    }
+
+    // [DEBUG-cloud-activation] Temporary state-only launch diagnostic.
+    // Never print unrelated app names, window titles, paths, or user content.
+    private func recordLaunchState(_ stage: String) {
+        let runner = NSRunningApplication.current
+        let product = NSRunningApplication.runningApplications(
+            withBundleIdentifier: productBundleIdentifier
+        ).first
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let foregroundRole = frontmost == nil ? "none"
+            : frontmost?.processIdentifier == runner.processIdentifier ? "runner"
+            : frontmost?.bundleIdentifier == productBundleIdentifier ? "product" : "other"
+        print("[DEBUG-cloud-activation] stage=\(stage) foreground=\(foregroundRole) runnerActive=\(runner.isActive) runnerPolicy=\(runner.activationPolicy.rawValue) productPresent=\(product != nil) productActive=\(product?.isActive ?? false) productPolicy=\(product?.activationPolicy.rawValue ?? -1) productFinished=\(product?.isFinishedLaunching ?? false) productHidden=\(product?.isHidden ?? false)")
     }
 
     func selectSettingsTab(_ title: String) {
