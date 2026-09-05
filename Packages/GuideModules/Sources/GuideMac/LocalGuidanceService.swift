@@ -96,7 +96,8 @@ private final class FoundationGuidanceModelSession: LocalGuidanceModelSession {
     }
 
     func respond(to prompt: String) async throws -> String {
-        try await session.respond(to: prompt).content
+        let response = try await session.respond(to: prompt, generating: FoundationGuidanceResponse.self)
+        return try response.content.encodedPlan()
     }
 }
 #endif
