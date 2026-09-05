@@ -238,8 +238,10 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   remain rejected.
 - The fourth owner-approved real-app attempt is retained at
   `evidence/issue-13-real-app-UF09-run4.xcresult` (generated and ignored). The
-  real app launched, the test method ran, every Talk/Finish action progressed,
-  and cleanup passed. Local-only AX/video inspection showed the transcript
+  real app launched, the test method ran, and every Talk/Finish action
+  progressed. The wrapper reported cleanup, but its individual cleanup
+  dimensions were not retained and therefore remain unverified. Local-only
+  AX/video inspection showed the transcript
   visibly advancing through the combined answer, `Open the File menu.`, and
   `Choose New Window.`. The failures were assertion-only: the combined SwiftUI
   row exposed label `SERPy` and no accessibility value, while the test waited
@@ -249,8 +251,9 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   and frames contained existing Chrome content and were deleted without being
   committed.
 - The fifth owner-approved real-app attempt at
-  `evidence/issue-13-real-app-UF09-run5.xcresult` is mechanically green (one
-  passed, zero failed, cleanup passed) but rejected as product proof. It drove
+  `evidence/issue-13-real-app-UF09-run5.xcresult` was reported mechanically
+  green (one passed, zero failed) but is rejected as product proof. Its cleanup
+  dimensions were not retained and remain unverified. It drove
   the optional Voice Transcript inspector, while HeyClicky parity requires the
   shortcut-invoked, nonactivating ambient Guide with no conventional Guide work
   window. The golden Guide tests now drive the real `GlobalShortcutCallbacks`

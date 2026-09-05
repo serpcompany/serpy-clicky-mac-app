@@ -107,10 +107,12 @@ that the now-rejected standalone host failed to acquire a process ID. It does
 not count as serpy evidence. The first real-app execution on 2026-09-05 stopped
 before the test method because macOS canceled XCTest automation-mode biometric
 authentication. Later runs corrected the session boundary and the rejected
-transcript-window design. The valid run at `79cd0d2` executes `GT-UF09-001`
-through the ambient shortcut path, passes stale/fresh progression and
-completion assertions, and retains its local `.xcresult` plus committed
-redacted proof as documented in `evidence/issue-13-golden-flow-harness.md`.
+transcript-window design. The committed summary for the run at `79cd0d2`
+records `GT-UF09-001` through the ambient shortcut path with stale/fresh
+progression and completion assertions. Its primary `.xcresult`, Xcode report
+screenshot, destination, and unmeasured cleanup dimensions are unavailable,
+so this is partial secondary evidence; see
+`evidence/issue-13-golden-flow-harness.md`.
 
 ## GitHub Actions
 
