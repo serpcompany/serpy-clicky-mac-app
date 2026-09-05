@@ -804,6 +804,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func presentGuidanceFailure(_ failure: GuideFailure) {
+        incidentReporter.report(DiagnosticIncident(failure: failure))
         guidancePhase = .failed(failure)
         statusMessage = failure.message
         recoveryMessage = failure.recovery
