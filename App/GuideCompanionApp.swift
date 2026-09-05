@@ -33,6 +33,16 @@ private enum GuideAppComposition {
     static private(set) var model: GuideAppModel!
     static private(set) var runtimeMode: AppRuntimeMode = .production
 
+#if DEBUG
+    // [DEBUG-cloud-launch] Temporary, fixed-name receipts in the owned test root.
+    static func recordLaunchStage(_ stage: String) {
+        guard AppRuntimeMode.resolve(arguments: CommandLine.arguments) == .uiTest,
+              let root = try? UITestSessionRootPolicy.validate(environment: ProcessInfo.processInfo.environment)
+        else { return }
+        try? Data().write(to: root.appendingPathComponent("launch-stage.\(stage)"), options: .atomic)
+    }
+#endif
+
     static func configure(for mode: AppRuntimeMode) -> GuideAppModel {
         if let model { return model }
         runtimeMode = mode
@@ -134,7 +144,13 @@ struct GuideCompanionApp: App {
 
     init() {
         let mode = AppRuntimeMode.resolve(arguments: CommandLine.arguments)
+#if DEBUG
+        GuideAppComposition.recordLaunchStage("init-entered")
+#endif
         _model = State(initialValue: GuideAppComposition.configure(for: mode))
+#if DEBUG
+        GuideAppComposition.recordLaunchStage("model-configured")
+#endif
     }
 
     var body: some Scene {
@@ -162,10 +178,22 @@ struct GuideCompanionApp: App {
 @MainActor
 final class GuideAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+#if DEBUG
+        GuideAppComposition.recordLaunchStage("did-finish-launching")
+#endif
         applyPresence(for: .running(settingsVisible: NSApp.windows.contains(where: \.isVisible)))
+#if DEBUG
+        GuideAppComposition.recordLaunchStage("presence-applied")
+#endif
         GuideAppComposition.settingsWindow.present()
+#if DEBUG
+        GuideAppComposition.recordLaunchStage("settings-present-returned")
+#endif
         Task {
             await GuideAppComposition.model.start()
+#if DEBUG
+            GuideAppComposition.recordLaunchStage("model-start-returned")
+#endif
             if CommandLine.arguments.contains("--ui-testing"),
                CommandLine.arguments.contains("--open-guide-transcript") {
                 GuideAppComposition.model.openGuidanceTranscript()
