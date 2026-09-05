@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "runId": "5009e334-3c09-4fe1-a547-3cd5d692d1cf",
+  "sourceCommit": "9b40897bbb1653d3a8aa3439bb3a7cb186a8166c",
+  "result": "FAILED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "logArtifactId": "d9ae2a06-6926-4447-a287-ace23578a58b",
+  "resultArtifactId": "47e04b46-2ddd-4bea-9d26-5bb756523591",
+  "firstFailure": "UF-03 timed out in application.launch; current state Running Background",
+  "experiment": "Deferring Settings presentation one main-queue turn did not resolve launch",
+  "cleanup": "Timing experiment removed; original synchronous presentation restored",
+  "nextExperiment": "Replace legacy Settings activation call with NSApplication.activate on the supported macOS baseline",
+  "consecutiveCleanRuns": 0
+}
