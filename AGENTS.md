@@ -32,6 +32,14 @@ screenshots, document content, identity, or arbitrary error strings.
 
 ## Hard Boundaries
 
+On 2026-09-05 the owner approved privacy-filtered handled-error reporting in
+installed internal test builds and pushing scoped source/evidence changes to
+the existing public `serpcompany/serpy-clicky-mac-app` repository. Report only
+fixed error codes, stages, provider classification, and build metadata. Keep
+transcripts, screenshots, credentials, document content, arbitrary error text,
+and crash stacks excluded. This supersedes the development-only restriction
+above for explicitly configured internal test artifacts, not general releases.
+
 - Dictation must not depend on an assistant engine, API key, or network.
 - Do not embed autonomous computer use, shell execution, agents, accounts,
   sync, billing, product analytics, pets, widgets, browser control, or MCP in

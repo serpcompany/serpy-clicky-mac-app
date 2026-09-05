@@ -429,9 +429,7 @@ public final class GuideTurnCoordinator {
                     message: error.localizedDescription,
                     recovery: "Try again."
                 )
-                if failure.code != .unclassified {
-                    incidentReporter.report(DiagnosticIncident(failure: failure))
-                }
+                incidentReporter.report(DiagnosticIncident(failure: failure))
                 phase = .failed(failure)
                 let readable = lastReadablePresentation
                 presentOverlay(.init(

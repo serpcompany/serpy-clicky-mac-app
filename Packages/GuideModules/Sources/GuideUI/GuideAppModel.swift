@@ -1169,6 +1169,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func presentFailure(_ failure: GuideFailure) {
+        incidentReporter.report(DiagnosticIncident(failure: failure))
         phase = .failed(failure)
         statusMessage = failure.message
         recoveryMessage = failure.recovery

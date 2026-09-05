@@ -10,7 +10,7 @@ import SwiftUI
 private enum GuideAppComposition {
     static let incidentReporter: any DiagnosticIncidentReporting = {
         let environment = ProcessInfo.processInfo.environment
-#if DEBUG
+#if DEBUG || SERPY_INTERNAL_DIAGNOSTICS
         let sentryConfiguration = SentryRuntimeConfiguration.resolve(
             processEnvironment: environment,
             bundleInfo: Bundle.main.infoDictionary ?? [:]
