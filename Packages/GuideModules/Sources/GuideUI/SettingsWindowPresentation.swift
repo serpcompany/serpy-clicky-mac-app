@@ -45,3 +45,26 @@ public struct SettingsWindowVisibilityLifecycle {
         activateApplication()
     }
 }
+
+@MainActor
+public struct SettingsWindowForegroundRecovery {
+    private let enterRegularMode: () -> Void
+    private let showSettings: () -> Void
+    private let forceActivateApplication: () -> Void
+
+    public init(
+        enterRegularMode: @escaping () -> Void,
+        showSettings: @escaping () -> Void,
+        forceActivateApplication: @escaping () -> Void
+    ) {
+        self.enterRegularMode = enterRegularMode
+        self.showSettings = showSettings
+        self.forceActivateApplication = forceActivateApplication
+    }
+
+    public func recover() {
+        enterRegularMode()
+        showSettings()
+        forceActivateApplication()
+    }
+}

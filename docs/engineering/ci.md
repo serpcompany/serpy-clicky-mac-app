@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 17 returned to 18 launch timeouts; runs 18-20 narrowed the activation-owner failure; bounded app-owned recovery is not yet cloud-proven; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 17 returned to 18 launch timeouts; runs 18-21 narrowed the activation-owner failure; forceful delayed recovery is not yet cloud-proven; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 is recorded as the installed signed/notarized candidate; user-flow acceptance remains red |
 
 Runs 1-7 established and narrowed cloud signing, project-identity, selector,
@@ -50,12 +50,15 @@ requirement was removed. A related Apple DTS discussion is linked in
 OS-level hypothesis but does not prove equivalence. Run 20 confirmed the same
 launch failure on Sequoia 15.6. See
 `evidence/issue-13-xcode-cloud-run20-comparison-proof.json`. Temporary activation
-logging and the ineffective runner yield have been removed. Staging now owns a
-bounded app-side recovery attempt that stops on success, exhaustion, or a user
-foreground change; it remains unproven in the UI lane. The next UI proof is the
-focused UF-03 and UF-11 diagnostic plan, followed by the complete plan only if
-that focused run passes. The cloud workflow must use the current runtime for
-acceptance, and burn-in remains 0/10.
+logging and the ineffective runner yield have been removed. Run 21 then proved
+that four bounded retries using ordinary `NSApplication.activate()` still left
+both selected tests blocked in `application.launch`; see
+`evidence/issue-13-xcode-cloud-run21-red-proof.json`. Staging keeps the immediate
+ordinary Settings presentation, but delayed owner-safe recovery now uses the
+activate-regardless AppKit call and remains unproven in the UI lane. The next UI
+proof is the focused UF-03 and UF-11 diagnostic plan, followed by the complete
+plan only if that focused run passes. The cloud workflow must use the current
+runtime for acceptance, and burn-in remains 0/10.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, permission, or click-through
 acceptance.

@@ -66,7 +66,7 @@ final class LaunchForegroundCoordinator {
     private let retryDelays: [Duration]
     private let schedule: Schedule
     private let snapshot: () -> LaunchForegroundSnapshot
-    private let retryActivation: () -> Void
+    private let recoverSettingsForeground: () -> Void
     private let finished: (LaunchForegroundOutcome) -> Void
 
     private var started = false
@@ -80,14 +80,14 @@ final class LaunchForegroundCoordinator {
         retryDelays: [Duration] = standardRetryDelays,
         schedule: @escaping Schedule,
         snapshot: @escaping () -> LaunchForegroundSnapshot,
-        retryActivation: @escaping () -> Void,
+        recoverSettingsForeground: @escaping () -> Void,
         finished: @escaping (LaunchForegroundOutcome) -> Void = { _ in }
     ) {
         precondition(!retryDelays.contains(where: { $0 < .zero }))
         self.retryDelays = retryDelays
         self.schedule = schedule
         self.snapshot = snapshot
-        self.retryActivation = retryActivation
+        self.recoverSettingsForeground = recoverSettingsForeground
         self.finished = finished
     }
 
@@ -142,7 +142,7 @@ final class LaunchForegroundCoordinator {
             return
         }
         retryAttempts += 1
-        retryActivation()
+        recoverSettingsForeground()
         observeOrScheduleRetry(using: snapshot())
     }
 

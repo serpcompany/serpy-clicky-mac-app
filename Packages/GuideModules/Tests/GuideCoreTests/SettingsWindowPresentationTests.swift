@@ -35,4 +35,17 @@ final class SettingsWindowPresentationTests: XCTestCase {
         lifecycle.didAppear()
         XCTAssertEqual(events, ["regular", "activate"])
     }
+
+    func testLaunchRecoveryShowsSettingsBeforeForcefulActivation() {
+        var events: [String] = []
+        let recovery = SettingsWindowForegroundRecovery(
+            enterRegularMode: { events.append("regular") },
+            showSettings: { events.append("show") },
+            forceActivateApplication: { events.append("force-activate") }
+        )
+
+        recovery.recover()
+
+        XCTAssertEqual(events, ["regular", "show", "force-activate"])
+    }
 }

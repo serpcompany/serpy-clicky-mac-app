@@ -10,7 +10,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
 
         fixture.coordinator.start()
 
-        #expect(fixture.retryAttempts == 0)
+        #expect(fixture.recoveryAttempts == 0)
         #expect(fixture.scheduler.scheduledDelays.isEmpty)
         #expect(fixture.outcomes == [.succeeded(retryAttempts: 0)])
     }
@@ -25,7 +25,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         let lateCallback = try fixture.scheduler.takeNext()
         lateCallback()
 
-        #expect(fixture.retryAttempts == 0)
+        #expect(fixture.recoveryAttempts == 0)
         #expect(fixture.outcomes == [.relinquished(
             retryAttempts: 0,
             reason: LaunchForegroundRelinquishment(
@@ -46,7 +46,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         fixture.coordinator.start()
         try fixture.scheduler.runNext()
 
-        #expect(fixture.retryAttempts == 1)
+        #expect(fixture.recoveryAttempts == 1)
         #expect(fixture.scheduler.scheduledDelays == [.zero])
         #expect(fixture.outcomes == [.relinquished(
             retryAttempts: 1,
@@ -67,7 +67,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         try fixture.scheduler.runNext()
 
         #expect(fixture.snapshotReads == 4)
-        #expect(fixture.retryAttempts == 1)
+        #expect(fixture.recoveryAttempts == 1)
         #expect(fixture.scheduler.scheduledDelays == [.zero, .milliseconds(100)])
         #expect(fixture.outcomes == [.relinquished(
             retryAttempts: 1,
@@ -84,7 +84,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         fixture.coordinator.start()
         try fixture.scheduler.runAll()
 
-        #expect(fixture.retryAttempts == 4)
+        #expect(fixture.recoveryAttempts == 4)
         #expect(fixture.scheduler.scheduledDelays == [
             .zero,
             .milliseconds(100),
@@ -114,7 +114,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         try fixture.scheduler.runNext()
         try fixture.scheduler.runNext()
 
-        #expect(fixture.retryAttempts == 2)
+        #expect(fixture.recoveryAttempts == 2)
         #expect(fixture.scheduler.scheduledDelays == [.zero, .milliseconds(100)])
         #expect(fixture.outcomes == [.succeeded(retryAttempts: 2)])
     }
@@ -129,7 +129,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         fixture.coordinator.start()
         try fixture.scheduler.runNext()
 
-        #expect(fixture.retryAttempts == 1)
+        #expect(fixture.recoveryAttempts == 1)
         #expect(fixture.outcomes == [.succeeded(retryAttempts: 1)])
     }
 
@@ -145,7 +145,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         lateCallback()
         fixture.coordinator.start()
 
-        #expect(fixture.retryAttempts == 0)
+        #expect(fixture.recoveryAttempts == 0)
         #expect(fixture.scheduler.scheduledDelays == [.zero])
         #expect(fixture.outcomes == [.relinquished(
             retryAttempts: 0,
@@ -166,7 +166,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
         lateCallback()
         fixture.coordinator.start()
 
-        #expect(fixture.retryAttempts == 1)
+        #expect(fixture.recoveryAttempts == 1)
         #expect(fixture.scheduler.scheduledDelays == [.zero])
         #expect(fixture.outcomes == [.succeeded(retryAttempts: 1)])
     }
@@ -177,7 +177,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
 
         fixture.coordinator.start()
 
-        #expect(fixture.retryAttempts == 0)
+        #expect(fixture.recoveryAttempts == 0)
         #expect(fixture.scheduler.scheduledDelays == [.zero])
         #expect(fixture.outcomes.isEmpty)
     }
@@ -186,7 +186,7 @@ struct LaunchForegroundCoordinatorOwnerTests {
 @MainActor
 private final class LaunchForegroundOwnerFixture {
     let scheduler = ManualLaunchForegroundOwnerScheduler()
-    private(set) var retryAttempts = 0
+    private(set) var recoveryAttempts = 0
     private(set) var outcomes: [LaunchForegroundOutcome] = []
     private(set) var snapshotReads = 0
     private let snapshots: [LaunchForegroundSnapshot]
@@ -201,7 +201,7 @@ private final class LaunchForegroundOwnerFixture {
             snapshotReads += 1
             return snapshot
         },
-        retryActivation: { [unowned self] in retryAttempts += 1 },
+        recoverSettingsForeground: { [unowned self] in recoveryAttempts += 1 },
         finished: { [unowned self] outcome in outcomes.append(outcome) }
     )
 

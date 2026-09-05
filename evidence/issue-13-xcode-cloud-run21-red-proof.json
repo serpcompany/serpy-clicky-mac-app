@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "runId": "f47c8514-a4b9-4d4b-9d2e-8cf106071665",
+  "sourceCommit": "b9588df545290d24bbf07b791d55ecaa462a0f85",
+  "result": "FAILED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "action": "GuideCompanionLaunchDiagnostic - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "createdAt": "2026-09-05T06:03:22.862Z",
+  "startedAt": "2026-09-05T06:03:31.289Z",
+  "finishedAt": "2026-09-05T06:08:12.235Z",
+  "durationSeconds": 280.946,
+  "passedTests": 0,
+  "failedTests": 2,
+  "skippedTests": 0,
+  "failures": [
+    {
+      "count": 2,
+      "durationSecondsEach": 60,
+      "summary": "UF-03 and UF-11 timed out inside application.launch after all four bounded cooperative activation retries"
+    }
+  ],
+  "resultArtifactId": "e1f75271-25c0-4bd1-88c7-9411ae31316f",
+  "logArtifactId": "c8eee267-3419-441b-bb60-09100bcb27bf",
+  "observed": "The bounded owner-aware recovery preserved its retry budget and user-focus safeguards, but NSApplication.activate() did not make the product foreground in either selected test.",
+  "interpretation": "Bounded timing alone is insufficient. Delayed recovery attempts need the AppKit activation call that explicitly activates regardless of other applications while retaining foreground-owner relinquishment.",
+  "nextEvidenceNeeded": "Repeat focused UF-03 and UF-11 against delayed recovery attempts using NSApplication.activate(ignoringOtherApps: true), then run the complete plan only if both pass.",
+  "consecutiveCleanRuns": 0
+}

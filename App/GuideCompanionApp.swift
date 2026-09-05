@@ -217,8 +217,8 @@ final class GuideAppDelegate: NSObject, NSApplicationDelegate {
                     activationPolicyIsRegular: NSApp.activationPolicy() == .regular
                 )
             },
-            retryActivation: {
-                settingsWindowController.present()
+            recoverSettingsForeground: {
+                settingsWindowController.recoverLaunchForeground()
             },
             finished: { [weak self] _ in
                 self?.launchForegroundCoordinator = nil

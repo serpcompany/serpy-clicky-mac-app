@@ -365,10 +365,16 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   tests at `26083784182544d06eaf2cf04c250fcfaf763696` on macOS 15.6 with
   Xcode 26.3; both again timed out. This rejects a Tahoe-only explanation but
   does not isolate OS from toolchain.
+- Diagnostic run 21 (`f47c8514-a4b9-4d4b-9d2e-8cf106071665`) selected UF-03
+  and UF-11 at `b9588df545290d24bbf07b791d55ecaa462a0f85` on macOS 26.6.2.
+  Both timed out inside `application.launch` after all four bounded recovery
+  attempts used the ordinary cooperative `NSApplication.activate()` call.
+  This proves the bounded schedule alone did not stabilize foreground launch.
 - Temporary activation logging and the disproven runner yield are removed.
-  Staging now contains a bounded app-owned launch recovery that stops on success,
-  exhaustion, or a user foreground-owner change. It has deterministic headless
-  coverage but no Xcode Cloud execution evidence yet.
+  Staging now keeps the immediate ordinary Settings presentation but gives only
+  delayed owner-safe recovery attempts the AppKit activate-regardless request.
+  It still stops on success, exhaustion, or a user foreground-owner change. It
+  has deterministic headless coverage but no Xcode Cloud execution evidence yet.
 - The complete-plan gate remains red. The ten-run isolated burn-in is 0/10 and
   the check must not be required.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
