@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "runId": "51f8829d-43ea-43ef-a30b-2c0aaa915a73",
+  "sourceCommit": "096af3b756e449aa8626f2805ac154ffa3e8ce79",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "result": "SUCCEEDED",
+  "startedAt": "2026-09-05T02:13:41.662Z",
+  "finishedAt": "2026-09-05T02:16:21.169Z",
+  "test": "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()",
+  "resultArtifactId": "b0c89061-2f9f-4e24-b08c-1af7760287b3",
+  "proves": "Deterministic real-app shortcut dictation, persistent confirmed-delivery UI, exact insertion fixture, confirmed recovery record, and test teardown",
+  "doesNotProve": "Real microphone or OS insertion, full-suite startup reliability, or installed acceptance",
+  "countsTowardAcceptance": false,
+  "consecutiveCleanRuns": 0
+}
