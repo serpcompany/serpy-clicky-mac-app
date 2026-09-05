@@ -26,8 +26,10 @@ remaining failures were classified as Settings selector ambiguity, three UF-05
 numeric radio-value assertions, UF-08 Guide timing, UF-10 speaking timing, and
 UF-11 selector/cascade failures. The current source removes the temporary launch
 probes, corrects the native selectors, and presents structured Guide steps before
-speech; those corrections do not have a claimed Xcode Cloud run yet. No run 13
-result is claimed. The complete-plan gate remains red and burn-in remains 0/10.
+speech. Full run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) was started against
+`1dccc86`, but no terminal result is claimed here. Neither its existence nor
+headless success changes the complete-plan gate: it remains red and burn-in
+remains 0/10.
 
 ## What developers run
 

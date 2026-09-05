@@ -1,6 +1,14 @@
 #!/bin/zsh
 set -euo pipefail
 
+# The runner uses 75 for both an occupied UI lane and a fixture timeout.
+# Reject an occupied lane before any timeout can be mistaken for exercised
+# cleanup. Do not terminate the owner's installed application for a self-test.
+if pgrep -f '/SERPy.app/Contents/MacOS/SERPy|GuideCompanionUITests-Runner' >/dev/null; then
+  print -u2 "golden UI runner self-test requires serpy and XCUI to be closed; no fixtures ran"
+  exit 75
+fi
+
 assert_clean() {
   local marker=$1
   local result=$2
