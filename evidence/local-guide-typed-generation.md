@@ -26,3 +26,13 @@ grounded pointer placement, spoken output, or cross-app acceptance.
 
 Reference: Apple's Foundation Models guided-generation documentation and the
 installed macOS SDK declarations for `respond(to:generating:)` and `@Guide`.
+
+Follow-up live probes tightened schema descriptions to literal labels and
+evidenced menu actions. One probe produced incorrect keyboard actions despite
+valid JSON; the next produced File → New Window actions but used the clicked
+labels themselves as completion evidence. Those labels can already be visible
+before the action, so these runs do not pass progression acceptance. This is
+evidence of a semantic weakness, not a successful prompt-only fix. The current
+progression policy matches substrings in fresh OCR but does not distinguish
+preexisting labels from newly observed outcomes; that boundary needs a
+regression before changing progression behavior.

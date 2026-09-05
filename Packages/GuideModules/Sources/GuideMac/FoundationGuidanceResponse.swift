@@ -22,10 +22,10 @@ struct FoundationGuidanceResponse: Codable {
 @available(macOS 26.0, *)
 @Generable
 struct FoundationGuidanceStep: Codable {
-    @Guide(description: "One short action for the user, not an action performed by the assistant.")
+    @Guide(description: "One action on an exact control named in the supplied evidence. Follow the user's requested route; for a menu walkthrough name the menu or item to click, not invented keyboard shortcuts. The user performs the action.")
     var text: String
 
-    @Guide(description: "Short visible strings expected after the step, used to verify progress.", .count(1...4))
+    @Guide(description: "Exact literal UI labels visible after this action, such as New Window or New Tab. Copy labels from the supplied evidence. Never use descriptions like menu appears or window opens.", .count(1...4))
     var completionEvidence: [String]
 }
 #endif
