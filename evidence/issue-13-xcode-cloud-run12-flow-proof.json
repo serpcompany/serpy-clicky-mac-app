@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "runId": "8fcfd28b-413a-4ebb-a767-052ef6d9ef58",
+  "sourceCommit": "a2d42c9d533b76877e25c438831bb37f669f0ff2",
+  "result": "FAILED",
+  "passedTests": 11,
+  "failedTests": 7,
+  "skippedTests": 0,
+  "resultArtifactId": "4f639db4-dc9c-4d58-ba4b-bdb0aa4f7c45",
+  "activationExperiment": "Runner yieldActivation before launch allowed full-plan tests to reach flow assertions instead of launch timeouts",
+  "remainingFailures": ["UF-02 menu ambiguity", "Three UF-05 numeric radio-value assertions", "UF-08 Guide state wait", "UF-10 speaking state wait", "UF-11 radio-value assertion and cascading control failures"],
+  "nextCorrections": "Use numeric radio values; scope Settings to the app menu; inspect Guide phase timing separately",
+  "startupProbeCleanup": "Temporary stage receipts and background probes removed after retaining run 11 evidence",
+  "consecutiveCleanRuns": 0
+}

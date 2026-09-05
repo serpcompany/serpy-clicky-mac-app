@@ -70,29 +70,6 @@ class GoldenUITestCase: XCTestCase {
             "SERPY_TEST_TEMP_ROOT": sessionTemporaryRoot.path,
             "SERPY_XCUI_RUN_TOKEN": runToken,
         ]
-        // [DEBUG-cloud-launch] Probe off the main thread while XCUI blocks in
-        // launch. Only fixed stage names are logged; never read root contents.
-        let diagnosticRoot = sessionRoot!
-        let stages = ["init-entered", "model-configured", "did-finish-launching",
-                      "presence-applied", "settings-present-returned", "model-start-returned"]
-        for stage in stages {
-            let receipt = diagnosticRoot.appendingPathComponent("launch-stage.\(stage)")
-            if FileManager.default.fileExists(atPath: receipt.path) {
-                try FileManager.default.removeItem(at: receipt)
-            }
-        }
-        let launchProbes = [5, 15, 30].map { delay in
-            let probe = DispatchWorkItem { @Sendable in
-                let reached = stages.filter {
-                    FileManager.default.fileExists(atPath: diagnosticRoot.appendingPathComponent("launch-stage.\($0)").path)
-                }
-                let message = "[DEBUG-cloud-launch] at=\(delay)s stages=\(reached.joined(separator: ","))\n"
-                FileHandle.standardError.write(Data(message.utf8))
-            }
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .seconds(delay), execute: probe)
-            return probe
-        }
-        defer { launchProbes.forEach { $0.cancel() } }
         // Cooperatively hand the runner's activation to the app it launches.
         // This does not activate the app; its real Settings path still must.
         if #available(macOS 14.0, *) {
@@ -113,7 +90,7 @@ class GoldenUITestCase: XCTestCase {
         let tab = application.radioButtons[title]
         XCTAssertTrue(tab.waitForExistence(timeout: 3))
         tab.click()
-        XCTAssertEqual(tab.value as? String, "1")
+        XCTAssertEqual((tab.value as? NSNumber)?.intValue, 1)
     }
 
     func tap(_ title: String) {
