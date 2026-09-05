@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "runId": "6076f536-68cb-410b-8bce-12451fd056e8",
+  "sourceCommit": "3b7673e283796dfee325baeef9538b58ec7fa066",
+  "result": "FAILED",
+  "reportedTimeouts": 18,
+  "logArtifactId": "88f12d8b-ae54-4b93-a090-9ed8251be655",
+  "firstTestStagesAtFiveSeconds": [
+    "init-entered", "model-configured", "did-finish-launching",
+    "presence-applied", "settings-present-returned", "model-start-returned"
+  ],
+  "firstTestStagesAtFifteenAndThirtySeconds": "Identical to five seconds",
+  "xctestFailure": "Failed to activate application; current state Running Background",
+  "diagnosis": "Model construction and launch callbacks returned; failure is at foreground activation, not model initialization",
+  "nextExperiment": "Runner yields activation to the exact product bundle before XCUIApplication launch; production code and timeouts unchanged",
+  "reference": "https://developer.apple.com/documentation/appkit/nsapplication/yieldactivation(toapplicationwithbundleidentifier:)",
+  "consecutiveCleanRuns": 0
+}

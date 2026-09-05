@@ -1,0 +1,200 @@
+#!/bin/zsh
+set -euo pipefail
+
+temp_parent=$(cd "${TMPDIR:-/tmp}" && pwd -P)
+
+test -z "$(find Packages/GuideModules/Sources -type f -name '*UITest*' -print -quit)" || {
+  print -u2 "UI-test composition leaked into a shipping package target"; exit 1
+}
+for fixture_source in GuideUITestComposition.swift UITestDictationAdapters.swift UITestGuideAdapters.swift UITestTalkAdapters.swift; do
+  /usr/bin/grep -Fq "$fixture_source" project.yml || {
+    print -u2 "$fixture_source is not excluded from Release"; exit 1
+  }
+done
+/usr/bin/grep -Fq 'GuideCompanionCompositionTests' project.yml || {
+  print -u2 "App composition contract target is missing"; exit 1
+}
+ui_test_target=$(/usr/bin/sed -n '/^  GuideCompanionUITests:/,/^  GuideCompanionCompositionTests:/p' project.yml)
+print -r -- "$ui_test_target" | /usr/bin/grep -Fq 'ENABLE_HARDENED_RUNTIME: NO' || {
+  print -u2 "non-shipping UI-test runner must disable hardened library validation for Xcode Cloud split signing"; exit 1
+}
+/usr/bin/grep -Fq 'ENABLE_HARDENED_RUNTIME = NO;' GuideCompanion.xcodeproj/project.pbxproj || {
+  print -u2 "generated project lost the UI-test runner hardened-runtime override"; exit 1
+}
+/usr/bin/grep -Fq 'ENABLE_HARDENED_RUNTIME: YES' project.yml || {
+  print -u2 "production app lost hardened runtime"; exit 1
+}
+/usr/bin/grep -Fq 'precondition(mode == .production, "UI-test composition is unavailable in Release builds")' App/GuideCompanionApp.swift || {
+  print -u2 "Release composition does not fail closed for --ui-testing"; exit 1
+}
+if /usr/bin/grep -REq 'runtimeMode[[:space:]]*==[[:space:]]*\.uiTest|Start Dictation Fixture|Stop Dictation Fixture|Cancel Dictation Fixture|Start Guide Fixture|Finish Guide Fixture|Cancel Guide Fixture|Open Guide Transcript|Configure OpenAI Fixture|test\.runtime\.state|test\.partial\.transcript' Packages/GuideModules/Sources/GuideUI; then
+  print -u2 "shipping GuideUI contains UI-test branches or fixture controls"
+  exit 1
+fi
+if /usr/bin/grep -Eq -- '--open-guide-transcript|openTranscript|tap\("Talk"\)|tap\("Finish Question"\)' GuideCompanionUITests/GoldenGuideUITests.swift; then
+  print -u2 "golden Guide tests use the transcript inspector instead of the ambient shortcut journey"
+  exit 1
+fi
+/usr/bin/grep -Fq 'triggerShortcut("guide-pressed")' GuideCompanionUITests/GoldenGuideUITests.swift || {
+  print -u2 "golden Guide tests do not enter through the shortcut driver"; exit 1
+}
+uf11_test=$(/usr/bin/sed -n '/func test_GT_UF11_001_/,/^    }/p' GuideCompanionUITests/GoldenGuideUITests.swift)
+print -r -- "$uf11_test" | /usr/bin/grep -Fq 'application.switches["talk.disclosure"]' || {
+  print -u2 "UF-11 does not query the disclosure through its real AX Switch role"; exit 1
+}
+if print -r -- "$uf11_test" | /usr/bin/grep -Fq 'application.checkBoxes["talk.disclosure"]'; then
+  print -u2 "UF-11 still queries the disclosure through the nonexistent AX CheckBox role"; exit 1
+fi
+print -r -- "$uf11_test" | /usr/bin/grep -Fq 'let disclosure = try XCTUnwrap(' || {
+  print -u2 "UF-11 does not stop after a missing disclosure control"; exit 1
+}
+/usr/bin/grep -Fq 'triggerShortcut("dictation-pressed")' GuideCompanionUITests/GoldenDictationUITests.swift || {
+  print -u2 "golden Dictation tests do not enter through the shortcut driver"; exit 1
+}
+composition_invocation=$(/usr/bin/sed -n '/-scheme GuideCompanionCompositionTests/,/REGISTER_APP_WITH_LAUNCH_SERVICES=NO/p' scripts/run-headless-check.sh)
+print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_ALLOWED=NO' || {
+  print -u2 "headless App composition tests require a developer certificate"; exit 1
+}
+print -r -- "$composition_invocation" | /usr/bin/grep -Fq 'CODE_SIGNING_REQUIRED=NO' || {
+  print -u2 "headless App composition tests require signing"; exit 1
+}
+
+for check_name in core-tests app-build evidence-contract; do
+  fixture_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+  find "$fixture_root" -depth -delete
+  set +e
+  SERPY_HARNESS_ROOT=$fixture_root SERPY_INJECT_FAILURE=$check_name \
+    scripts/run-headless-check.sh "$check_name" >/dev/null 2>&1
+  run_status=$?
+  set -e
+  [[ $run_status -eq 86 ]] || { print -u2 "$check_name injected failure did not fail predictably"; exit 1; }
+  [[ ! -e $fixture_root ]] || { print -u2 "$check_name left its owned temp root behind"; exit 1; }
+done
+
+/usr/bin/grep -Fq 'run: scripts/run-headless-check.sh evidence-contract' .github/workflows/verification.yml || {
+  print -u2 "CI does not use the bounded evidence-contract entrypoint"; exit 1
+}
+core_checkout_has_full_history() {
+  local job_text=$1
+  local checkout_block
+  checkout_block=$(print -r -- "$job_text" | /usr/bin/sed -n \
+    '/^[[:space:]]*- uses: actions\/checkout@/,/^[[:space:]]*- name: Prove runner can fail/p')
+  print -r -- "$checkout_block" \
+    | /usr/bin/grep -Eq '^[[:space:]]+fetch-depth:[[:space:]]*0[[:space:]]*$'
+}
+
+core_ci_job=$(/usr/bin/sed -n '/^  core-tests:/,/^  app-build:/p' .github/workflows/verification.yml)
+core_checkout_has_full_history "$core_ci_job" || {
+  print -u2 "CI core-tests requires full Git history for evidence commit correlation"; exit 1
+}
+forged_core_ci_job=$(print -r -- "$core_ci_job" \
+  | /usr/bin/sed '/^[[:space:]]*fetch-depth:[[:space:]]*0[[:space:]]*$/d')
+forged_core_ci_job+=$'\n      # fetch-depth: 0 intentionally removed'
+if core_checkout_has_full_history "$forged_core_ci_job"; then
+  print -u2 "CI full-history guard accepts comments without a checkout setting"
+  exit 1
+fi
+if /usr/bin/grep -Eq 'python3 scripts/(test|validate)-issue-13-evidence' .github/workflows/verification.yml; then
+  print -u2 "CI invokes evidence Python outside the bounded runner"
+  exit 1
+fi
+
+phase_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$phase_root" -depth -delete
+phase_log=$(mktemp "$temp_parent/serpy-headless-phase-log.XXXXXX")
+set +e
+SERPY_HARNESS_ROOT=$phase_root SERPY_RUNNER_FIXTURE=all-phase-footprint \
+  scripts/run-headless-check.sh all >"$phase_log" 2>&1
+phase_status=$?
+set -e
+if [[ $phase_status -ne 0 ]]; then
+  print -u2 "all retained completed core products during app-build"
+  /bin/cat "$phase_log" >&2
+  find "$phase_log" -delete
+  exit 1
+fi
+find "$phase_log" -delete
+[[ ! -e $phase_root ]] || { print -u2 "all-phase fixture root survived"; exit 1; }
+
+for failure_case in all-core-fails:86 all-cleanup-fails:75; do
+  fixture=${failure_case%%:*}
+  expected_status=${failure_case##*:}
+  failure_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+  find "$failure_root" -depth -delete
+  phase_marker="$temp_parent/serpy-headless-phase-marker.$(uuidgen)"
+  set +e
+  SERPY_HARNESS_ROOT=$failure_root SERPY_RUNNER_FIXTURE=$fixture \
+    SERPY_PHASE_MARKER=$phase_marker scripts/run-headless-check.sh all >/dev/null 2>&1
+  failure_status=$?
+  set -e
+  [[ $failure_status -eq $expected_status ]] || {
+    print -u2 "$fixture was masked by a later all phase (returned $failure_status)"; exit 1
+  }
+  [[ ! -e $phase_marker ]] || {
+    print -u2 "$fixture continued into app-build after failure"; exit 1
+  }
+  [[ ! -e $failure_root ]] || { print -u2 "$fixture root survived"; exit 1; }
+done
+
+traversal_base=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+set +e
+SERPY_HARNESS_ROOT="$traversal_base/../../serpy-runner-escape" \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1
+traversal_status=$?
+set -e
+find "$traversal_base" -depth -delete
+[[ $traversal_status -eq 64 ]] || { print -u2 "traversal-shaped root was not rejected"; exit 1; }
+
+timeout_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$timeout_root" -depth -delete
+timeout_marker=$(uuidgen)
+set +e
+SERPY_HARNESS_ROOT=$timeout_root SERPY_RUNNER_FIXTURE=ignore-term \
+  SERPY_TEST_SESSION_ID=$timeout_marker SERPY_WALL_SECONDS=1 \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1
+timeout_status=$?
+set -e
+[[ $timeout_status -eq 75 ]] || { print -u2 "TERM-ignoring fixture did not hit the budget"; exit 1; }
+[[ ! -e $timeout_root ]] || { print -u2 "timed-out fixture root survived"; exit 1; }
+! pgrep -f "[s]erpy-runner-fixture-$timeout_marker" >/dev/null || {
+  print -u2 "TERM-ignoring descendant survived escalation"; exit 1
+}
+
+descendant_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$descendant_root" -depth -delete
+descendant_marker=$(uuidgen)
+set +e
+SERPY_HARNESS_ROOT=$descendant_root SERPY_RUNNER_FIXTURE=leader-exits \
+  SERPY_TEST_SESSION_ID=$descendant_marker SERPY_WALL_SECONDS=1 \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1
+descendant_status=$?
+set -e
+[[ $descendant_status -eq 75 ]] || { print -u2 "leader-exit descendant did not hit the budget"; exit 1; }
+[[ ! -e $descendant_root ]] || { print -u2 "leader-exit fixture root survived"; exit 1; }
+! pgrep -f "[s]erpy-runner-fixture-$descendant_marker" >/dev/null || {
+  print -u2 "descendant survived after its leader exited"; exit 1
+}
+
+interrupt_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
+find "$interrupt_root" -depth -delete
+interrupt_marker=$(uuidgen)
+SERPY_HARNESS_ROOT=$interrupt_root SERPY_RUNNER_FIXTURE=ignore-term \
+  SERPY_TEST_SESSION_ID=$interrupt_marker SERPY_WALL_SECONDS=60 \
+  scripts/run-headless-check.sh core-tests >/dev/null 2>&1 &
+runner_pid=$!
+for _ in {1..30}; do
+  pgrep -f "[s]erpy-runner-fixture-$interrupt_marker" >/dev/null && break
+  sleep 0.1
+done
+kill -TERM "$runner_pid"
+set +e
+wait "$runner_pid"
+interrupt_status=$?
+set -e
+[[ $interrupt_status -eq 143 ]] || { print -u2 "interrupted runner returned $interrupt_status"; exit 1; }
+[[ ! -e $interrupt_root ]] || { print -u2 "interrupted fixture root survived"; exit 1; }
+! pgrep -f "[s]erpy-runner-fixture-$interrupt_marker" >/dev/null || {
+  print -u2 "interrupted descendant survived teardown"; exit 1
+}
+
+print "headless runner rejection, red-capability, escalation, and cleanup: PASS"

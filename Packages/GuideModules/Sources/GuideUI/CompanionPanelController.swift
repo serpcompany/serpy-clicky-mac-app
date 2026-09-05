@@ -30,6 +30,7 @@ public final class CompanionPresentation {
 public final class CompanionPanelController {
     private let presentation: CompanionPresentation
     private let panel: CompanionPanel
+    private let panelHostingView: NSHostingView<CompanionBubbleView>
     private let responsePanel: CompanionPanel
     private let pointCuePanel: CompanionPanel
     private let responseLayoutPolicy = CompanionResponseLayoutPolicy()
@@ -37,6 +38,7 @@ public final class CompanionPanelController {
     private let responseInteractionPolicy = CompanionResponseInteractionPolicy()
     private let responseSizingPolicy = CompanionResponseSizingPolicy()
     private let guideLayoutPolicy = GuideAmbientPanelLayoutPolicy()
+    private let guideDisplaySelectionPolicy = GuideTargetDisplaySelectionPolicy()
     private let guideInteractionPolicy = GuideSurfaceInteractionPolicy()
     private let pointCueProjector = GuidePointCueProjector()
     private var trackingTimer: Timer?
@@ -52,6 +54,7 @@ public final class CompanionPanelController {
             backing: .buffered,
             defer: false
         )
+        panelHostingView = NSHostingView(rootView: CompanionBubbleView(presentation: presentation))
         responsePanel = CompanionPanel(
             contentRect: NSRect(x: 0, y: 0, width: 600, height: 120),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -118,7 +121,10 @@ public final class CompanionPanelController {
         panel.isReleasedWhenClosed = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        panel.contentView = NSHostingView(rootView: CompanionBubbleView(presentation: presentation))
+        panelHostingView.setAccessibilityElement(true)
+        panelHostingView.setAccessibilityRole(.group)
+        panelHostingView.setAccessibilityIdentifier("guide.ambient")
+        panel.contentView = panelHostingView
 
         responsePanel.isOpaque = false
         responsePanel.backgroundColor = .clear
@@ -153,14 +159,29 @@ public final class CompanionPanelController {
     }
 
     private func updateContentSizeAndPosition() {
+        let ambientAccessibility = CompanionAmbientAccessibility(
+            stage: presentation.guideStage,
+            caption: presentation.caption,
+            contextLabel: presentation.contextLabel,
+            responseText: presentation.responseText
+        )
+        panelHostingView.setAccessibilityLabel(ambientAccessibility.label)
+        panelHostingView.setAccessibilityValue(ambientAccessibility.value)
         let pointer = NSEvent.mouseLocation
         let screen: NSScreen?
         if presentation.guideStage != nil, let target = presentation.guideTarget {
-            guard let displayIdentifier = target.displayIdentifier else { return }
-            screen = NSScreen.screens.first { screen in
-                (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
-                    == displayIdentifier
+            let screens = NSScreen.screens
+            let displays = screens.map { screen in
+                GuideDisplayFrame(
+                    identifier: (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value,
+                    frame: screen.frame
+                )
             }
+            screen = guideDisplaySelectionPolicy.index(
+                targetDisplayIdentifier: target.displayIdentifier,
+                targetFrame: target.frame,
+                displays: displays
+            ).map { screens[$0] }
         } else {
             screen = NSScreen.screens.first(where: { $0.frame.contains(pointer) }) ?? NSScreen.main
         }
@@ -375,9 +396,6 @@ private struct CompanionBubbleView: View {
                 cursorContent
             }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityDescription)
-        .accessibilityValue(presentation.responseText.isEmpty ? (presentation.contextLabel ?? "") : presentation.responseText)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.caption)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.16), value: presentation.mode)
     }
@@ -512,17 +530,33 @@ private struct CompanionBubbleView: View {
         }
     }
 
-    private var accessibilityDescription: String {
-        if presentation.guideStage == .liveTranscript {
-            return ["SERPy is listening", presentation.caption, presentation.contextLabel]
+}
+
+struct CompanionAmbientAccessibility: Equatable {
+    let label: String
+    let value: String
+
+    init(stage: GuidanceAmbientStage?, caption: String, contextLabel: String?, responseText: String) {
+        let stageDescription: String? = switch stage {
+        case .liveTranscript: "SERPy is listening"
+        case .speaking: "SERPy is speaking"
+        case .readyForFollowUp: "SERPy is ready for a follow-up"
+        default: nil
+        }
+        if let stageDescription {
+            label = [stageDescription, caption, contextLabel]
                 .compactMap { $0 }
                 .filter { !$0.isEmpty }
                 .joined(separator: ". ")
+        } else {
+            let description = [caption, contextLabel]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: ". ")
+            label = description.isEmpty ? "SERPy is ready" : description
         }
-        let description = [presentation.caption, presentation.contextLabel]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-            .joined(separator: ". ")
-        return description.isEmpty ? "SERPy is ready" : description
+        value = stage == .cancelled
+            ? ""
+            : (responseText.isEmpty ? (contextLabel ?? "") : responseText)
     }
 }

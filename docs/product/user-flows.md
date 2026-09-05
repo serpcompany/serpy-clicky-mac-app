@@ -40,6 +40,34 @@ is not proof that the installed journey works.
 | UF-11 | Explicitly opt into OpenAI multimodal Talk | Accepted for internal testing; evidence pending | ADR 0006, C18–C22, #7 |
 | UF-12 | Turn a handled development failure into agent-readable evidence | Development pilot | ADR 0007, #8, #9 |
 
+## Golden-test traceability
+
+Issue [#13](https://github.com/serpcompany/serpy-clicky-mac-app/issues/13)
+defines the enforcement harness. `core-tests` executes the named headless
+contracts. `app-build` compiles both the production app and the UI-test bundle
+without launching either. `golden-ui-tests` is the Xcode Cloud-only lane using
+`GuideCompanionGolden.xctestplan`; it is not enabled or required until ten
+consecutive isolated runs pass.
+
+The `GT-*` XCUI tests launch the production application in deterministic
+UI-test mode. They do not replace adjacent headless contracts or installed
+evidence for real macOS services.
+
+| Flow | Headless production contract IDs | Isolated XCUI ID | Installed evidence |
+| --- | --- | --- | --- |
+| UF-01 | `StateMachineTests/testPermissionCannotRequestBeforeExplanation` | `GoldenPermissionsAndLifecycleUITests/test_GT_UF01_001_permissionDenialShowsRecoveryAcrossRelaunch` | **Red:** real macOS prompt and denial/relaunch loop not observed on a post-harness artifact |
+| UF-02 | `ApplicationPresencePolicyTests/a running app stays regular when Settings opens or closes`, `SettingsWindowPresentationTests/testMenuSettingsActionActivatesApplicationBeforeOpeningWindow` | `GoldenPermissionsAndLifecycleUITests/test_GT_UF02_001_realSettingsClosesAndReopensAsOneWindow` | **Red:** Dock, Command-Tab, Quit, relaunch, and one production process/window not observed on a post-harness artifact |
+| UF-03 | `RecordingCoordinatorTests/final transcript is preserved before delivery`, `DurableDictationSessionTests/multi-minute PCM input preserves sentinels across the one-minute boundary`, `PasteboardSnapshotTests/restores all items and representations while it owns the pasteboard` | `GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation` | **Red:** real microphone, focus, clipboard, and exact cross-app insertion require the installed lane |
+| UF-04 | `RecordingCoordinatorTests/cancellation suppresses a late transcript and all delivery`, `RecordingCoordinatorTests/cancellation while insertion is pending prevents target mutation` | `GoldenDictationUITests/test_GT_UF04_001_escapeCancelsRealDictationWithoutLateDelivery`, `test_GT_UF04_002_escapeCancelsRealTranscription`, `test_GT_UF04_003_escapeCancelsRealPrecommitInsertion` | **Red:** physical shortcut timing against a real target requires the installed lane |
+| UF-05 | `TranscriptHistoryStoreTests/persists before delivery and survives a new store instance`, `TranscriptHistoryStoreTests/tracks confirmed, unconfirmed, and failed delivery without losing text`, `RecordingCoordinatorTests/an interrupted audio checkpoint becomes Last Dictation without automatic insertion` | `GoldenDictationUITests/test_GT_UF05_001_realRecoveryUIShowsFailedLastDictation`, `test_GT_UF05_002_realRecoveryUIShowsUnconfirmedState`, `test_GT_UF05_003_realRecoveryUIShowsInterruptedState` | **Red:** installed quit/relaunch recovery requires the installed lane |
+| UF-08 | `GuideTurnCoordinatorTests/testAmbientTurnLocksTargetBeforeListeningAndAnswersWithFreshContext`, `GuideTurnCoordinatorTests/testCompleteAnswerReachesConversationAmbientPresentationAndSpeechWithoutTruncation` | `GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion` | **Red:** real shortcut, microphone, capture, answer, speech, and focus require the installed lane |
+| UF-09 | `GuideProgressionPolicyTests/fresh request-scoped evidence advances, stays, or completes exactly`, `GuideTurnCoordinatorTests/testExplicitReinvocationUsesFreshCaptureAndShowsOnlyTheAdvancedStep`, `GT-UF09-001` | `GoldenGuideUITests/test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep` | **Red:** installed ambient walkthrough and click-through behavior remain unobserved |
+| UF-10 | `GuideTurnCoordinatorTests/testCancellingWhileExactWindowCaptureIsPendingCannotProduceAnAnswer`, `GuideTurnCoordinatorTests/testCancellingWhileSpeakingStopsAudioAndDismissesTheReadableAnswer`, `GuideTurnCoordinatorTests/testCancellationAtReadyForFollowUpClearsPlanCueAndPendingProgressionIdempotently` | `GoldenGuideUITests/test_GT_UF10_001_shortcutCancelClearsAmbientListening`, `test_GT_UF10_002_shortcutCancelClearsAmbientCapture`, `test_GT_UF10_003_shortcutCancelClearsAmbientThinking`, `test_GT_UF10_004_shortcutCancelClearsAmbientSpeaking`, `test_GT_UF10_005_shortcutCancelClearsAmbientFollowUp` | **Red:** phase-by-phase installed shortcut cancellation and focus checks remain unobserved |
+| UF-11 | `MultimodalTalkContractTests/testCloudTalkRequiresSelectionConsentAndCredential`, `OpenAIMultimodalAdapterTests/testCloudRouterRefusesTransmissionUntilSelectionDisclosureAndCredentialAreAllPresent`, `OpenAIMultimodalAdapterTests/testCancellingLiveBytesTransportStopsURLProtocolAndYieldsNoLateCompletion` | `GoldenGuideUITests/test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization` | **Red:** a live request requires separate owner approval and the installed lane |
+| UF-12 | `DiagnosticIncidentTests/testMalformedGuidanceFailureProducesOnlyAllowlistedClassification`, `SentryDiagnosticReporterTests/testHandledEventScrubberRemovesSDKAddedIdentityAndContext` | `GoldenGuideUITests/test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure` | **Partial/secondary only:** the committed summary records a post-harness real-app XCUI pass on M3, but its primary `.xcresult` is unavailable and no report screenshot is committed. Issue #9 separately records allowlist-only HTTP 200 event `139c9b86601e416e9b59db36a6f0e952`; this M3 authenticated with a Keychain-held `event:read,project:read` token and retrieved `SERPY-CLICKY-MAC-APP-1` plus the exact event without copying raw content. **Red:** primary XCUI proof and installed-artifact observation remain unproven |
+
+UF-06 and UF-07 are deferred. They intentionally have no golden test IDs.
+
 ## UF-01 — Install, launch, and understand permissions
 
 **Starting state:** A fresh notarized build is installed normally with no prior

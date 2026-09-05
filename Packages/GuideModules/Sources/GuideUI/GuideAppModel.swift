@@ -32,6 +32,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     public private(set) var dictationShortcut: GlobalHotKeyConfiguration
     public private(set) var guideShortcut: GlobalModifierChordConfiguration
     public private(set) var talkCredentialAvailable = false
+    public let runtimeMode: AppRuntimeMode
+    public let runtimeCompositionAudit: RuntimeCompositionAudit
     public private(set) var talkCredentialVerification: TalkCredentialVerificationState = .missing
     public private(set) var talkCredentialStatus = "No OpenAI key saved."
     public var talkCredentialDraft = ""
@@ -65,14 +67,15 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         }
     }
 
-    @ObservationIgnored private let defaults: UserDefaults
-    @ObservationIgnored private let permissionService: PermissionService
-    @ObservationIgnored private let insertionService: TextInsertionService
-    @ObservationIgnored private let historyStore: TranscriptHistoryStore
-    @ObservationIgnored private let screenContextService: ScreenContextService
+    @ObservationIgnored private let defaults: any AppPreferences
+    @ObservationIgnored private let clipboard: any AppClipboardServicing
+    @ObservationIgnored private let permissionService: any AppPermissionServicing
+    @ObservationIgnored private let insertionService: any AppTextInsertionServicing
+    @ObservationIgnored private let historyStore: any AppTranscriptHistoryServicing
+    @ObservationIgnored private let screenContextService: any AppScreenContextServicing
     @ObservationIgnored private let localGuidanceService: LocalGuidanceService
-    @ObservationIgnored private let guidanceTranscriber: AppleSpeechTranscriber
-    @ObservationIgnored private let guidanceSpeaker: LocalSpeechOutputService
+    @ObservationIgnored private let guidanceTranscriber: any AppGuideTranscribing
+    @ObservationIgnored private let guidanceSpeaker: any GuideTurnSpeaking
     @ObservationIgnored private let talkCredentialStore: any TalkCredentialStoring
     @ObservationIgnored private let talkCredentialVerifier: any TalkCredentialVerifying
     @ObservationIgnored private let talkVerificationExpirySleeper: any TalkVerificationExpirySleeping
@@ -92,9 +95,9 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     @ObservationIgnored private var guideResponseDismissalTask: Task<Void, Never>?
     @ObservationIgnored private lazy var guideTurnCoordinator = GuideTurnCoordinator(
         capture: screenContextService,
-        transcription: AppleSpeechGuideTurnTranscriber(transcriber: guidanceTranscriber),
+        transcription: guidanceTranscriber,
         generation: talkGenerator,
-        speech: LocalGuideTurnSpeaker(speaker: guidanceSpeaker),
+        speech: guidanceSpeaker,
         overlay: self,
         incidentReporter: incidentReporter
     )
@@ -115,14 +118,17 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     public init(
-        defaults: UserDefaults = .standard,
-        permissionService: PermissionService,
+        defaults: any AppPreferences = UserDefaults.standard,
+        runtimeMode: AppRuntimeMode = .production,
+        runtimeCompositionAudit: RuntimeCompositionAudit = .production,
+        clipboard: any AppClipboardServicing = SystemAppClipboardService(),
+        permissionService: any AppPermissionServicing,
         recordingCoordinator: RecordingCoordinator<FocusedTextTarget>,
-        insertionService: TextInsertionService,
-        historyStore: TranscriptHistoryStore,
-        screenContextService: ScreenContextService,
-        guidanceTranscriber: AppleSpeechTranscriber,
-        guidanceSpeaker: LocalSpeechOutputService,
+        insertionService: any AppTextInsertionServicing,
+        historyStore: any AppTranscriptHistoryServicing,
+        screenContextService: any AppScreenContextServicing,
+        guidanceTranscriber: any AppGuideTranscribing,
+        guidanceSpeaker: any GuideTurnSpeaking,
         localGuidanceService: LocalGuidanceService,
         talkCredentialStore: any TalkCredentialStoring,
         talkCredentialVerifier: any TalkCredentialVerifying,
@@ -132,6 +138,10 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         shortcutMonitorFactory: @escaping ShortcutMonitorFactory
     ) {
         self.defaults = defaults
+        self.clipboard = clipboard
+        self.runtimeMode = runtimeMode
+        precondition(runtimeCompositionAudit.isValid(for: runtimeMode))
+        self.runtimeCompositionAudit = runtimeCompositionAudit
         self.permissionService = permissionService
         self.recordingCoordinator = recordingCoordinator
         self.insertionService = insertionService
@@ -639,6 +649,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
 
     public func requestAccessibility() {
         statusMessage = "Accessibility lets SERPy place your transcript in the field you selected."
+        recoveryMessage = "Open Settings beside Accessibility, enable SERPy, then return here and click Refresh."
         _ = permissionService.requestAccessibility()
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
@@ -793,6 +804,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func presentGuidanceFailure(_ failure: GuideFailure) {
+        incidentReporter.report(DiagnosticIncident(failure: failure))
         guidancePhase = .failed(failure)
         statusMessage = failure.message
         recoveryMessage = failure.recovery
@@ -849,11 +861,19 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                     "SERPy insertion test.",
                     into: target
                 )
-                lastDictationStage = "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
-                statusMessage = "The insertion test succeeded."
+                let confirmed = lastInsertionMethod?.isConfirmed == true
+                lastDictationStage = confirmed
+                    ? "Insertion test succeeded via \(lastInsertionMethod?.rawValue ?? "unknown")"
+                    : "Insertion test unconfirmed"
+                statusMessage = confirmed
+                    ? "The insertion test succeeded."
+                    : "Paste sent, but the destination could not be verified."
+                recoveryMessage = confirmed
+                    ? ""
+                    : "Check the destination. Run the test again only if the text is missing."
                 lastFailureMessage = "None"
-                presentation.mode = .success
-                presentation.caption = "Insertion works"
+                presentation.mode = confirmed ? .success : .error
+                presentation.caption = confirmed ? "Insertion works" : "Verify paste"
                 companionController.refresh()
             } catch {
                 lastDictationStage = "Insertion test failed"
@@ -872,9 +892,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func copyTranscript(_ transcript: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        guard pasteboard.setString(transcript, forType: .string) else {
+        guard clipboard.copy(transcript) else {
             statusMessage = "The last dictation could not be copied."
             return
         }
@@ -929,7 +947,8 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                     transcriptHistory = (try? await historyStore.updateDelivery(
                         id: historyID,
                         state: .failed,
-                        method: lastInsertionMethod?.rawValue
+                        method: lastInsertionMethod?.rawValue,
+                        targetBundleIdentifier: nil
                     )) ?? transcriptHistory
                 }
                 lastDictationStage = "Retry failed"
@@ -1112,7 +1131,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
                 ? "Listening"
                 : "Speech detected (\(partialTranscript.count) characters)"
             presentation.mode = .recording
-            presentation.caption = "Listening…"
+            presentation.caption = DictationAmbientCaption.resolve(partialTranscript: partialTranscript)
         case .transcribing:
             statusMessage = "Finishing local transcription…"
             lastDictationStage = "Finishing transcription"
@@ -1151,6 +1170,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
     }
 
     private func presentFailure(_ failure: GuideFailure) {
+        incidentReporter.report(DiagnosticIncident(failure: failure))
         phase = .failed(failure)
         statusMessage = failure.message
         recoveryMessage = failure.recovery
@@ -1208,7 +1228,7 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
         presentation.guideStage = turn.stage
         presentation.caption = turn.statusText
         presentation.contextLabel = turn.context?.compactLabel
-        presentation.responseText = turn.responseText
+        presentation.responseText = GuideAmbientResponseText.resolve(turn)
         presentation.pointCue = turn.pointCue
         presentation.guideTarget = turn.target
         statusMessage = turn.statusText
@@ -1277,5 +1297,23 @@ public final class GuideAppModel: GuideTurnOverlayPresenting {
             return
         }
         companionController.show()
+    }
+}
+
+struct GuideAmbientResponseText {
+    static func resolve(_ turn: GuideTurnPresentation) -> String {
+        guard turn.stage == .error,
+              let recovery = turn.failure?.recovery,
+              !recovery.isEmpty else { return turn.responseText }
+        return [turn.responseText, recovery]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+    }
+}
+
+struct DictationAmbientCaption {
+    static func resolve(partialTranscript: String) -> String {
+        let partial = partialTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        return partial.isEmpty ? "Listening…" : partial
     }
 }

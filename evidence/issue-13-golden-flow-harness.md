@@ -1,0 +1,392 @@
+# Issue 13 golden-flow harness evidence
+
+Date: 2026-09-05
+
+Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
+
+## Rejected first design
+
+- `GuideCompanionGoldenHost` and `GuideTestSupport` were rejected by the owner.
+  Their results proved only a replacement fixture application and do not count
+  as end-to-end evidence for serpy.
+
+## Current safety design
+
+- XCUI targets the production `GuideCompanion` application.
+- `AppRuntimeMode.uiTest` resolves in `GuideCompanionApp.init` before model
+  composition.
+- The real lifecycle, `GuideAppModel`, GuideUI views/controllers, routing,
+  `RecordingCoordinator`, and `GuideTurnCoordinator` remain in the graph.
+- Only external boundaries receive deterministic in-memory or ephemeral
+  adapters. No production permission, microphone, Keychain, network, Sentry,
+  global-shortcut, or persistent-history adapter is constructed.
+- `AppRuntimeMode.uiTest` admits only deterministic fixtures and ephemeral
+  storage; microphone, permission requests, Screen Recording, production
+  Keychain, persistent user data, Sentry transport, network providers, and
+  global shortcuts are forbidden.
+- Routine local verification uses `swift test`, unsigned `xcodebuild build`,
+  and unsigned `xcodebuild build-for-testing`. An explicitly authorized focused
+  lane may execute one named real-app XCUI test.
+- Xcode's temporary build products are explicitly unregistered from Launch
+  Services before their one owned run root is removed.
+
+## Red-capable evidence
+
+- `ActualAppRuntimeCompositionTests` lock mode-before-composition and the
+  production-capability exclusion contract.
+- The bounded `evidence-contract` lane discovers every tracked Issue 13 proof,
+  rejects unsafe cleanup values and contradictory result counts, correlates the
+  tested commit with an executable XCTest declaration and committed test plan,
+  and checks structured result fields when an xcresult is available. It is an
+  honesty linter only: screenshot checks are secondary file-shape hygiene, and
+  it categorically rejects repository-declared complete proof or overall green.
+  Live primary-artifact verification and reviewer approval remain external;
+  `evidence/issue-13-overall-status.json` stays red.
+- Injected `core-tests` and `app-build` failures each exit 86. The combined
+  `all` path also stops immediately on an injected core failure (86) or
+  completed-core cleanup failure (75), never enters app-build, and removes its
+  owned temporary root. This locks the explicit fail-closed sequencing needed
+  because zsh suppresses implicit `errexit` inside a function used as an `if`
+  condition.
+- The focused-XCUI runner self-test rejects full-suite and outside-evidence
+  invocations, forces TERM-ignoring and leader-exit descendants through bounded
+  TERM-to-KILL escalation, interrupts a live owned group, and runs a command
+  that creates build-shaped output before exiting 65. It proves the original
+  status is retained and no descendant or run directory survives. A separate
+  timeout fixture seeds token-owned sessions in the Darwin user temp and the
+  exact serpy xctrunner container temp when present; wrapper fallback cleanup
+  removes those sessions while preserving unrelated sentinels. A disk-sampling
+  fixture fails its first two `du` measurements during a live process, succeeds
+  on the third, and preserves both budget enforcement and the child exit code.
+  A behavioral fixture removes an approved XCTest temporary root before wrapper
+  cleanup and proves cleanup returns the original command status without a hang
+  or residue; this exercises the `realpath`-without-`cd` implementation.
+- UI session-root tests keep bounded-runner build scratch separate from the
+  XCTest-owned session in XCTest's writable canonical temporary directory.
+  They reject matching-name roots elsewhere and symlinked parents; independent
+  run and session UUID tokens bind the parent and direct-child root.
+- Session provisioning tests cover the bounded local wrapper, the exact
+  documented Xcode Cloud environment, and missing, malformed, or wrong-workflow
+  environments. Only the verified cloud case may create and tear down its own
+  XCTest session when a wrapper token is absent.
+- Debug UI-test composition is owned by the App target, derives its audit from
+  concrete adapter instances accepted by the deterministic-adapter factory,
+  and is guarded by the model's runtime audit precondition. No fixture or
+  provider object lives in the shipping GuideUI package.
+- `GuideCompanionCompositionTests` compiles the exact App-owned composition
+  sources into a non-shipping unit-test target, constructs the real test model
+  headlessly, asserts the exact role-to-concrete-type allowlist and production
+  denylist, and proves an injected production Keychain adapter makes the audit
+  fail.
+- The App composition contract also drives token-owned Dictation press/release,
+  Guide press/release, and cancel signals through the deterministic shortcut
+  monitor and asserts that the installed `GlobalShortcutCallbacks` receive them
+  in order. Golden Guide XCUI contains a static guard against transcript-opening
+  arguments and visible Talk/Finish controls. Shipping GuideUI contains no
+  runtime-mode fixture bar; static source and Release-binary scans reject every
+  former fixture-control string.
+- Golden Dictation now enters through the same token-owned shortcut callback
+  driver as Guide. UF-11 manipulates the real Settings provider, disclosure,
+  credential, save, and verify controls individually; deterministic adapters
+  replace only Keychain and provider I/O. UF-10 releases blocked adapter work
+  after cancellation, waits for a late-return receipt, and proves no ambient
+  output returns. UF-03 asserts the real partial transcript on the ambient
+  Dictation surface. UF-04 similarly releases cancellation-insensitive late
+  transcription and insertion returns, then proves no target receipt, recovery
+  UI, or ambient output appears. UF-12 asserts the visible recovery action and
+  exact one-report diagnostic receipt.
+- Release excludes every UI-test composition source, rejects `--ui-testing`
+  before production construction, and the bounded Release build scans the
+  executable for fixture symbols. The headless harness self-test also rejects
+  any UI-test source under a shipping package target or missing Release
+  exclusion.
+- The Last Dictation fixture persists into the session's ephemeral JSON store;
+  the compiled XCUI relaunch removes the seed argument before asserting
+  restoration from that store. Executed proof remains red below.
+
+## Local results
+
+| Check | Result | Output retention | Cleanup |
+| --- | --- | --- | --- |
+| `scripts/test-headless-check.sh` | Green | none | Green |
+| `scripts/test-golden-ui-runner.sh` | Green; adversarial process fixtures only, no app launch | none | Green |
+| `scripts/run-headless-check.sh app-build` | Green; Debug app, fixture-free Release app, Release symbol scan, and actual-app XCUI bundle compiled only | none | Green |
+| `scripts/run-headless-check.sh core-tests` | Green after sandbox-safe local/Xcode Cloud provisioning, shortcut callback-driver coverage, ambient failure recovery mapping, Dictation partial mapping, and target-display fallback; 100 XCTest, 87 Swift Testing cases, and 4 App composition contract tests passed | none | Green |
+| `scripts/run-headless-check.sh all` | Green on Apple Silicon M3 after explicit fail-closed phase sequencing and removal of completed core build products before app-build; a red-first fixture proved the prior zsh control flow could mask an earlier phase failure, and the pre-footprint fix run exceeded 10,581,672 KiB because both lanes' separate Sentry package/build trees accumulated under one 8 GiB cap | none | Green |
+
+## GitHub Actions results
+
+- PR #14 verification run
+  [33930252682](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33930252682)
+  passed for exact commit `15d7056b24f46c25e3be43cb086b1c2a065180c3`:
+  `core-tests` and `app-build` both completed successfully. Later work is not
+  covered by this run and remains unverified until its own exact-head run.
+- The exact current source before this evidence integration,
+  `1dccc860b83a14231b1c6138a031d78aa3f8c278`, passed `core-tests` and
+  `app-build` in
+  [GitHub Actions run 33942146377](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33942146377).
+  The integrated evidence-honesty job still needs an exact-head GitHub result.
+
+## Partial focused actual-app evidence
+
+- The committed summary for `GT-UF12-001` records a pass in the real
+  `GuideCompanion` app at tested commit
+  `0a21ed140f9ebc6211f85b9ddf3636031a9ecf36` through the bounded ambient
+  shortcut lane on the M3 on 2026-09-05. It executed one test in 13.624 seconds
+  with zero failures or skips, asserted the exact visible malformed-guidance
+  cause and recovery action, recorded exactly one allowlisted
+  `guidance.plan.malformed` diagnostic, and kept the transcript inspector
+  absent. The retained local bundle
+  `evidence/issue-13-real-app-UF12-m3-run3.xcresult` was generated and ignored,
+  but is unavailable in this worktree; no Xcode report screenshot is committed.
+  The committed redacted machine-readable summary is
+  `evidence/issue-13-real-app-UF12-m3-run3-proof.json`, and the mechanically
+  sanitized subset is
+  `evidence/issue-13-real-app-UF12-m3-run3-xcresult-sanitized.json`; both are
+  secondary evidence and not complete proof. Its cleanup record measures
+  wrapper exit, serpy/XCUI process count, and wrapper-root count only. XCTest-session roots,
+  Launch Services registrations, unexpected prompts, network access, Keychain
+  access, and build-cache residue were not recorded and remain unverified.
+
+## Other focused actual-app evidence
+- The M3 authenticated to Sentry with the read-only personal token held in
+  macOS Keychain and retrieved issue `SERPY-CLICKY-MAC-APP-1` plus exact event
+  `139c9b86601e416e9b59db36a6f0e952` through Sentry's API. The issue remained
+  unresolved with four events; the selected event was the expected development
+  Cocoa error for `com.serpcompany.guidecompanion.internal@0.1.0+42`. No token,
+  raw event payload, identity, question, transcript, or screenshot was retained.
+  The committed redacted proof is
+  `evidence/issue-9-sentry-m3-retrieval-proof.json`; the retained mechanically
+  sanitized response subset is
+  `evidence/issue-9-sentry-m3-api-response-sanitized.json`.
+- The committed summary for `GT-UF09-001` records a pass in the real
+  `GuideCompanion` app at tested commit
+  `79cd0d216f1f09913d2531b16a69c26b2cfbac63` through the bounded
+  ambient shortcut lane on 2026-09-05. The summary says the test closed
+  Settings, never opened the transcript inspector or another app, drove the
+  installed `GlobalShortcutCallbacks`, and asserted stale evidence, fresh
+  advancement, and completion. It also records exact AX content for every
+  nonempty instruction and an expanded ambient frame (at least 300 points wide
+  and taller than the 46-point icon-only state). The bundle
+  `evidence/issue-13-real-app-UF09-ambient-run11.xcresult` was generated and
+  ignored but is unavailable in this worktree, and no Xcode report screenshot
+  is committed. The machine-readable summary
+  `evidence/issue-13-real-app-UF09-ambient-run11-proof.json` records one passed
+  and zero failed, plus descriptions of four element-only attachments, but
+  those primary artifacts and the run destination cannot be inspected here.
+  This is partial secondary evidence, not complete proof. The summary records
+  process, XCTest-session, and wrapper-root counts.
+  Launch Services registrations, unexpected prompts, network access, Keychain
+  access, and build-cache residue were not recorded and remain unverified. No
+  private-desktop video or frame was committed.
+
+## Deliberately red evidence
+
+- With `SERPY_INJECT_GUIDE_FAILURE=1`, the committed secondary summary records
+  that the bounded runner executed the normal `GT-UF08-001` journey against the
+  real `GuideCompanion` app on the M3 and that the `GuideCompanionGolden` plan
+  reported one executed, one failed, zero passed, and zero skipped at exact
+  tested commit `7bbf43d3732a71a124bc570f076ea17b4b4a8c0d`. The one-minute timeout and
+  two sanitized failure summaries are retained, but the generated, ignored
+  `.xcresult` is unavailable in this worktree and no Xcode report screenshot is
+  committed, so the summary does not complete injected-red proof. Its cleanup
+  record measures only serpy/XCUI process count and wrapper-root count; wrapper
+  exit, XCTest-session roots, Launch Services registrations,
+  unexpected prompts, network access, Keychain access, and build-cache residue
+  remain unverified. The honest red summary is
+  `evidence/issue-13-real-app-UF08-injected-red-m3-proof.json`; its committed
+  sanitized result subset is
+  `evidence/issue-13-real-app-UF08-injected-red-m3-xcresult-sanitized.json`.
+
+- The first M3 focused UF-12 attempt is retained locally at
+  `evidence/issue-13-real-app-UF12-m3-run1.xcresult` (generated and ignored).
+  Xcode executed zero tests because this Mac has no Mac Development certificate
+  for team `847HR8U8D9`; both the app and UI-test targets failed signing before
+  launch. The bounded wrapper still removed its build root and XCTest session,
+  and no serpy process survived. At the time, Xcode Settings also had no Apple
+  Account configured. The owner subsequently signed in and automatic
+  provisioning made the Debug/XCUI build launchable.
+- The second M3 focused UF-12 attempt is retained locally at
+  `evidence/issue-13-real-app-UF12-m3-run2.xcresult` (generated and ignored).
+  The signed app and UI runner launched, but macOS timed out while enabling
+  automation mode before the test body. During failure cleanup, XCTest removed
+  its runner-container temporary root while the wrapper had entered that root
+  to canonicalize it, stranding the cleanup shell in `getcwd`. The run was
+  interrupted after the exact stuck process was sampled; its owned 3.5 GiB
+  build root and all serpy/XCUI processes were removed. Cleanup now canonicalizes
+  candidate roots without changing directory, with a regression guard in the
+  adversarial runner test.
+- `GT-UF09-001` was executed once through the focused local Xcode/XCUI lane on
+  2026-09-04. It failed after 60 seconds because the golden host did not acquire
+  a process ID. The actual local result bundle is
+  `evidence/issue-13-local-UF09.xcresult` (generated, ignored, not committed).
+  The curated Xcode report screenshot is
+  `evidence/issue-13-local-UF09-xcode-report.png`.
+- The earlier real-app UF-09 attempt is retained at
+  `evidence/issue-13-real-app-UF09.xcresult` (generated and ignored). XCTest
+  connected the runner, then macOS canceled LocalAuthentication while enabling
+  UI automation. No test method or app fixture executed. The owner must approve
+  that OS authentication on the next explicitly announced run.
+- The owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-approved.xcresult` (generated and ignored).
+  It did not fail LocalAuthentication: the real app launched as PID 99241 and
+  then crashed in `UITestSessionRootPolicy.validate` because XCTest and the app
+  had different process-specific temporary directories. XCTest timed out after
+  one minute before any flow assertion. The cross-process root contract is now
+  headlessly regression-tested; executed UI proof remains red until a new
+  explicitly authorized run.
+- The second owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-run2.xcresult` (generated and ignored). It
+  executed one test and failed immediately with `invalidIdentity` before app
+  launch because the local wrapper supplied its two authorization values to
+  `xcodebuild`, not to the XCTest runner. The wrapper now uses Apple's required
+  `TEST_RUNNER_` prefix, while XCTest continues to forward the validated
+  session values explicitly to the app. The same run exposed a separate zsh
+  top-level nonzero-exit path that skipped the EXIT trap and retained its build
+  root; the adversarial runner test now exercises that exact path with a deep,
+  3.5 GiB sparse build tree and requires synchronous cleanup before exit.
+- The third owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-run3.xcresult` (generated and ignored). It
+  executed one test and failed immediately before app launch with Cocoa 513 /
+  POSIX `EPERM`: the sandboxed XCTest runner received the authorization token
+  but could not create its session inside the wrapper-owned `/private/tmp`
+  build root. The wrapper now owns only build/source scratch. XCTest creates a
+  separately tokened session beneath its own writable canonical temporary
+  directory and forwards the exact paths and tokens to the app. App validation
+  accepts only the current Darwin user temporary directory or the exact serpy
+  XCTest runner container temporary directory; spoofed and symlinked paths
+  remain rejected.
+- The fourth owner-approved real-app attempt is retained at
+  `evidence/issue-13-real-app-UF09-run4.xcresult` (generated and ignored). The
+  real app launched, the test method ran, and every Talk/Finish action progressed.
+  The wrapper reported cleanup, but its individual cleanup dimensions were not
+  retained and therefore remain unverified. Local-only AX/video inspection showed the transcript
+  visibly advancing through the combined answer, `Open the File menu.`, and
+  `Choose New Window.`. The failures were assertion-only: the combined SwiftUI
+  row exposed label `SERPy` and no accessibility value, while the test waited
+  for message text in `value`. The row now exposes its visible content as its
+  accessibility label and the test selects the latest matching transcript row;
+  speaker identity remains separate accessibility metadata. The exported video
+  and frames contained existing Chrome content and were deleted without being
+  committed.
+- The fifth owner-approved real-app attempt at
+  `evidence/issue-13-real-app-UF09-run5.xcresult` was reported mechanically
+  green (one passed, zero failed) but is rejected as product proof. Its cleanup
+  dimensions were not retained and remain unverified. It drove
+  the optional Voice Transcript inspector, while HeyClicky parity requires the
+  shortcut-invoked, nonactivating ambient Guide with no conventional Guide work
+  window. The golden Guide tests now drive the real `GlobalShortcutCallbacks`
+  through token-owned signals and assert only the ambient panel lifecycle. The
+  screenshot `evidence/issue-13-real-app-UF09-run5-xcode-report.png` is retained
+  only as a labeled record of this rejected proof and its runtime warning; it
+  must not be cited as golden acceptance. Later activity-tree inspection in the
+  valid ambient run placed the same warning beneath XCTest's discovered
+  interrupting Superwhisper window, alongside an existing Chrome window—not
+  beneath serpy launch or session provisioning. The harness does not close or
+  control either external app. Session provisioning remains off the main actor.
+- Ambient runs 6–9 are retained locally as red-capable evidence. Run 6 exposed
+  the real icon-only bug: a target without display metadata made panel layout
+  return before resizing. Run 7 proved the response card was visibly expanded
+  after target-frame display fallback, while AX value remained empty. Run 8
+  proved the controller-owned hosting-view AX value worked and exposed captured
+  context; its test still expected the obsolete empty value. Run 9 passed exact
+  response values and width but rejected a valid 54-point card using an
+  arbitrary 58-point height threshold. Run 10 uses the product invariant:
+  response cards must exceed the 46-point icon state in both dimensions. All
+  private-desktop diagnostic exports for runs 6–9 were removed.
+- A Developer ID signed build 43 was notarized successfully before the
+  fail-open combined-runner defect was found. That candidate is rejected and
+  must not be installed or cited: its DMG, checksum, manifest, staging output,
+  and Release derived data are removed before rebuilding from the reviewed fix.
+- Build 43 was rebuilt from exact commit
+  `15d7056b24f46c25e3be43cb086b1c2a065180c3`, notarized and stapled under
+  submission `881f81b2-945f-4124-8b6e-6c60b7d6b65e`, and installed at
+  `/Applications/SERPy.app`. The DMG SHA-256 is
+  `39d0bf3e75758e25e51bf127dcf6e7e4f5974353f8a2bd11ef6037fa0b7e0c17`;
+  the installed executable matches the reviewed Release executable at
+  `b869bfdc5ecfd038cc2b7fe8c822d12b9d68c5a23f1506475a271725fe58414c`.
+  Gatekeeper accepted both the DMG and mounted app, and the installed app
+  launched. This proves artifact identity and launch only; installed product
+  flows remain red. The machine-readable record is
+  `evidence/issue-13-build-43-m3-install-proof.json`.
+- `golden-ui-tests` is connected to the GitHub repository and configured with
+  one required macOS Test action, the `GuideCompanion` scheme, the
+  complete `GuideCompanionGolden` plan, and one Mac destination. Runs 1-7
+  established and narrowed cloud signing, project-identity, selector,
+  fixture-timing, and launch failures. Their sanitized heterogeneous records
+  are retained as `evidence/issue-13-xcode-cloud-run1-red-proof.json` through
+  `evidence/issue-13-xcode-cloud-run7-red-proof.json`.
+- Run 8 passed the one-test `GuideCompanionLaunchDiagnostic` plan. It proved the
+  focused UF-03 deterministic path only and does not count toward acceptance.
+  Run 9 returned to the complete plan and reproduced launch timeouts. Run 10's
+  temporary startup probe crashed before producing the intended receipts. Run
+  11 established that model construction and launch callbacks returned, while
+  XCTest foreground activation still failed. The temporary probes were then
+  removed.
+- Run 12 (`8fcfd28b-413a-4ebb-a767-052ef6d9ef58`) at exact commit
+  `a2d42c9d533b76877e25c438831bb37f669f0ff2` executed the complete plan:
+  11 tests passed and 7 failed at flow assertions. The remaining failure classes
+  were Settings selector ambiguity, three UF-05 numeric radio-value assertions,
+  UF-08 Guide timing, UF-10 speaking timing, and UF-11 selector/cascade failures.
+  The subsequent source removed the probes, corrected the native selectors, and
+  presented the structured Guide step before speaking.
+- Run 13 (`dab4658d-f470-4e84-bf24-622bb6f9346a`) at exact commit
+  `1dccc860b83a14231b1c6138a031d78aa3f8c278` executed the complete plan but
+  passed 0 of 18 tests: every test timed out for 60 seconds in
+  `application.launch` while XCTest reported the app as Running Background.
+- Focused run 14 (`5009e334-3c09-4fe1-a547-3cd5d692d1cf`) at exact commit
+  `9b40897bbb1653d3a8aa3439bb3a7cb186a8166c` passed 0 of 1 UF-03 test and
+  reproduced the same 60-second launch timeout. That run falsified the deferred
+  Settings-presentation timing experiment; the experiment was removed and the
+  original synchronous presentation restored.
+- Focused run 15 (`2e5e8f93-4d7c-4ce9-863c-81f690ce0a58`) at exact commit
+  `fb33621af95d9ee450e051436c536663935b7110` passed the one selected UF-03
+  deterministic test in 8.48 seconds with zero failures or skips. It proves only
+  that focused fixture flow and does not count as a clean complete-plan run.
+- Run 16 (`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) used the complete plan at
+  the same exact `fb33621af95d9ee450e051436c536663935b7110` commit: 17 of 18
+  tests passed. The sole failing test, UF-11, queried the native
+  `talk.disclosure` Switch as a CheckBox; its remaining assertions cascaded from
+  that failed lookup. The stronger throwing Switch lookup with `XCTUnwrap` is
+  present in staging but has not yet been proven by Xcode Cloud.
+- Run 17 (`d56d5d21-65d7-4a66-8962-0dc59f37cd9f`) used the complete plan at
+  `22cd47e1c4afcf6fc2d2710878eaef022d7ee976` but returned to 18 one-minute
+  launch timeouts. This proves the single focused pass and run 16 launch success
+  did not establish stable foreground activation.
+- Diagnostic run 18 (`270ed0be-5c02-4130-9367-07f4a4943db7`) selected UF-03
+  and UF-11 at `80fb7024a43b4e0bdaeaa3d27ecc8c8d73aded50`; both timed out. Its
+  bounded state record showed the product regular, finished launching, and not
+  hidden, but inactive while another application remained frontmost.
+- Diagnostic run 19 (`bddcf4bc-4e33-4348-9873-3e9f8be06055`) selected the
+  same two tests at `45b4742ba30ccec627adc657ec23edb0947a572b`; both failed
+  fast because the prohibited/inactive UI runner could not become active before
+  yielding. That runner prerequisite was removed.
+- Diagnostic run 20 (`7927958b-8aa6-401d-ba94-601cfce6ca2a`) selected the same
+  tests at `26083784182544d06eaf2cf04c250fcfaf763696` on macOS 15.6 with
+  Xcode 26.3; both again timed out. This rejects a Tahoe-only explanation but
+  does not isolate OS from toolchain.
+- Diagnostic run 21 (`f47c8514-a4b9-4d4b-9d2e-8cf106071665`) selected UF-03
+  and UF-11 at `b9588df545290d24bbf07b791d55ecaa462a0f85` on macOS 26.6.2.
+  Both timed out inside `application.launch` after all four bounded recovery
+  attempts used the ordinary cooperative `NSApplication.activate()` call.
+  This proves the bounded schedule alone did not stabilize foreground launch.
+- Diagnostic run 22 (`4203f1cf-30f1-49a8-a62b-76aca859cbc3`) selected the same
+  two tests at `e71d99995c7a6a7d3d995f1dcd042cc29e1b89c8` on macOS 26.6.2.
+  Both again timed out for 60 seconds inside `application.launch` while XCTest
+  reported the product as Running Background. This falsifies the delayed
+  activate-regardless variant as an Xcode Cloud stabilization strategy; neither
+  test flow initialized, so it does not prove a product failure.
+- Temporary activation logging and the disproven runner yield are removed.
+  The cooperative and activate-regardless product coordinators are also removed.
+  Xcode Cloud remains manual and non-required because its foreground launch is
+  platform-unreliable; the burn-in remains 0/10.
+- The exact local UF-03 attempt is retained, ignored, at
+  `evidence/issue-13-local-UF03-force-recovery.xcresult`. macOS reported
+  `Authentication canceled. Canceled by user.` before the test flow initialized.
+  The result bundle therefore records an XCTest-runner initialization failure,
+  not a product-flow failure. Teardown left no serpy/XCTest process, wrapper
+  root, or owned XCTest session directory.
+- The complete-plan gate remains red. The ten-run isolated burn-in is 0/10 and
+  the check must not be required.
+- Every installed evidence cell in `docs/product/user-flows.md` remains red
+  until one exact reviewed artifact is exercised in the installed lane.

@@ -19,7 +19,7 @@ public struct SentryRuntimeConfiguration: Equatable, Sendable {
         let environment = processEnvironment["SENTRY_ENVIRONMENT"]
             ?? bundleInfo["SentryEnvironment"] as? String
             ?? "development"
-        guard environment == "development" else { return nil }
+        guard environment == "development" || environment == "internal-test" else { return nil }
         return SentryRuntimeConfiguration(
             dsn: dsn,
             environment: environment,
@@ -74,19 +74,25 @@ public struct SentryHandledEventScrubber {
     }
 
     public func scrub(_ event: Event) -> Event? {
-        guard event.environment == "development",
+        guard event.environment == "development" || event.environment == "internal-test",
               event.tags?["serpy_schema"] == "handled-v1",
               let message = event.message?.formatted,
               let code = GuideFailureCode(rawValue: message),
-              code == .guidancePlanMalformed,
               let stageValue = event.tags?["failure_stage"],
-              stageValue == GuideFailureStage.guidance.rawValue,
+              GuideFailureStage(rawValue: stageValue) != nil,
               let providerValue = event.tags?["provider_kind"],
-              providerValue == GuideFailureProvider.local.rawValue
-                || providerValue == GuideFailureProvider.openAI.rawValue
+              GuideFailureProvider(rawValue: providerValue) != nil
         else { return nil }
+        if code == .guidancePlanMalformed {
+            guard stageValue == GuideFailureStage.guidance.rawValue,
+                  providerValue == GuideFailureProvider.local.rawValue
+                    || providerValue == GuideFailureProvider.openAI.rawValue else { return nil }
+        } else {
+            // Broader stage-only reporting is approved solely for installed internal tests.
+            guard event.environment == "internal-test", code == .unclassified else { return nil }
+        }
         event.message = SentryMessage(formatted: code.rawValue)
-        event.fingerprint = [code.rawValue]
+        event.fingerprint = code == .unclassified ? [code.rawValue, stageValue] : [code.rawValue]
         event.tags = [
             "failure_stage": stageValue,
             "provider_kind": providerValue,

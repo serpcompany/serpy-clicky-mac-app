@@ -11,6 +11,7 @@ build/
 dist/
 *.xcuserstate
 xcuserdata/
+*.xcresult/
 default.profraw
 
 # Downloaded local models are versioned by manifest, not committed as binaries.

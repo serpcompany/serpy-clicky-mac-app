@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "runId": "d6628451-43b0-4480-b36b-dd4ff70e68b2",
+  "sourceCommit": "1901f81a0b0504821801fa98634e017fba9bf114",
+  "plan": "GuideCompanionGolden",
+  "result": "FAILED",
+  "startedAt": "2026-09-05T02:17:44.730Z",
+  "finishedAt": "2026-09-05T02:40:30.935Z",
+  "reportedTimeouts": 18,
+  "firstTest": "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()",
+  "firstFailure": "One-minute timeout inside application launch before flow assertions",
+  "resultArtifactId": "fdcfc2d3-d90a-42f8-a702-d5cf946f90c2",
+  "comparison": "The same UF-03 test passed in focused run 8; returning to the full plan reproduced the launch timeout",
+  "diagnosis": "Failure correlates with full-plan execution; app startup versus XCTest activation cause is not established",
+  "nextExperiment": "Capture bounded test-only startup milestones to distinguish app initialization, Settings presentation, and XCTest activation",
+  "consecutiveCleanRuns": 0
+}

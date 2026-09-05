@@ -21,9 +21,10 @@ serpy keeps its own identity, credentials, signing, services, and release path.
 3. Read [ARCHITECTURE.md](ARCHITECTURE.md).
 4. Read [DELIVERY_PLAN.md](DELIVERY_PLAN.md).
 5. Read [Testing and verification](docs/engineering/testing.md).
-6. Read [ACCEPTANCE.md](ACCEPTANCE.md).
-7. Read [PROVENANCE.md](PROVENANCE.md) before importing any donor code or assets.
-8. Read [AGENTS.md](AGENTS.md) before making changes.
+6. Read [CI and test operation](docs/engineering/ci.md).
+7. Read [ACCEPTANCE.md](ACCEPTANCE.md).
+8. Read [PROVENANCE.md](PROVENANCE.md) before importing any donor code or assets.
+9. Read [AGENTS.md](AGENTS.md) before making changes.
 
 Private beta release procedure: [docs/RELEASING.md](docs/RELEASING.md).
 

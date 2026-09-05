@@ -28,6 +28,6 @@ public final class GuideSettingsWindowController: NSWindowController {
         NSApplication.shared.setActivationPolicy(.regular)
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.activate()
     }
 }

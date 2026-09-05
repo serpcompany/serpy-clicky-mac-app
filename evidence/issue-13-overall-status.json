@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "issue": 13,
+  "overallStatus": "red",
+  "gates": {
+    "completeGoldenPlan": "red",
+    "xcodeCloudConfigured": true,
+    "xcodeCloudCleanRuns": 0,
+    "xcodeCloudRequiredCleanRuns": 10,
+    "installedAcceptance": "red",
+    "installedArtifact": "evidence/issue-13-build-43-m3-install-proof.json"
+  }
+}

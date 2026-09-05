@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "runId": "2e5e8f93-4d7c-4ce9-863c-81f690ce0a58",
+  "sourceCommit": "fb33621af95d9ee450e051436c536663935b7110",
+  "result": "PASSED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "action": "GuideCompanionGolden - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "passedTests": 1,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "durationSeconds": 8.477726936,
+  "failures": [],
+  "resultArtifactId": "3fd5e79a-e39e-4c7b-8f73-5c12a87f488e",
+  "observedFlow": "UF-03 launched, showed deterministic transcript, confirmed delivery, then terminated and reached Not Running",
+  "scope": "Focused deterministic flow only; not full-suite stability or installed microphone/insertion evidence",
+  "nextRun": "Full run 16 uses the same source commit",
+  "consecutiveCleanFullRuns": 0
+}

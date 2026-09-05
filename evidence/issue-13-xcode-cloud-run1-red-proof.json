@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "C9080C13-B496-48B2-B622-CBCA3D055051",
+  "workflowName": "golden-ui-tests",
+  "buildRunId": "a00efbc1-d67b-4f1b-8b02-036f91063ae4",
+  "buildNumber": 1,
+  "sourceCommit": "15d7056b24f46c25e3be43cb086b1c2a065180c3",
+  "startReason": "MANUAL",
+  "startedDate": "2026-09-05T00:01:16.135Z",
+  "finishedDate": "2026-09-05T00:03:33.558Z",
+  "result": "FAILED",
+  "action": {
+    "name": "GuideCompanionGolden - macOS",
+    "type": "TEST",
+    "result": "FAILED",
+    "testPlan": "GuideCompanionGolden"
+  },
+  "failure": {
+    "stage": "test bundle loading before test execution",
+    "category": "Xcodebuild",
+    "sanitizedCause": "Hardened Runtime library validation rejected the embedded GuideCompanionUITests bundle because the execution host and mapped bundle had different Team IDs.",
+    "testsExecuted": 0
+  },
+  "correction": "Disable Hardened Runtime only for the non-shipping GuideCompanionUITests runner; keep the production SERPy target hardened.",
+  "burnInCountAfterRun": 0
+}

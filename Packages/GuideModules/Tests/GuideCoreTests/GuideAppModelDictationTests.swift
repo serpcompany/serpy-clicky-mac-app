@@ -7,6 +7,50 @@ import Testing
 @MainActor
 @Suite("Guide app Dictation presentation")
 struct GuideAppModelDictationTests {
+    @Test("insertion diagnostic distinguishes confirmed and unconfirmed delivery",
+          arguments: [TextInsertionMethod.accessibility, .accessibilityValue, .paste, .pasteUnconfirmed])
+    func insertionDiagnosticReportsEvidence(method: TextInsertionMethod) async throws {
+        let failure = GuideFailure(stage: .storage, message: "unused", recovery: "unused")
+        let history = TranscriptHistoryStore(fileURL: FileManager.default.temporaryDirectory
+            .appending(path: "serpy-insertion-status-\(UUID().uuidString)/transcripts.json"))
+        let insertion = ModelDiagnosticInserter(method: method)
+        let local = LocalGuidanceService()
+        let credentials = ModelCredentialStore()
+        let model = GuideAppModel(
+            defaults: UserDefaults(suiteName: "serpy-insertion-status-\(UUID().uuidString)")!,
+            permissionService: PermissionService(),
+            recordingCoordinator: RecordingCoordinator(
+                session: CleanupFailingSession(failure: failure),
+                targetReader: ModelTargetReader(), inserter: ModelNoopInserter(), history: history),
+            insertionService: insertion,
+            historyStore: history,
+            screenContextService: ScreenContextService(),
+            guidanceTranscriber: AppleSpeechGuideTurnTranscriber(transcriber: AppleSpeechTranscriber()),
+            guidanceSpeaker: LocalGuideTurnSpeaker(speaker: LocalSpeechOutputService()),
+            localGuidanceService: local,
+            talkCredentialStore: credentials,
+            talkCredentialVerifier: ModelCredentialVerifier(),
+            talkVerificationExpirySleeper: ModelExpirySleeper(),
+            talkGenerator: TalkGenerationRouter(local: local, cloud: ModelNoopGuidanceGenerator(),
+                                                 credentialStore: credentials),
+            shortcutMonitorFactory: { _, _ in ModelNoopShortcutMonitor() }
+        )
+        model.beginInsertionTest()
+        let deadline = ContinuousClock.now + .seconds(6)
+        while insertion.calls == 0 && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(insertion.calls == 1)
+        #expect(model.lastInsertionMethod == method)
+        if method.isConfirmed {
+            #expect(model.statusMessage == "The insertion test succeeded.")
+        } else {
+            #expect(model.statusMessage == "Paste sent, but the destination could not be verified.")
+            #expect(model.lastDictationStage == "Insertion test unconfirmed")
+            #expect(model.recoveryMessage == "Check the destination. Run the test again only if the text is missing.")
+        }
+    }
+
     @Test("cleanup failure is not overwritten by a false cancelled message")
     func cleanupFailureRemainsVisible() async throws {
         let failure = GuideFailure(
@@ -40,8 +84,8 @@ struct GuideAppModelDictationTests {
             insertionService: insertion,
             historyStore: history,
             screenContextService: ScreenContextService(),
-            guidanceTranscriber: AppleSpeechTranscriber(),
-            guidanceSpeaker: LocalSpeechOutputService(),
+            guidanceTranscriber: AppleSpeechGuideTurnTranscriber(transcriber: AppleSpeechTranscriber()),
+            guidanceSpeaker: LocalGuideTurnSpeaker(speaker: LocalSpeechOutputService()),
             localGuidanceService: local,
             talkCredentialStore: credentials,
             talkCredentialVerifier: ModelCredentialVerifier(),
@@ -59,6 +103,20 @@ struct GuideAppModelDictationTests {
         #expect(model.phase == .failed(failure))
         #expect(model.statusMessage == failure.message)
         #expect(model.recoveryMessage == failure.recovery)
+    }
+}
+
+@MainActor
+private final class ModelDiagnosticInserter: AppTextInsertionServicing {
+    let method: TextInsertionMethod
+    var calls = 0
+    init(method: TextInsertionMethod) { self.method = method }
+    func captureFocusedTarget() throws -> FocusedTextTarget {
+        FocusedTextTarget(processIdentifier: 42, element: nil, bundleIdentifier: "com.example.target")
+    }
+    func insert(_ text: String, into target: FocusedTextTarget) async throws -> TextInsertionMethod {
+        calls += 1
+        return method
     }
 }
 

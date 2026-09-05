@@ -4,9 +4,21 @@ Date: 2026-09-04
 
 ## Status
 
-Accepted for development evaluation only. Production, private-beta, automatic
-GitHub issue creation, scheduled agent writes, crash collection, and release
-distribution remain unapproved.
+Extended by owner approval on 2026-09-05 to explicitly configured installed
+internal test builds. General production telemetry, automatic GitHub issue
+creation, scheduled agent writes, and crash collection remain unapproved.
+
+Internal builds require `SERPY_INTERNAL_DIAGNOSTICS` at compile time, a runtime
+or build-injected DSN, and environment `internal-test`. Ordinary Release builds
+remain disabled. The existing development environment retains its original
+single-code allowlist. Internal tests additionally allow the fixed
+`guide.failure.unclassified` code grouped by the enum failure stage, with only
+enum provider classification and the existing scrubbed build metadata. This
+allows stage-level triage of handled errors, not arbitrary logs or crash stacks.
+The owning Dictation failure presenter and Guide coordinator emit typed
+incidents; absent configuration uses the no-op reporter. All automated tests
+remain transport-free. An installed event must be retrieved before claiming the
+expanded feedback loop works.
 
 ## Decision
 

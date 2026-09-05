@@ -55,6 +55,13 @@ public struct SettingsView: View {
         .onAppear {
             settingsWindowLifecycle.didAppear()
         }
+        .onExitCommand {
+            if model.phase.isActive {
+                model.cancelDictation()
+            } else if model.guidancePhase != .idle {
+                model.cancelGuidanceVoice()
+            }
+        }
     }
 
     private var settingsWindowLifecycle: SettingsWindowVisibilityLifecycle {
@@ -167,6 +174,7 @@ public struct SettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("talk.provider")
 
                 if model.talkProviderSelection == .openAI {
                     Text("OpenAI Talk sends only the current spoken question, a bounded recent Talk transcript, and screenshot pixels of the exact window locked when this turn starts. SERPy requests store:false. OpenAI processes the request under your API account and normal API charges may apply.")
@@ -176,21 +184,26 @@ public struct SettingsView: View {
                         "I accept this request-scoped transmission on this Mac",
                         isOn: $model.talkDisclosureAccepted
                     )
+                    .accessibilityIdentifier("talk.disclosure")
 
                     SecureField("OpenAI API key", text: $model.talkCredentialDraft)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("talk.credential")
                     HStack {
                         Button("Save to Keychain") { model.saveTalkCredential() }
+                            .accessibilityIdentifier("talk.credential.save")
                             .disabled(
                                 model.talkCredentialDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                     || model.talkCredentialVerification == .verifying
                             )
                         Button("Verify Provider") { Task { await model.testSavedTalkCredential() } }
+                            .accessibilityIdentifier("talk.credential.verify")
                             .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
                         Button("Delete Key", role: .destructive) { model.deleteTalkCredential() }
                             .disabled(!model.talkCredentialAvailable || model.talkCredentialVerification == .verifying)
                     }
                     Text(model.talkCredentialStatus)
+                        .accessibilityIdentifier("talk.credential.status")
                         .font(.caption)
                         .foregroundStyle(model.openAITalkReady ? .green : .secondary)
                         .textSelection(.enabled)

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-05",
+  "runId": "7db8ba39-2a39-4b83-a4bb-3b74d3965b63",
+  "buildNumber": 2,
+  "sourceCommit": "d7798c1e91b8514597679223576de7281fbdb165",
+  "completionStatus": "FAILED",
+  "failure": "UITestRunSessionProvisioner rejected environment with invalidIdentity before app launch",
+  "secondaryFailure": "Tests continued after launch returned and crashed when using an absent session root",
+  "confirmedProgress": "UI test bundle loaded successfully after the UI-test-only hardened runtime change",
+  "unknown": "Which cloud identity environment field differs; raw execution logs do not expose these fields",
+  "consecutiveCleanRuns": 0,
+  "releaseAcceptance": false
+}

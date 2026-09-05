@@ -42,7 +42,7 @@ targets:
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/GuideCompanion.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CURRENT_PROJECT_VERSION: 42
+        CURRENT_PROJECT_VERSION: 46
         MARKETING_VERSION: 0.1.0
         GENERATE_INFOPLIST_FILE: NO
       configs:
@@ -50,10 +50,19 @@ targets:
           ARCHS: arm64
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
           ENABLE_TESTABILITY: NO
+          EXCLUDED_SOURCE_FILE_NAMES: >-
+            GuideUITestComposition.swift
+            UITestDictationAdapters.swift
+            UITestGuideAdapters.swift
+            UITestTalkAdapters.swift
     scheme:
       testTargets:
         - GuideCompanionUITests
-      gatherCoverageData: true
+      testPlans:
+        - path: GuideCompanionGolden.xctestplan
+          defaultPlan: true
+        - path: GuideCompanionLaunchDiagnostic.xctestplan
+      gatherCoverageData: false
   GuideCompanionUITests:
     type: bundle.ui-testing
     platform: macOS
@@ -61,7 +70,35 @@ targets:
       - path: GuideCompanionUITests
     dependencies:
       - target: GuideCompanion
+      - package: GuideModules
+        product: GuideCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.uitests
         GENERATE_INFOPLIST_FILE: YES
+        # Xcode Cloud signs the execution host separately from the embedded
+        # non-shipping test bundle. Hardened library validation on the runner
+        # rejects that documented split-Team test arrangement before XCTest
+        # can load. Keep the production app hardened; relax only this runner.
+        ENABLE_HARDENED_RUNTIME: NO
+  GuideCompanionCompositionTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: App/UITestComposition
+      - path: AppCompositionTests
+    dependencies:
+      - package: GuideModules
+        product: GuideCore
+      - package: GuideModules
+        product: GuideMac
+      - package: GuideModules
+        product: GuideUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.serpcompany.guidecompanion.internal.composition-tests
+        GENERATE_INFOPLIST_FILE: YES
+    scheme:
+      testTargets:
+        - GuideCompanionCompositionTests
+      gatherCoverageData: false

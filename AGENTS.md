@@ -32,6 +32,14 @@ screenshots, document content, identity, or arbitrary error strings.
 
 ## Hard Boundaries
 
+On 2026-09-05 the owner approved privacy-filtered handled-error reporting in
+installed internal test builds and pushing scoped source/evidence changes to
+the existing public `serpcompany/serpy-clicky-mac-app` repository. Report only
+fixed error codes, stages, provider classification, and build metadata. Keep
+transcripts, screenshots, credentials, document content, arbitrary error text,
+and crash stacks excluded. This supersedes the development-only restriction
+above for explicitly configured internal test artifacts, not general releases.
+
 - Dictation must not depend on an assistant engine, API key, or network.
 - Do not embed autonomous computer use, shell execution, agents, accounts,
   sync, billing, product analytics, pets, widgets, browser control, or MCP in
@@ -81,6 +89,23 @@ screenshots, document content, identity, or arbitrary error strings.
 - Use stable signing identity and bundle ID for interactive TCC testing.
 - Run Xcode-launched permission tests against one stable build identity; do not
   churn temporary command-line identities.
+- **Permission UI:** use available computer use to handle authorized macOS
+  permission controls. Inspect the live UI before claiming a prompt requires
+  a human click. On the M3, enabling SERPy in System Settings → Privacy &
+  Security → Microphone, then choosing Quit & Reopen, was verified to produce
+  `Microphone Granted` in the installed app. Reuse existing specific user
+  authorization; verify the resulting app status after any restart. If a
+  control is inaccessible or an approval review blocks it, report that actual
+  limitation and the exact remaining user action. Password and Touch ID
+  authentication must be completed by the owner directly; never request their
+  password or bypass a computer-use safety restriction. Resume authorized
+  controls after authentication rather than asking for approval again.
+  On this host, computer use can open `Use Password…`, but the protected
+  `com.apple.LocalAuthenticationRemoteService` rejects password entry with an
+  explicit safety error. Hand that step to the owner even if they supply a
+  password; retain no credential in source or evidence. After the dialog
+  clears, use the app's Refresh control to verify grants before diagnosing
+  stale permission or shortcut status.
 - Keep Settings a normal non-floating window and overlays nonactivating unless
   a documented interaction requires activation.
 - Redact dictated text, screenshots, application document content, usernames,
@@ -93,6 +118,15 @@ screenshots, document content, identity, or arbitrary error strings.
 - A synthetic transcript is not proof of microphone capture.
 - A preview is not proof of packaged overlay behavior.
 - Only the exact signed artifact may satisfy installed-observed acceptance rows.
+- **Internal telemetry:** before enabling reporting, read
+  `docs/releases/build-45-diagnostics-rejected.md`. Validate the stored server
+  event, not just the outgoing scrubber: server-inferred IP/geo and SDK-added
+  trace context caused the installed privacy failure. Keep reporting off until
+  the stored event satisfies the approved allowlist.
+- **Local Guide pointing:** read `evidence/local-guide-pointing.md` before
+  changing target selection or claiming menu walkthrough parity. OCR uses
+  bottom-left bounds; overlays use top-left points, and window capture excludes
+  the system menu bar.
 - Record unsupported applications and failure states rather than generalizing
   from one successful text field.
 

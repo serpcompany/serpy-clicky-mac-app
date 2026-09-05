@@ -1,5 +1,33 @@
 import CoreGraphics
 
+public struct GuideDisplayFrame: Equatable, Sendable {
+    public let identifier: UInt32?
+    public let frame: CGRect
+
+    public init(identifier: UInt32?, frame: CGRect) {
+        self.identifier = identifier
+        self.frame = frame
+    }
+}
+
+public struct GuideTargetDisplaySelectionPolicy: Sendable {
+    public init() {}
+
+    public func index(
+        targetDisplayIdentifier: UInt32?,
+        targetFrame: CGRect,
+        displays: [GuideDisplayFrame]
+    ) -> Int? {
+        if let targetDisplayIdentifier,
+           let exact = displays.firstIndex(where: { $0.identifier == targetDisplayIdentifier }) {
+            return exact
+        }
+        let targetCenter = CGPoint(x: targetFrame.midX, y: targetFrame.midY)
+        return displays.firstIndex(where: { $0.frame.contains(targetCenter) })
+            ?? displays.indices.first
+    }
+}
+
 public struct GuideAmbientPanelLayoutPolicy: Sendable {
     public init() {}
 

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "runId": "dab4658d-f470-4e84-bf24-622bb6f9346a",
+  "sourceCommit": "1dccc860b83a14231b1c6138a031d78aa3f8c278",
+  "result": "FAILED",
+  "plan": "GuideCompanionGolden",
+  "action": "GuideCompanionGolden - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "26.6.2"
+  },
+  "passedTests": 0,
+  "failedTests": 18,
+  "skippedTests": 0,
+  "durationSeconds": 1351.054,
+  "failures": [
+    {
+      "count": 18,
+      "durationSecondsEach": 60,
+      "summary": "Every test timed out inside application.launch while XCTest reported Running Background"
+    }
+  ],
+  "resultArtifactId": "4acb0fc0-8396-40da-863f-f1b5d292ddf6",
+  "logArtifactId": "d4813e10-9996-4db4-abb5-1737cb081f79",
+  "firstFailure": "UF-03 timed out inside application.launch; XCTest reported Running Background",
+  "interpretation": "Runner yieldActivation alone did not establish stable launch. Flow corrections were not validated by this run.",
+  "nextExperiment": "Defer existing Settings presentation until after the launch notification; run focused UF-03 before another full suite",
+  "consecutiveCleanRuns": 0,
+  "installedAcceptance": "Still unproven"
+}

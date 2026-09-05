@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-05",
+  "runId": "c6c63f70-5245-40d7-b1ea-5e77ee9f8acc",
+  "buildNumber": 3,
+  "sourceCommit": "7b7475c9f01e22e084a46d8424d379dc0b49724d",
+  "completionStatus": "FAILED",
+  "startedAt": "2026-09-05T00:49:11.821Z",
+  "finishedAt": "2026-09-05T00:51:39.505Z",
+  "diagnostic": {
+    "CI": "matched",
+    "CI_WORKFLOW": "matched",
+    "CI_XCODEBUILD_ACTION": "matched",
+    "CI_XCODE_CLOUD": "matched",
+    "CI_XCODE_PROJECT": "different",
+    "CI_XCODE_SCHEME": "matched",
+    "projectFilename": true,
+    "buildIDPresent": true
+  },
+  "rootCause": "Cloud provides GuideCompanion.xcodeproj; validator expected GuideCompanion",
+  "failFastEvidence": "18 tests each reported diagnostic and thrown invalidIdentity; no crash artifact or nil-session crash issue",
+  "resultArtifactId": "e9d19641-3fd8-44e1-ae63-8aebfb3ce1cf",
+  "consecutiveCleanRuns": 0,
+  "releaseAcceptance": false
+}

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "issue": 13,
+  "proofRole": "red-capability",
+  "evidenceStatus": "red",
+  "missingRequirements": [
+    "artifacts.reportScreenshots",
+    "artifacts.resultEvidence",
+    "cleanup.buildCachesRemaining",
+    "cleanup.keychainAccessObserved",
+    "cleanup.launchServicesRegistrationsRemaining",
+    "cleanup.networkRequestsObserved",
+    "cleanup.unexpectedSystemPromptsObserved",
+    "cleanup.wrapperExitCode",
+    "cleanup.xctestSessionRootsRemaining"
+  ],
+  "purpose": "prove the actual-app golden lane reports an injected external-adapter failure as red",
+  "testId": "GT-UF08-001",
+  "xcodeTestIdentifier": "GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+  "testedCommit": "7bbf43d3732a71a124bc570f076ea17b4b4a8c0d",
+  "injection": "SERPY_INJECT_GUIDE_FAILURE=1",
+  "testPlan": "GuideCompanionGolden",
+  "testPlanConfiguration": "Golden UI",
+  "destination": {
+    "platform": "macOS",
+    "architecture": "arm64",
+    "osVersion": "26.5.2",
+    "osBuildNumber": "25F84"
+  },
+  "localUncommittedResultBundle": "evidence/issue-13-real-app-UF08-injected-red-m3.xcresult",
+  "result": {
+    "status": "failed-as-injected",
+    "executed": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "durationSeconds": 60
+  },
+  "failures": [
+    {
+      "stage": "ambient answer assertion",
+      "cause": "the injected external Guide adapter prevented the expected ambient answer and the assertion timed out",
+      "recovery": "remove the deliberate SERPY_INJECT_GUIDE_FAILURE injection before a normal focused run"
+    },
+    {
+      "stage": "test execution allowance",
+      "cause": "the deliberately blocked journey exceeded its one-minute execution allowance",
+      "recovery": "run the normal fixture without deliberate failure injection"
+    }
+  ],
+  "artifacts": {
+    "resultEvidence": [],
+    "reportScreenshots": [],
+    "secondary": [
+      "evidence/issue-13-real-app-UF08-injected-red-m3-xcresult-sanitized.json"
+    ],
+    "unavailable": [
+      "primary .xcresult",
+      "Xcode report screenshot"
+    ]
+  },
+  "cleanup": {
+    "measured": {
+      "serpyAndUITestProcessesRemaining": 0,
+      "wrapperRootsRemaining": 0
+    },
+    "unverifiedDimensions": [
+      "buildCachesRemaining",
+      "keychainAccessObserved",
+      "launchServicesRegistrationsRemaining",
+      "networkRequestsObserved",
+      "unexpectedSystemPromptsObserved",
+      "wrapperExitCode",
+      "xctestSessionRootsRemaining"
+    ]
+  },
+  "redaction": {
+    "hardwareIdentifiersIncluded": false,
+    "hostLabelsIncluded": false,
+    "privateDesktopCaptureIncluded": false
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "source": "mechanically selected fields from authenticated Sentry REST API responses",
+  "retrievedAt": "2026-09-04T23:36:02Z",
+  "issueResponse": {
+    "id": "7711327390",
+    "shortId": "SERPY-CLICKY-MAC-APP-1",
+    "title": "guidance.plan.malformed",
+    "status": "unresolved",
+    "count": "4",
+    "firstSeen": "2026-09-04T07:24:14.315343Z",
+    "lastSeen": "2026-09-04T07:27:41Z"
+  },
+  "eventResponse": {
+    "eventID": "139c9b86601e416e9b59db36a6f0e952",
+    "dateCreated": "2026-09-04T07:27:41.836000Z",
+    "platform": "cocoa",
+    "environment": "development",
+    "level": "error",
+    "release": "com.serpcompany.guidecompanion.internal@0.1.0+42"
+  },
+  "omitted": [
+    "authorization token",
+    "raw event payload",
+    "identity and device fields",
+    "question, transcript, model output, screenshot, and document content"
+  ]
+}
