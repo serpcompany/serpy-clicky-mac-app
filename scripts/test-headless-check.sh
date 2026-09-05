@@ -81,12 +81,19 @@ fi
 
 phase_root=$(mktemp -d "$temp_parent/serpy-headless.XXXXXX")
 find "$phase_root" -depth -delete
+phase_log=$(mktemp "$temp_parent/serpy-headless-phase-log.XXXXXX")
 set +e
 SERPY_HARNESS_ROOT=$phase_root SERPY_RUNNER_FIXTURE=all-phase-footprint \
-  scripts/run-headless-check.sh all >/dev/null 2>&1
+  scripts/run-headless-check.sh all >"$phase_log" 2>&1
 phase_status=$?
 set -e
-[[ $phase_status -eq 0 ]] || { print -u2 "all retained completed core products during app-build"; exit 1; }
+if [[ $phase_status -ne 0 ]]; then
+  print -u2 "all retained completed core products during app-build"
+  /bin/cat "$phase_log" >&2
+  find "$phase_log" -delete
+  exit 1
+fi
+find "$phase_log" -delete
 [[ ! -e $phase_root ]] || { print -u2 "all-phase fixture root survived"; exit 1; }
 
 for failure_case in all-core-fails:86 all-cleanup-fails:75; do

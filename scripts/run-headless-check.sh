@@ -207,6 +207,13 @@ run_app_build() {
   fi
   if [[ ${SERPY_RUNNER_FIXTURE:-} == all-phase-footprint ]]; then
     if [[ -d "$run_root/swiftpm" || -d "$run_root/composition-derived-data" || -d "$run_root/composition-source-packages" ]]; then
+      for retained_core_product in \
+        "$run_root/swiftpm" \
+        "$run_root/composition-derived-data" \
+        "$run_root/composition-source-packages"; do
+        [[ -e "$retained_core_product" ]] || continue
+        print -u2 "retained core path: ${retained_core_product:t}"
+      done
       print -u2 "completed core build products survived into app-build"
       return 75
     fi
