@@ -2,13 +2,15 @@ import Foundation
 import Darwin
 import GuideCore
 import GuideMac
+import Testing
 import XCTest
 
 extension KeychainTalkCredentialStore: @retroactive DeterministicUITestAdapter {}
 
 @MainActor
-final class GuideAppCompositionContractTests: XCTestCase {
-    func testAccessibilityRequestShowsItsOwnRecoveryRoute() throws {
+@Suite("Permission recovery presentation")
+struct PermissionRecoveryPresentationTests {
+    @Test func accessibilityRequestShowsItsOwnRecoveryRoute() throws {
         let owned = try makeOwnedSessionRoot()
         defer { owned.remove() }
         let model = try GuideUITestComposition.makeModel(
@@ -18,10 +20,13 @@ final class GuideAppCompositionContractTests: XCTestCase {
 
         model.requestAccessibility()
 
-        XCTAssertEqual(model.recoveryMessage,
+        #expect(model.recoveryMessage ==
             "Open Settings beside Accessibility, enable SERPy, then return here and click Refresh.")
     }
+}
 
+@MainActor
+final class GuideAppCompositionContractTests: XCTestCase {
     func testActualAppCompositionConstructsOnlyTheExactAllowlistedAdapterTypes() throws {
         let owned = try makeOwnedSessionRoot()
         defer { owned.remove() }
@@ -128,46 +133,46 @@ final class GuideAppCompositionContractTests: XCTestCase {
             "dictation-pressed", "dictation-released", "pressed", "released", "cancelled",
         ])
     }
+}
 
-    private func makeOwnedSessionRoot() throws -> OwnedSessionRoot {
-        let sessionID = UUID().uuidString
-        let runToken = UUID().uuidString
-        let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        let rawTemporaryPath = FileManager.default.temporaryDirectory.path
-        guard let resolvedTemporaryPath = Darwin.realpath(rawTemporaryPath, nil) else {
-            throw UITestSessionRootError.invalidLocation
-        }
-        defer { Darwin.free(resolvedTemporaryPath) }
-        let temporaryRoot = URL(
-            fileURLWithPath: String(cString: resolvedTemporaryPath),
-            isDirectory: true
-        )
-        let parent = temporaryRoot.appendingPathComponent("serpy-xctest-session.\(suffix)")
-        let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
-        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
-        try runToken.write(
-            to: parent.appendingPathComponent(".serpy-xctest-run-owner"),
-            atomically: true,
-            encoding: .utf8
-        )
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
-        try sessionID.write(
-            to: root.appendingPathComponent(".serpy-real-ui-owner"),
-            atomically: true,
-            encoding: .utf8
-        )
-        return OwnedSessionRoot(
-            parent: parent,
-            root: root,
-            environment: [
-                "SERPY_TEST_SESSION_ID": sessionID,
-                "SERPY_XCUI_RUN_TOKEN": runToken,
-                "SERPY_TEST_ROOT": root.path,
-                "SERPY_TEST_PARENT": parent.path,
-                "SERPY_TEST_TEMP_ROOT": temporaryRoot.path,
-            ]
-        )
+private func makeOwnedSessionRoot() throws -> OwnedSessionRoot {
+    let sessionID = UUID().uuidString
+    let runToken = UUID().uuidString
+    let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+    let rawTemporaryPath = FileManager.default.temporaryDirectory.path
+    guard let resolvedTemporaryPath = Darwin.realpath(rawTemporaryPath, nil) else {
+        throw UITestSessionRootError.invalidLocation
     }
+    defer { Darwin.free(resolvedTemporaryPath) }
+    let temporaryRoot = URL(
+        fileURLWithPath: String(cString: resolvedTemporaryPath),
+        isDirectory: true
+    )
+    let parent = temporaryRoot.appendingPathComponent("serpy-xctest-session.\(suffix)")
+    let root = parent.appendingPathComponent("serpy-real-ui-\(sessionID)")
+    try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
+    try runToken.write(
+        to: parent.appendingPathComponent(".serpy-xctest-run-owner"),
+        atomically: true,
+        encoding: .utf8
+    )
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+    try sessionID.write(
+        to: root.appendingPathComponent(".serpy-real-ui-owner"),
+        atomically: true,
+        encoding: .utf8
+    )
+    return OwnedSessionRoot(
+        parent: parent,
+        root: root,
+        environment: [
+            "SERPY_TEST_SESSION_ID": sessionID,
+            "SERPY_XCUI_RUN_TOKEN": runToken,
+            "SERPY_TEST_ROOT": root.path,
+            "SERPY_TEST_PARENT": parent.path,
+            "SERPY_TEST_TEMP_ROOT": temporaryRoot.path,
+        ]
+    )
 }
 
 private final class ContractFixtureAdapter: DeterministicUITestAdapter {}
