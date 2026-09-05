@@ -43,7 +43,7 @@ xcodebuild \
   CODE_SIGN_IDENTITY="${signing_hash}" \
   DEVELOPMENT_TEAM="${team_id}" \
   OTHER_CODE_SIGN_FLAGS=--timestamp \
-  "${diagnostic_settings[@]}"
+  ${diagnostic_settings[@]+"${diagnostic_settings[@]}"}
 
 codesign --verify --deep --strict --verbose=2 "${app_path}"
 
