@@ -74,6 +74,13 @@ System Settings frontmost. A related Apple DTS discussion is linked in
 OS-level hypothesis but does not prove equivalence. The next comparison uses
 Sequoia 15.6 with Xcode 26.3. Because both OS and toolchain differ, that
 diagnostic cannot establish a Tahoe fix or replace current-runtime acceptance.
+Run 20 confirmed the same launch failure on Sequoia 15.6. See
+`evidence/issue-13-xcode-cloud-run20-comparison-proof.json`. Temporary activation
+logging and the ineffective runner yield have been removed; no production
+timing workaround remains. Further cloud retries are paused pending a focused
+local comparison. The owner's Mac authentication sheet must be completed
+directly by the owner before installed acceptance can proceed. The cloud
+workflow is restored to the current runtime and full plan; burn-in remains 0/10.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 
