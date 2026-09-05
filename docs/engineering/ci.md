@@ -42,11 +42,17 @@ Run 4 loaded the suite and executed 18 tests (3 passed, 15 failed). Runs 5–6
 then reproduced a shared launch-boundary timeout. Diagnostic run 7 proved that
 launch completed and exposed a transient success-message assertion. Diagnostic
 run 8 passed that one corrected UF-03 journey at `096af3b`; it does not execute
-the complete golden plan and does not count toward burn-in. The heterogeneous
-run records remain under `evidence/issue-13-xcode-cloud-run*-proof.json`; the
-focused real-app XCUI evidence-honesty linter does not validate those external
-records. No completed full-plan run 9 is recorded at this base, so it cannot be
-classified green or counted toward acceptance.
+the complete golden plan and does not count toward burn-in. Full-plan run 9 at
+exact commit `1901f81a0b0504821801fa98634e017fba9bf114` returned to 18
+one-minute application-launch timeouts before flow assertions, despite the same
+UF-03 journey passing in focused run 8. Run 9 is red and the underlying app
+startup versus XCTest activation cause remains unproven. Commit `29baaed` adds
+bounded DEBUG-only fixed-name launch-stage receipts in the owned test session
+and XCTest probes at 5, 15, and 30 seconds; that instrumentation has not yet
+produced a run result. The heterogeneous run records remain under
+`evidence/issue-13-xcode-cloud-run*-proof.json`; the focused real-app XCUI
+evidence-honesty linter does not validate those external records. No run 10 is
+recorded or claimed, and burn-in remains 0/10.
 
 ## What developers run
 
