@@ -295,6 +295,18 @@ def _xcresult_node_has_exact_identity(
     class_name: str,
     method: str,
 ) -> bool:
+    owns_target = any(
+        ancestor.get("nodeType") in {"UI test bundle", "Unit test bundle"}
+        and ancestor.get("name") == "GuideCompanionUITests"
+        for ancestor in ancestors
+    )
+    owns_class = any(
+        ancestor.get("nodeType") == "Test Suite"
+        and ancestor.get("name") == class_name
+        for ancestor in ancestors
+    )
+    if not owns_target or not owns_class:
+        return False
     if node.get("nodeIdentifier") in {
         identifier,
         f"GuideCompanionUITests/{identifier}",
@@ -306,17 +318,7 @@ def _xcresult_node_has_exact_identity(
         and node.get("nodeIdentifier") not in method_names
     ):
         return False
-    owns_target = any(
-        ancestor.get("nodeType") in {"UI test bundle", "Unit test bundle"}
-        and ancestor.get("name") == "GuideCompanionUITests"
-        for ancestor in ancestors
-    )
-    owns_class = any(
-        ancestor.get("nodeType") == "Test Suite"
-        and ancestor.get("name") == class_name
-        for ancestor in ancestors
-    )
-    return owns_target and owns_class
+    return True
 
 
 def validate_xcresult_data(

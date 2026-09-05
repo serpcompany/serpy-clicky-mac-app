@@ -8,8 +8,8 @@ result proves. The canonical user outcomes remain in
 
 | Check | Runner | Trigger | Current state |
 | --- | --- | --- | --- |
-| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for exact current source `1dccc860b83a14231b1c6138a031d78aa3f8c278` in run `33942146377` |
-| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for exact current source `1dccc860b83a14231b1c6138a031d78aa3f8c278` in run `33942146377` |
+| `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for earlier source `1dccc860b83a14231b1c6138a031d78aa3f8c278` in run `33942146377`; current staging head is unverified in GitHub Actions |
+| `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for earlier source `1dccc860b83a14231b1c6138a031d78aa3f8c278` in run `33942146377`; current staging head is unverified in GitHub Actions |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
 | `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Configured; run 12 reached the complete plan and finished 11 passed / 7 failed; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 is recorded as the installed signed/notarized candidate; user-flow acceptance remains red |
@@ -117,7 +117,7 @@ Workflow actions are pinned to reviewed full commit SHAs. The checkout pin is
 official `actions/checkout` v7.0.1, which uses the Node 24 action runtime.
 
 The workflow runs for pull requests, merge queue candidates, and pushes to
-`main`. For PR #14 at exact current source
+`main`. For PR #14 at earlier source
 `1dccc860b83a14231b1c6138a031d78aa3f8c278`, `core-tests` and `app-build`
 both passed in
 [GitHub Actions run 33942146377](https://github.com/serpcompany/serpy-clicky-mac-app/actions/runs/33942146377).

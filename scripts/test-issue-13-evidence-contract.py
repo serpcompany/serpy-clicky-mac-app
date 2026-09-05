@@ -319,7 +319,10 @@ class EvidenceContractTests(unittest.TestCase):
                                     "children": [
                                         {
                                             "nodeType": "Test Case",
-                                            "name": "test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()",
+                                            "name": "test_unrelated()",
+                                            "nodeIdentifier": self.complete[
+                                                "xcodeTestIdentifier"
+                                            ],
                                             "result": "Passed",
                                         }
                                     ],
