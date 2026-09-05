@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "runId": "9bd655de-d44e-4f88-b24c-1a8562820928",
+  "sourceCommit": "b8153b7cb69f24ee03e28a43bf4522921f4cbdf0",
+  "result": "FAILED",
+  "startedAt": "2026-09-05T01:16:59.757Z",
+  "finishedAt": "2026-09-05T01:39:31.347Z",
+  "reportedTimeouts": 18,
+  "firstFailure": "application.launch failed to activate SERPy; current state Running Background",
+  "firstFailureLocation": "GoldenUITestCase.swift:73",
+  "runnerStack": "GoldenUITestCase.launch waiting in XCTest application launch/foreground activation",
+  "resultArtifactId": "d90454bf-502c-4338-9f54-06833775b7c5",
+  "diagnosis": "Shared startup failure before flow assertions; cloud-session versus app-startup cause is not yet established",
+  "nextExperiment": "Rerun exact source without changing test timeouts or production code",
+  "consecutiveCleanRuns": 0
+}
