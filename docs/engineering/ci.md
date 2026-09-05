@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 17 returned to 18 launch timeouts; runs 18-21 narrowed the activation-owner failure; forceful delayed recovery is not yet cloud-proven; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual and non-required | Runs 21-22 falsified cooperative and activate-regardless product retries; Cloud foreground launch is platform-unreliable; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 is recorded as the installed signed/notarized candidate; user-flow acceptance remains red |
 
 Runs 1-7 established and narrowed cloud signing, project-identity, selector,
@@ -50,15 +50,16 @@ requirement was removed. A related Apple DTS discussion is linked in
 OS-level hypothesis but does not prove equivalence. Run 20 confirmed the same
 launch failure on Sequoia 15.6. See
 `evidence/issue-13-xcode-cloud-run20-comparison-proof.json`. Temporary activation
-logging and the ineffective runner yield have been removed. Run 21 then proved
-that four bounded retries using ordinary `NSApplication.activate()` still left
-both selected tests blocked in `application.launch`; see
-`evidence/issue-13-xcode-cloud-run21-red-proof.json`. Staging keeps the immediate
-ordinary Settings presentation, but delayed owner-safe recovery now uses the
-activate-regardless AppKit call and remains unproven in the UI lane. The next UI
-proof is the focused UF-03 and UF-11 diagnostic plan, followed by the complete
-plan only if that focused run passes. The cloud workflow must use the current
-runtime for acceptance, and burn-in remains 0/10.
+logging and the ineffective runner yield have been removed. Run 21 proved that
+four bounded retries using ordinary `NSApplication.activate()` still left both
+selected tests blocked in `application.launch`; see
+`evidence/issue-13-xcode-cloud-run21-red-proof.json`. Run 22 repeated the exact
+UF-03 and UF-11 diagnostic selection with delayed activate-regardless recovery
+and returned the same Running Background launch timeouts; see
+`evidence/issue-13-xcode-cloud-run22-red-proof.json`. Both product-side
+coordinator variants were falsified and removed. Xcode Cloud remains a manual,
+non-required diagnostic lane because foreground launch is platform-unreliable;
+burn-in remains 0/10.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, permission, or click-through
 acceptance.
@@ -115,6 +116,14 @@ side-effect-incapable UI-test mode; it must not open another application.
 Save an `.xcresult` for every claimed run. A compile-only result is not a test
 result. After execution, confirm serpy and the XCTest runner terminated
 and the temporary build directory was removed.
+
+The exact local UF-03 attempt retained at
+`evidence/issue-13-local-UF03-force-recovery.xcresult` stopped before test-flow
+initialization because the owner canceled macOS UI-testing authentication. Its
+result bundle records one XCTest-runner initialization failure, not a product
+assertion. No serpy or XCTest runner process, wrapper root, or owned XCTest
+session remained after teardown. This does not prove a product failure or a
+UF-03 result.
 
 `scripts/test-golden-ui-runner.sh` exercises timeout, TERM-to-KILL process-group
 cleanup, result isolation, temporary-root removal, and an approved XCTest root

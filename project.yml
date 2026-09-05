@@ -85,7 +85,6 @@ targets:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: App/LaunchForegroundCoordinator.swift
       - path: App/UITestComposition
       - path: AppCompositionTests
     dependencies:

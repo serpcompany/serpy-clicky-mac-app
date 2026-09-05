@@ -30,19 +30,4 @@ public final class GuideSettingsWindowController: NSWindowController {
         window?.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate()
     }
-
-    public func recoverLaunchForeground() {
-        SettingsWindowForegroundRecovery(
-            enterRegularMode: {
-                NSApplication.shared.setActivationPolicy(.regular)
-            },
-            showSettings: { [self] in
-                showWindow(nil)
-                window?.makeKeyAndOrderFront(nil)
-            },
-            forceActivateApplication: {
-                NSApplication.shared.activate(ignoringOtherApps: true)
-            }
-        ).recover()
-    }
 }

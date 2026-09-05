@@ -370,11 +370,22 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   Both timed out inside `application.launch` after all four bounded recovery
   attempts used the ordinary cooperative `NSApplication.activate()` call.
   This proves the bounded schedule alone did not stabilize foreground launch.
+- Diagnostic run 22 (`4203f1cf-30f1-49a8-a62b-76aca859cbc3`) selected the same
+  two tests at `e71d99995c7a6a7d3d995f1dcd042cc29e1b89c8` on macOS 26.6.2.
+  Both again timed out for 60 seconds inside `application.launch` while XCTest
+  reported the product as Running Background. This falsifies the delayed
+  activate-regardless variant as an Xcode Cloud stabilization strategy; neither
+  test flow initialized, so it does not prove a product failure.
 - Temporary activation logging and the disproven runner yield are removed.
-  Staging now keeps the immediate ordinary Settings presentation but gives only
-  delayed owner-safe recovery attempts the AppKit activate-regardless request.
-  It still stops on success, exhaustion, or a user foreground-owner change. It
-  has deterministic headless coverage but no Xcode Cloud execution evidence yet.
+  The cooperative and activate-regardless product coordinators are also removed.
+  Xcode Cloud remains manual and non-required because its foreground launch is
+  platform-unreliable; the burn-in remains 0/10.
+- The exact local UF-03 attempt is retained, ignored, at
+  `evidence/issue-13-local-UF03-force-recovery.xcresult`. macOS reported
+  `Authentication canceled. Canceled by user.` before the test flow initialized.
+  The result bundle therefore records an XCTest-runner initialization failure,
+  not a product-flow failure. Teardown left no serpy/XCTest process, wrapper
+  root, or owned XCTest session directory.
 - The complete-plan gate remains red. The ten-run isolated burn-in is 0/10 and
   the check must not be required.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red
