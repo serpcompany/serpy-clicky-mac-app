@@ -31,6 +31,26 @@
   "testTargets" : [
     {
       "parallelizable" : false,
+      "selectedTests" : [
+        "GoldenPermissionsAndLifecycleUITests/test_GT_UF01_001_permissionDenialShowsRecoveryAcrossRelaunch()",
+        "GoldenPermissionsAndLifecycleUITests/test_GT_UF02_001_realSettingsClosesAndReopensAsOneWindow()",
+        "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()",
+        "GoldenDictationUITests/test_GT_UF04_001_escapeCancelsRealDictationWithoutLateDelivery()",
+        "GoldenDictationUITests/test_GT_UF04_002_escapeCancelsRealTranscription()",
+        "GoldenDictationUITests/test_GT_UF04_003_escapeCancelsRealPrecommitInsertion()",
+        "GoldenDictationUITests/test_GT_UF05_001_realRecoveryUIShowsFailedLastDictation()",
+        "GoldenDictationUITests/test_GT_UF05_002_realRecoveryUIShowsUnconfirmedState()",
+        "GoldenDictationUITests/test_GT_UF05_003_realRecoveryUIShowsInterruptedState()",
+        "GoldenGuideUITests/test_GT_UF08_001_realAmbientGuideAnswersOneFixtureQuestion()",
+        "GoldenGuideUITests/test_GT_UF09_001_walkthroughRequiresFreshEvidenceForEachStep()",
+        "GoldenGuideUITests/test_GT_UF10_001_shortcutCancelClearsAmbientListening()",
+        "GoldenGuideUITests/test_GT_UF10_002_shortcutCancelClearsAmbientCapture()",
+        "GoldenGuideUITests/test_GT_UF10_003_shortcutCancelClearsAmbientThinking()",
+        "GoldenGuideUITests/test_GT_UF10_004_shortcutCancelClearsAmbientSpeaking()",
+        "GoldenGuideUITests/test_GT_UF10_005_shortcutCancelClearsAmbientFollowUp()",
+        "GoldenGuideUITests/test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization()",
+        "GoldenGuideUITests/test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure()"
+      ],
       "target" : {
         "containerPath" : "container:GuideCompanion.xcodeproj",
         "identifier" : "85C699F9ABBAC335777CC339",

@@ -169,6 +169,7 @@ run_core_tests() {
     print core > "$run_root/swiftpm/fixture"
     return 0
   fi
+  /usr/bin/python3 scripts/test-golden-plan-selection.py || return $?
   run_bounded swift test \
     --package-path Packages/GuideModules \
     --scratch-path "$run_root/swiftpm" \

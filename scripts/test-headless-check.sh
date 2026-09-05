@@ -3,6 +3,8 @@ set -euo pipefail
 
 temp_parent=$(cd "${TMPDIR:-/tmp}" && pwd -P)
 
+/usr/bin/python3 scripts/test-golden-plan-selection.py
+
 test -z "$(find Packages/GuideModules/Sources -type f -name '*UITest*' -print -quit)" || {
   print -u2 "UI-test composition leaked into a shipping package target"; exit 1
 }

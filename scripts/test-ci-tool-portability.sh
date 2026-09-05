@@ -5,6 +5,7 @@ system_path=/usr/bin:/bin:/usr/sbin:/sbin
 safety_scripts=(
   scripts/run-headless-check.sh
   scripts/test-headless-check.sh
+  scripts/test-golden-plan-selection.py
 )
 
 if /usr/bin/grep -En '(^|[[:space:]])rg([[:space:]]|$)' "${safety_scripts[@]}"; then
