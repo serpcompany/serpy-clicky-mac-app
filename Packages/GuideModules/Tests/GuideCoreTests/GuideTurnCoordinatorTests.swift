@@ -1,6 +1,37 @@
 import CoreGraphics
 import GuideCore
+import Testing
 import XCTest
+
+@Suite("Structured Guide presentation ordering")
+@MainActor
+struct StructuredGuidePresentationOrderingTests {
+    @Test func activeStepIsPresentedBeforeSpeechStarts() async throws {
+        let target = GuideWindowTarget(processIdentifier: 41, windowIdentifier: 901,
+            applicationName: "Fixture App", windowTitle: "Fixture Window",
+            frame: CGRect(x: 0, y: 0, width: 900, height: 700))
+        let events = EventRecorder()
+        let overlay = FakeOverlay(events: events)
+        let speech = FakeSpeech(events: events)
+        let coordinator = GuideTurnCoordinator(
+            capture: FakeCapture(target: target, context: ScreenContext(
+                applicationName: target.applicationName, windowTitle: target.windowTitle,
+                windowFrame: target.frame, textBlocks: []), events: events),
+            transcription: FakeTranscription(result: "Show me how", events: events),
+            generation: StreamingPlanGeneration(), speech: speech, overlay: overlay
+        )
+        try coordinator.start()
+        await Task.yield()
+        coordinator.finishListening()
+        await coordinator.waitUntilIdle()
+
+        let presented = try #require(events.values.firstIndex(of: "present:speaking"))
+        let spoken = try #require(events.values.firstIndex(of: "speech"))
+        #expect(presented < spoken)
+        #expect(speech.spokenTexts == ["Open File."])
+        #expect(overlay.presentations.first(where: { $0.stage == .speaking })?.responseText == "Open File.")
+    }
+}
 
 @MainActor
 final class GuideTurnCoordinatorTests: XCTestCase {

@@ -515,12 +515,12 @@ public final class GuideTurnCoordinator {
                 recovery: "Check the network and try again. SERPy will not silently switch providers."
             )
         }
-        let speechItems: [String]
-        if let firstStep = structuredPlan?.steps.first {
-            speechItems = [firstStep.text]
-        } else {
-            speechItems = queuedSentences
+        if let structuredPlan {
+            // The caller installs the active step and presents its speaking
+            // state before invoking speech, including cancellation ownership.
+            return GeneratedTurn(plan: structuredPlan, speechCompleted: false, pointCue: pointCue)
         }
+        let speechItems = queuedSentences
         do {
             for item in speechItems {
                 try Task.checkCancellation()
