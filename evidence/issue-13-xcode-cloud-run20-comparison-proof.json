@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 2,
+  "runId": "7927958b-8aa6-401d-ba94-601cfce6ca2a",
+  "sourceCommit": "26083784182544d06eaf2cf04c250fcfaf763696",
+  "result": "FAILED",
+  "plan": "GuideCompanionLaunchDiagnostic",
+  "action": "GuideCompanionLaunchDiagnostic - macOS",
+  "destination": {
+    "name": "Apple Virtual Machine 1",
+    "platform": "macOS",
+    "osVersion": "15.6"
+  },
+  "startedAt": "2026-09-05T05:00:43.442Z",
+  "finishedAt": "2026-09-05T05:05:28.018Z",
+  "durationSeconds": 284.576,
+  "passedTests": 0,
+  "failedTests": 2,
+  "skippedTests": 0,
+  "failures": [
+    {
+      "count": 2,
+      "durationSecondsEach": 60,
+      "summary": "UF-03 and UF-11 timed out inside application.launch on macOS 15.6"
+    }
+  ],
+  "runtime": "macOS Sequoia 15.6 (24G84)",
+  "configuredToolchain": "Xcode 26.3",
+  "logArtifactId": "aef668ce-8994-4ac1-83a9-a202fa5203e2",
+  "resultArtifactId": "df0b8762-a6d8-4355-86fc-9f2975269b62",
+  "observed": "Both selected tests timed out during application.launch. Product was regular, finished launching, not hidden and inactive; runner remained prohibited and inactive.",
+  "interpretation": "Failure also occurs on Sequoia; a Tahoe-only explanation is unsupported. OS and toolchain changed together, so this is not a single-variable causal result.",
+  "cleanup": "Temporary state logging and ineffective runner yield removed; default cloud workflow restored to current runtime and full plan",
+  "nextEvidenceNeeded": "Focused local comparison and exact installed Dictation acceptance after owner completes Mac authentication",
+  "consecutiveCleanRuns": 0
+}

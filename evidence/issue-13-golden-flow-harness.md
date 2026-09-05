@@ -349,6 +349,26 @@ Base: `9427f18e80120583fe815bbd1c701b5c09367fe5`
   `talk.disclosure` Switch as a CheckBox; its remaining assertions cascaded from
   that failed lookup. The stronger throwing Switch lookup with `XCTUnwrap` is
   present in staging but has not yet been proven by Xcode Cloud.
+- Run 17 (`d56d5d21-65d7-4a66-8962-0dc59f37cd9f`) used the complete plan at
+  `22cd47e1c4afcf6fc2d2710878eaef022d7ee976` but returned to 18 one-minute
+  launch timeouts. This proves the single focused pass and run 16 launch success
+  did not establish stable foreground activation.
+- Diagnostic run 18 (`270ed0be-5c02-4130-9367-07f4a4943db7`) selected UF-03
+  and UF-11 at `80fb7024a43b4e0bdaeaa3d27ecc8c8d73aded50`; both timed out. Its
+  bounded state record showed the product regular, finished launching, and not
+  hidden, but inactive while another application remained frontmost.
+- Diagnostic run 19 (`bddcf4bc-4e33-4348-9873-3e9f8be06055`) selected the
+  same two tests at `45b4742ba30ccec627adc657ec23edb0947a572b`; both failed
+  fast because the prohibited/inactive UI runner could not become active before
+  yielding. That runner prerequisite was removed.
+- Diagnostic run 20 (`7927958b-8aa6-401d-ba94-601cfce6ca2a`) selected the same
+  tests at `26083784182544d06eaf2cf04c250fcfaf763696` on macOS 15.6 with
+  Xcode 26.3; both again timed out. This rejects a Tahoe-only explanation but
+  does not isolate OS from toolchain.
+- Temporary activation logging and the disproven runner yield are removed.
+  Staging now contains a bounded app-owned launch recovery that stops on success,
+  exhaustion, or a user foreground-owner change. It has deterministic headless
+  coverage but no Xcode Cloud execution evidence yet.
 - The complete-plan gate remains red. The ten-run isolated burn-in is 0/10 and
   the check must not be required.
 - Every installed evidence cell in `docs/product/user-flows.md` remains red

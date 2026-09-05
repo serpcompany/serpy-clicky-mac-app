@@ -32,7 +32,8 @@
     {
       "parallelizable" : false,
       "selectedTests" : [
-        "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()"
+        "GoldenDictationUITests/test_GT_UF03_001_realModelCompletesDeterministicDictation()",
+        "GoldenGuideUITests/test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization()"
       ],
       "target" : {
         "containerPath" : "container:GuideCompanion.xcodeproj",
