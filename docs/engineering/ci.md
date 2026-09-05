@@ -11,7 +11,7 @@ result proves. The canonical user outcomes remain in
 | `core-tests` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | `app-build` | GitHub Actions macOS runner | Pull request, merge queue, push to `main` | Green for source `fb33621af95d9ee450e051436c536663935b7110` in run `33943616152`; current staging head is unverified in GitHub Actions |
 | Focused golden XCUI | Local Xcode/XCTest | Explicitly selected test | **Partial/secondary:** the summary for ambient `GT-UF09-001` at `79cd0d2` records a pass, but the primary `.xcresult`, Xcode report screenshot, destination, and five cleanup dimensions are unavailable |
-| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 13 timed out during launch in all 18 tests; run 15 passed only focused UF-03; full run 16 is not claimed; burn-in is 0/10 |
+| `golden-ui-tests` | Xcode Cloud temporary macOS environment | Manual during burn-in; pull request after acceptance | Run 16 reached all 18 tests: 17 passed and UF-11 failed at its Talk disclosure selector; burn-in is 0/10 |
 | Installed acceptance | Exact signed/notarized app on the owner's Mac | Explicit named acceptance session | Build 43 is recorded as the installed signed/notarized candidate; user-flow acceptance remains red |
 
 Runs 1-7 established and narrowed cloud signing, project-identity, selector,
@@ -33,9 +33,11 @@ Settings presentation and failed at the same launch boundary; that timing
 experiment was removed and synchronous presentation restored. Focused run 15
 used the current `NSApplication.activate()` call and passed UF-03 with zero
 failures or skips, including teardown. Full run 16
-(`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tests the same `fb33621` source, but
-no terminal result is claimed here. One focused success is not proof of stable
-full-suite launch. The complete-plan gate remains red and burn-in remains 0/10.
+(`9cf37d97-17c0-47d7-b2a5-222f86b30a77`) tested the same `fb33621` source and
+reached every flow: 17 passed and UF-11 failed because the test queried the
+native Talk disclosure switch as a checkbox. The stronger throwing Switch
+lookup is present in staging but has not yet been proven by Xcode Cloud. The
+complete-plan gate remains red and burn-in remains 0/10.
 Neither cloud fixtures nor headless success satisfy installed microphone,
 insertion, focus, audible speech, permission, or click-through acceptance.
 

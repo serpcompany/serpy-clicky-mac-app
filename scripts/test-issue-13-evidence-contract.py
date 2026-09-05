@@ -115,6 +115,30 @@ class EvidenceContractTests(unittest.TestCase):
                 "unverifiedDimensions": [],
             },
         }
+        self.cloud_summary = {
+            "schemaVersion": 2,
+            "runId": "dab4658d-f470-4e84-bf24-622bb6f9346a",
+            "sourceCommit": self.tested_commit,
+            "result": "FAILED",
+            "plan": "GuideCompanionGolden",
+            "action": "GuideCompanionGolden - macOS",
+            "destination": {
+                "name": "Apple Virtual Machine 1",
+                "platform": "macOS",
+                "osVersion": "26.6.2",
+            },
+            "passedTests": 0,
+            "failedTests": 18,
+            "skippedTests": 0,
+            "durationSeconds": 1351.054,
+            "failures": [
+                {
+                    "count": 18,
+                    "durationSecondsEach": 60,
+                    "summary": "application.launch timed out in every test",
+                }
+            ],
+        }
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
@@ -371,6 +395,52 @@ class EvidenceContractTests(unittest.TestCase):
             evidence_contract.discover_proofs(tracked),
             sorted(path for path in tracked if "real-app" in path),
         )
+
+    def test_current_and_future_cloud_proofs_are_discovered_for_validation(self) -> None:
+        tracked = {
+            "evidence/issue-13-xcode-cloud-run12-flow-proof.json",
+            "evidence/issue-13-xcode-cloud-run13-red-proof.json",
+            "evidence/issue-13-xcode-cloud-run15-focused-green-proof.json",
+            "evidence/issue-13-xcode-cloud-run20-proof.json",
+        }
+        self.assertEqual(
+            evidence_contract.discover_cloud_proofs(tracked),
+            sorted(path for path in tracked if "run12" not in path),
+        )
+
+    def test_cloud_summary_requires_plan_destination_counts_duration_failures_and_source(self) -> None:
+        required_fields = (
+            "sourceCommit",
+            "plan",
+            "action",
+            "destination",
+            "passedTests",
+            "failedTests",
+            "skippedTests",
+            "durationSeconds",
+            "failures",
+        )
+        for field in required_fields:
+            with self.subTest(field=field):
+                document = deepcopy(self.cloud_summary)
+                del document[field]
+                self.assertIn(
+                    f"{field} is required",
+                    evidence_contract.validate_cloud_summary(
+                        document, repo_root=self.repo_root
+                    ),
+                )
+
+    def test_cloud_summary_rejects_inconsistent_counts_and_failure_receipts(self) -> None:
+        document = deepcopy(self.cloud_summary)
+        document["result"] = "PASSED"
+        document["failedTests"] = 1
+        document["failures"] = []
+        errors = evidence_contract.validate_cloud_summary(
+            document, repo_root=self.repo_root
+        )
+        self.assertIn("PASSED cloud result must have failedTests=0", errors)
+        self.assertIn("failed cloud result requires failure receipts", errors)
 
     def test_cli_proof_path_must_resolve_beneath_evidence(self) -> None:
         with self.assertRaisesRegex(ValueError, "proof path must be beneath repo evidence"):

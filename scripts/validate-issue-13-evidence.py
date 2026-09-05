@@ -17,6 +17,9 @@ from typing import Any, Optional, Tuple
 
 
 PROOF_PATTERN = re.compile(r"^evidence/issue-13-real-app-.*-proof\.json$")
+CLOUD_PROOF_PATTERN = re.compile(
+    r"^evidence/issue-13-xcode-cloud-run(?:1[3-9]|[2-9][0-9]+).*proof\.json$"
+)
 OVERALL_STATUS_PATH = "evidence/issue-13-overall-status.json"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -67,6 +70,11 @@ def _tracked_paths(repo_root: Path) -> set[str]:
 def discover_proofs(tracked_paths: set[str]) -> list[str]:
     """Return every tracked Issue 13 proof rather than an allowlist."""
     return sorted(path for path in tracked_paths if PROOF_PATTERN.fullmatch(path))
+
+
+def discover_cloud_proofs(tracked_paths: set[str]) -> list[str]:
+    """Return current and future cloud summaries governed by schema version 2."""
+    return sorted(path for path in tracked_paths if CLOUD_PROOF_PATTERN.fullmatch(path))
 
 
 def _resolve_beneath_evidence(repo_root: Path, supplied_path: str) -> Path:
@@ -618,6 +626,98 @@ def validate_overall_status(document: dict[str, Any]) -> list[str]:
     return errors
 
 
+def validate_cloud_summary(document: dict[str, Any], *, repo_root: Path) -> list[str]:
+    """Validate the minimum reproducible facts for an Xcode Cloud test summary."""
+    errors: list[str] = []
+    if document.get("schemaVersion") != 2:
+        errors.append("schemaVersion must be 2")
+
+    run_id = document.get("runId")
+    if not _nonempty_string(run_id):
+        errors.append("runId is required")
+
+    source_commit = document.get("sourceCommit")
+    if not _nonempty_string(source_commit):
+        errors.append("sourceCommit is required")
+    elif not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        errors.append("sourceCommit must be a full lowercase Git SHA")
+    elif not _git_commit_exists(repo_root, source_commit):
+        errors.append("sourceCommit does not resolve to a commit")
+
+    for field in ("plan", "action"):
+        if not _nonempty_string(document.get(field)):
+            errors.append(f"{field} is required")
+
+    destination = document.get("destination")
+    if not isinstance(destination, dict):
+        errors.append("destination is required")
+    else:
+        for field in ("name", "platform", "osVersion"):
+            if not _nonempty_string(destination.get(field)):
+                errors.append(f"destination.{field} is required")
+
+    counts: dict[str, int] = {}
+    for field in ("passedTests", "failedTests", "skippedTests"):
+        value = document.get(field)
+        if value is None:
+            errors.append(f"{field} is required")
+        elif not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            errors.append(f"{field} must be a nonnegative integer")
+        else:
+            counts[field] = value
+
+    duration = document.get("durationSeconds")
+    if duration is None:
+        errors.append("durationSeconds is required")
+    elif not isinstance(duration, (int, float)) or isinstance(duration, bool) or duration <= 0:
+        errors.append("durationSeconds must be positive")
+
+    failures = document.get("failures")
+    if failures is None:
+        errors.append("failures is required")
+    elif not isinstance(failures, list):
+        errors.append("failures must be an array")
+    else:
+        valid_receipts = all(
+            isinstance(failure, dict)
+            and isinstance(failure.get("count"), int)
+            and not isinstance(failure.get("count"), bool)
+            and failure["count"] > 0
+            and isinstance(failure.get("durationSecondsEach"), (int, float))
+            and not isinstance(failure.get("durationSecondsEach"), bool)
+            and failure["durationSecondsEach"] > 0
+            and _nonempty_string(failure.get("summary"))
+            for failure in failures
+        )
+        if not valid_receipts:
+            errors.append(
+                "each failure receipt requires positive count, durationSecondsEach, and summary"
+            )
+        failed_count = counts.get("failedTests")
+        if failed_count and not failures:
+            errors.append("failed cloud result requires failure receipts")
+        if failed_count is not None and failures and valid_receipts:
+            if sum(failure["count"] for failure in failures) != failed_count:
+                errors.append("failure receipt counts must equal failedTests")
+        if failed_count == 0 and failures:
+            errors.append("passing cloud result must not include failure receipts")
+
+    result = document.get("result")
+    if result not in {"PASSED", "FAILED"}:
+        errors.append("result must be PASSED or FAILED")
+    elif result == "PASSED":
+        if counts.get("failedTests") != 0:
+            errors.append("PASSED cloud result must have failedTests=0")
+        if counts.get("passedTests", 0) < 1:
+            errors.append("PASSED cloud result must include at least one passed test")
+    elif counts.get("failedTests", 0) < 1:
+        errors.append("FAILED cloud result must include at least one failed test")
+
+    if not _nonempty_string(document.get("resultArtifactId")):
+        errors.append("resultArtifactId is required")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("proofs", nargs="*")
@@ -658,6 +758,22 @@ def main() -> int:
         else:
             counts[document["evidenceStatus"]] += 1
             print(f"{proof_path}: {document['evidenceStatus'].upper()}")
+
+    for cloud_path in discover_cloud_proofs(tracked_paths):
+        path = repo_root / cloud_path
+        try:
+            document = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as error:
+            print(f"{cloud_path}: ERROR: {error}", file=sys.stderr)
+            failed = True
+            continue
+        errors = validate_cloud_summary(document, repo_root=repo_root)
+        if errors:
+            failed = True
+            for error in errors:
+                print(f"{cloud_path}: ERROR: {error}", file=sys.stderr)
+        else:
+            print(f"{cloud_path}: CLOUD SUMMARY VALID")
 
     overall_path = repo_root / OVERALL_STATUS_PATH
     if OVERALL_STATUS_PATH not in tracked_paths:
