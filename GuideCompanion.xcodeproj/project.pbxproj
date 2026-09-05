@@ -263,7 +263,6 @@
 				};
 			};
 			buildConfigurationList = 210D67D6FFA1D8F9C2F9C6A2 /* Build configuration list for PBXProject "GuideCompanion" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -276,12 +275,13 @@
 				F3EEE62A0DE2D2AE47F483D8 /* XCLocalSwiftPackageReference "Packages/GuideModules" */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 17EFB257F5758A59B940B974 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				C72578BA9BADD56511A59773 /* GuideCompanion */,
-				3F2EBFEE41AB1427A5445C51 /* GuideCompanionCompositionTests */,
 				85C699F9ABBAC335777CC339 /* GuideCompanionUITests */,
+				3F2EBFEE41AB1427A5445C51 /* GuideCompanionCompositionTests */,
 			);
 		};
 /* End PBXProject section */
@@ -402,7 +402,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/GuideCompanion.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -573,7 +573,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/GuideCompanion.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				ENABLE_TESTABILITY = NO;
 				EXCLUDED_SOURCE_FILE_NAMES = "GuideUITestComposition.swift UITestDictationAdapters.swift UITestGuideAdapters.swift UITestTalkAdapters.swift";
 				GENERATE_INFOPLIST_FILE = NO;

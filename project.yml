@@ -42,7 +42,7 @@ targets:
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/GuideCompanion.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CURRENT_PROJECT_VERSION: 43
+        CURRENT_PROJECT_VERSION: 44
         MARKETING_VERSION: 0.1.0
         GENERATE_INFOPLIST_FILE: NO
       configs:
@@ -61,6 +61,7 @@ targets:
       testPlans:
         - path: GuideCompanionGolden.xctestplan
           defaultPlan: true
+        - path: GuideCompanionLaunchDiagnostic.xctestplan
       gatherCoverageData: false
   GuideCompanionUITests:
     type: bundle.ui-testing
