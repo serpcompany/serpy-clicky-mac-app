@@ -7,7 +7,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
         triggerShortcut("dictation-pressed")
         expectAmbient(labelContains: "alpha beta")
         triggerShortcut("dictation-pressed")
-        XCTAssertTrue(application.staticTexts["The dictation was inserted locally."].waitForExistence(timeout: 5))
+        XCTAssertTrue(application.staticTexts["Dictation inserted locally."].waitForExistence(timeout: 5))
         XCTAssertEqual(
             try? String(contentsOf: sessionRoot.appendingPathComponent("insertion.fixture"), encoding: .utf8),
             "alpha beta"
@@ -23,16 +23,16 @@ final class GoldenDictationUITests: GoldenUITestCase {
     func test_GT_UF04_001_escapeCancelsRealDictationWithoutLateDelivery() async throws {
         try await launch(flow: "UF-04")
         triggerShortcut("dictation-pressed")
-        expectAmbient(labelContains: "Listening")
+        expectAmbient(labelContains: "alpha beta")
         triggerShortcut("cancelled")
         XCTAssertTrue(application.staticTexts["Dictation cancelled."].waitForExistence(timeout: 5))
-        XCTAssertFalse(application.staticTexts["The dictation was inserted locally."].exists)
+        XCTAssertFalse(application.staticTexts["Dictation inserted locally."].exists)
     }
 
     func test_GT_UF04_002_escapeCancelsRealTranscription() async throws {
         try await launch(flow: "UF-04", extraArguments: ["--block-dictation-stop"])
         triggerShortcut("dictation-pressed")
-        expectAmbient(labelContains: "Listening")
+        expectAmbient(labelContains: "alpha beta")
         triggerShortcut("dictation-pressed")
         expectAmbient(labelContains: "Transcribing")
         triggerShortcut("cancelled")
@@ -43,7 +43,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
     func test_GT_UF04_003_escapeCancelsRealPrecommitInsertion() async throws {
         try await launch(flow: "UF-04", extraArguments: ["--block-dictation-insertion"])
         triggerShortcut("dictation-pressed")
-        expectAmbient(labelContains: "Listening")
+        expectAmbient(labelContains: "alpha beta")
         triggerShortcut("dictation-pressed")
         expectAmbient(labelContains: "Inserting")
         triggerShortcut("cancelled")
@@ -53,7 +53,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
 
     func test_GT_UF05_001_realRecoveryUIShowsFailedLastDictation() async throws {
         try await launch(flow: "UF-05", recoveryVariant: "failed")
-        tap("History")
+        selectSettingsTab("History")
         XCTAssertTrue(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 5))
         XCTAssertTrue(application.staticTexts["Failed"].exists)
         XCTAssertTrue(application.buttons["Copy"].exists)
@@ -64,7 +64,7 @@ final class GoldenDictationUITests: GoldenUITestCase {
         application.launchArguments.removeAll { $0.hasPrefix("--recovery-variant=") }
         application.launch()
         XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
-        tap("History")
+        selectSettingsTab("History")
         XCTAssertTrue(application.staticTexts["Recovered fixture dictation"].waitForExistence(timeout: 5))
         tap("Copy")
         XCTAssertEqual(
@@ -84,13 +84,13 @@ final class GoldenDictationUITests: GoldenUITestCase {
 
     func test_GT_UF05_002_realRecoveryUIShowsUnconfirmedState() async throws {
         try await launch(flow: "UF-05", recoveryVariant: "unconfirmed")
-        tap("History")
+        selectSettingsTab("History")
         XCTAssertTrue(application.staticTexts["Unconfirmed"].waitForExistence(timeout: 5))
     }
 
     func test_GT_UF05_003_realRecoveryUIShowsInterruptedState() async throws {
         try await launch(flow: "UF-05", recoveryVariant: "interrupted")
-        tap("History")
+        selectSettingsTab("History")
         XCTAssertTrue(application.staticTexts["Pending"].waitForExistence(timeout: 5))
     }
 

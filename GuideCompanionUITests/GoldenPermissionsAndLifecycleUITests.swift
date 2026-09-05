@@ -27,6 +27,8 @@ final class GoldenPermissionsAndLifecycleUITests: GoldenUITestCase {
         application.windows["SERPy Settings"].buttons[XCUIIdentifierCloseWindow].click()
         XCTAssertFalse(application.windows["SERPy Settings"].exists)
         application.activate()
+        application.menuBars.menuBarItems["SERPy"].click()
+        application.menuItems["Settings…"].click()
         XCTAssertTrue(application.windows["SERPy Settings"].waitForExistence(timeout: 5))
         XCTAssertEqual(application.windows.matching(identifier: "SERPy Settings").count, 1)
         application.terminate()

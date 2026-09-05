@@ -118,7 +118,9 @@ private final class UITestLocalModelSession: LocalGuidanceModelSession {
 }
 
 private func waitForUITestRelease(_ url: URL) async throws {
-    for _ in 0..<100 {
+    // XCUI accessibility snapshots can consume several seconds per assertion.
+    // Keep the fixture pending until the explicit release, within the test budget.
+    for _ in 0..<600 {
         try Task.checkCancellation()
         if FileManager.default.fileExists(atPath: url.path) { return }
         try await Task.sleep(for: .milliseconds(50))

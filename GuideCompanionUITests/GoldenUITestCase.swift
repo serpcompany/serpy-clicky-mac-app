@@ -81,6 +81,13 @@ class GoldenUITestCase: XCTestCase {
         )
     }
 
+    func selectSettingsTab(_ title: String) {
+        let tab = application.radioButtons[title]
+        XCTAssertTrue(tab.waitForExistence(timeout: 3))
+        tab.click()
+        XCTAssertEqual(tab.value as? String, "1")
+    }
+
     func tap(_ title: String) {
         let button = application.buttons[title]
         XCTAssertTrue(button.waitForExistence(timeout: 3))

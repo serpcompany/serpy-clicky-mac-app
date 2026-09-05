@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "runId": "0689706b-8d79-4b8f-9282-266aad2b83cc",
+  "sourceCommit": "b7c4800fdcbc296945b96a227ecf3e63c7d1ec89",
+  "resultArtifactId": "734ebdb0-b978-4175-a82b-27f77bd58730",
+  "result": "Failed",
+  "totalTests": 18,
+  "passedTests": 3,
+  "failedTests": 15,
+  "confirmed": [
+    "Cloud project identity validation succeeded and actual app launched",
+    "Initial package download timeout was followed by TEST BUILD SUCCEEDED",
+    "Settings History and Guidance controls are RadioButton elements; tests queried Button",
+    "Dictation ambient label was alpha beta while test expected Listening",
+    "Success assertion expected obsolete text The dictation was inserted locally.",
+    "Guide stepwise fixture reported timeout while test driver observed capture",
+    "Cancellation overlay was gone before the Cancelled-label assertion completed"
+  ],
+  "pendingVerification": [
+    "Correct radio-button selectors",
+    "Observe actual dictation partial and success text",
+    "Allow 30 seconds for bounded explicit fixture release",
+    "Assert durable cancellation cleanup rather than transient acknowledgement",
+    "Reopen Settings through the application's Settings menu action"
+  ],
+  "consecutiveCleanRuns": 0,
+  "installedAcceptance": false
+}

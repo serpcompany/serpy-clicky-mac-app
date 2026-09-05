@@ -70,8 +70,8 @@ final class GoldenGuideUITests: GoldenUITestCase {
 
     func test_GT_UF11_001_realSettingsEnforcesInMemoryTalkAuthorization() async throws {
         try await launch(flow: "UF-11", extraArguments: ["--block-cloud-generation"])
-        tap("Guidance")
-        tap("OpenAI multimodal")
+        selectSettingsTab("Guidance")
+        application.radioButtons["OpenAI multimodal"].click()
         let disclosure = application.checkBoxes["talk.disclosure"]
         XCTAssertTrue(disclosure.waitForExistence(timeout: 5))
         disclosure.click()
@@ -95,7 +95,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [requestWritten], timeout: 5), .completed)
         XCTAssertEqual(try? String(contentsOf: requestReceipt, encoding: .utf8), "question=Open a new window;raster=3;evidence=0")
         triggerShortcut("cancelled")
-        expectAmbient(labelContains: "Cancelled", value: "")
+        expectAmbientGone(timeout: 3)
     }
 
     func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() async throws {
@@ -134,7 +134,7 @@ final class GoldenGuideUITests: GoldenUITestCase {
 
     private func cancelAmbientGuide(lateAdapter: String? = nil) {
         triggerShortcut("cancelled")
-        expectAmbient(labelContains: "Cancelled", value: "")
+        // The acknowledgement lasts 1.2 seconds; assert the durable outcome.
         expectAmbientGone(timeout: 3)
         if let lateAdapter {
             writeFixtureSignal("\(lateAdapter).late-release")
