@@ -10,6 +10,7 @@
 		038E8579A88A34541F278BB2 /* UITestTalkAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54A9FA0DAA494D672AC8BCD /* UITestTalkAdapters.swift */; };
 		09512350E3754A3515E14576 /* GuideUITestComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 106F1DB7AE3F4A1EC01F0BC0 /* GuideUITestComposition.swift */; };
 		1AD332644E140F0C6EE38032 /* UITestGuideAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189A7F361E4A08406A8EEE14 /* UITestGuideAdapters.swift */; };
+		238107C9D9E28CBBB9D4C40B /* LaunchDiagnosticProbeScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5D51311748759C0D69CD5D /* LaunchDiagnosticProbeScheduler.swift */; };
 		33555C768A91CDF2387FEC27 /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 11CF664193125A6D4EDC0FAF /* GuideUI */; };
 		34A605741DE02A6B17DB039F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 402E6AB6BF038ED9D42B35CD /* Assets.xcassets */; };
 		443C3FEBF813992B2FE19BA8 /* UITestTalkAdapters.swift in Sources */ = {isa = PBXBuildFile; fileRef = B54A9FA0DAA494D672AC8BCD /* UITestTalkAdapters.swift */; };
@@ -17,8 +18,10 @@
 		4EF8BA963CED051854BD45CD /* GuideCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */; };
 		64111961D0F8B28EB6EDB3BD /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = BAC0936C6365B8922515E18F /* GuideCore */; };
 		7204EBBE433834E95D41EB0F /* GuideUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9537BA0D8D33187B249BEF5C /* GuideUI */; };
+		74E45547E5F8A0B41F8FCCD4 /* LaunchDiagnosticProbeScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5D51311748759C0D69CD5D /* LaunchDiagnosticProbeScheduler.swift */; };
 		75B0738563E442E11FC4FB09 /* GoldenUITestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15D32009580958F12B13B2E8 /* GoldenUITestCase.swift */; };
 		7C928719518AA808ED5B3B03 /* GoldenGuideUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE0EE746FCFB1B0120F94B3 /* GoldenGuideUITests.swift */; };
+		7D703D9A9D67FA6D43FBD9BA /* LaunchDiagnosticProbeSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFF5D0226C6815BFAB93E63 /* LaunchDiagnosticProbeSchedulerTests.swift */; };
 		8207B8192F94EBD5537149B1 /* GuideAppCompositionContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF3B79B032DC10A17370A76D /* GuideAppCompositionContractTests.swift */; };
 		9A199FF62B52AF13590211E3 /* GuideMac in Frameworks */ = {isa = PBXBuildFile; productRef = C8B324BF2E72E10DE2B43148 /* GuideMac */; };
 		9FDCD85439B52AF22561A60D /* GuideCore in Frameworks */ = {isa = PBXBuildFile; productRef = E878CF5435BA1D7276BA94B8 /* GuideCore */; };
@@ -55,9 +58,11 @@
 		9026249DD6F983B60FC8BA39 /* GuideCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideCompanionApp.swift; sourceTree = "<group>"; };
 		92111BF32FF7B211722A39EC /* GuideCompanionCompositionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GuideCompanionCompositionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		92ABEB16055301DBFF398885 /* SERPy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SERPy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AEFF5D0226C6815BFAB93E63 /* LaunchDiagnosticProbeSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchDiagnosticProbeSchedulerTests.swift; sourceTree = "<group>"; };
 		B54A9FA0DAA494D672AC8BCD /* UITestTalkAdapters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestTalkAdapters.swift; sourceTree = "<group>"; };
 		CFE0EE746FCFB1B0120F94B3 /* GoldenGuideUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoldenGuideUITests.swift; sourceTree = "<group>"; };
 		DA1572F19C3E0D8130EEF6A4 /* GuideModules */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GuideModules; path = Packages/GuideModules; sourceTree = SOURCE_ROOT; };
+		DD5D51311748759C0D69CD5D /* LaunchDiagnosticProbeScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchDiagnosticProbeScheduler.swift; sourceTree = "<group>"; };
 		DF3B79B032DC10A17370A76D /* GuideAppCompositionContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideAppCompositionContractTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -153,6 +158,14 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		75A0A49EAEDDB5772A2F0C84 /* UITestSupport */ = {
+			isa = PBXGroup;
+			children = (
+				DD5D51311748759C0D69CD5D /* LaunchDiagnosticProbeScheduler.swift */,
+			);
+			path = UITestSupport;
+			sourceTree = "<group>";
+		};
 		7ABA4585E13989225A70B3BC = {
 			isa = PBXGroup;
 			children = (
@@ -160,6 +173,7 @@
 				A0B02FF274D77ECAF37661B9 /* AppCompositionTests */,
 				295C5EC77B7D4457BE787C42 /* GuideCompanionUITests */,
 				007A1CC91626A28E12775EF8 /* Packages */,
+				75A0A49EAEDDB5772A2F0C84 /* UITestSupport */,
 				17EFB257F5758A59B940B974 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -168,6 +182,7 @@
 			isa = PBXGroup;
 			children = (
 				DF3B79B032DC10A17370A76D /* GuideAppCompositionContractTests.swift */,
+				AEFF5D0226C6815BFAB93E63 /* LaunchDiagnosticProbeSchedulerTests.swift */,
 			);
 			path = AppCompositionTests;
 			sourceTree = "<group>";
@@ -304,6 +319,8 @@
 			files = (
 				8207B8192F94EBD5537149B1 /* GuideAppCompositionContractTests.swift in Sources */,
 				09512350E3754A3515E14576 /* GuideUITestComposition.swift in Sources */,
+				74E45547E5F8A0B41F8FCCD4 /* LaunchDiagnosticProbeScheduler.swift in Sources */,
+				7D703D9A9D67FA6D43FBD9BA /* LaunchDiagnosticProbeSchedulerTests.swift in Sources */,
 				A43AB18100053D8501993DEC /* UITestDictationAdapters.swift in Sources */,
 				AEFFCDA2C7C5AA88E325301C /* UITestGuideAdapters.swift in Sources */,
 				038E8579A88A34541F278BB2 /* UITestTalkAdapters.swift in Sources */,
@@ -318,6 +335,7 @@
 				7C928719518AA808ED5B3B03 /* GoldenGuideUITests.swift in Sources */,
 				EC5B6B3502E591824DA037B6 /* GoldenPermissionsAndLifecycleUITests.swift in Sources */,
 				75B0738563E442E11FC4FB09 /* GoldenUITestCase.swift in Sources */,
+				238107C9D9E28CBBB9D4C40B /* LaunchDiagnosticProbeScheduler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
