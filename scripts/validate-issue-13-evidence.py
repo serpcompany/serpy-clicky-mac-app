@@ -234,7 +234,7 @@ def _strip_swift_noncode(source: str) -> str:
     return "".join(output)
 
 
-def _swift_class_direct_scope(source: str, class_name: str) -> Optional[str]:
+def _swift_class_direct_scope(source: str, class_name: str) -> Optional[tuple[str, int]]:
     class_match = re.search(
         rf"^[ \t]*(?:final[ \t]+)?class[ \t]+{re.escape(class_name)}\b[^{{]*{{",
         source,
@@ -250,7 +250,7 @@ def _swift_class_direct_scope(source: str, class_name: str) -> Optional[str]:
             direct_scope.append(" ")
         elif character == "}":
             if depth == 0:
-                return "".join(direct_scope)
+                return "".join(direct_scope), class_match.end()
             depth -= 1
             direct_scope.append(" ")
         elif depth == 0:
@@ -258,6 +258,21 @@ def _swift_class_direct_scope(source: str, class_name: str) -> Optional[str]:
         else:
             direct_scope.append("\n" if character == "\n" else " ")
     return None
+
+
+def _swift_position_is_conditionally_compiled(source: str, position: int) -> bool:
+    """Return whether a source position is lexically governed by Swift #if."""
+    depth = 0
+    directive_pattern = re.compile(
+        r"^[ \t]*#(if|elseif|else|endif)\b", flags=re.MULTILINE
+    )
+    for directive in directive_pattern.finditer(source, 0, position):
+        kind = directive.group(1)
+        if kind == "if":
+            depth += 1
+        elif kind == "endif" and depth > 0:
+            depth -= 1
+    return depth > 0
 
 
 def _validate_test_source_and_plan(
@@ -272,17 +287,22 @@ def _validate_test_source_and_plan(
     source_path = f"GuideCompanionUITests/{class_name}.swift"
     source = _git_text_at_commit(repo_root, tested_commit, source_path)
     executable_source = _strip_swift_noncode(source) if source is not None else ""
-    class_scope = _swift_class_direct_scope(executable_source, class_name)
+    class_scope_result = _swift_class_direct_scope(executable_source, class_name)
     method_pattern = re.compile(
         rf"^[ \t]*(?:override[ \t]+)?func[ \t]+{re.escape(method_name)}[ \t]*\(",
         flags=re.MULTILINE,
     )
     expected_token = str(document.get("testId", "")).replace("-", "_")
-    if (
-        class_scope is None
-        or method_pattern.search(class_scope) is None
-        or expected_token not in method_name
-    ):
+    executable_method_found = False
+    if class_scope_result is not None:
+        class_scope, class_body_start = class_scope_result
+        executable_method_found = any(
+            not _swift_position_is_conditionally_compiled(
+                executable_source, class_body_start + method_match.start()
+            )
+            for method_match in method_pattern.finditer(class_scope)
+        )
+    if not executable_method_found or expected_token not in method_name:
         errors.append(
             "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method"
         )

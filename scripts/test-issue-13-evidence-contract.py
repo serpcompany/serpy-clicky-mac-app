@@ -296,6 +296,106 @@ class EvidenceContractTests(unittest.TestCase):
             self.validate(document),
         )
 
+    def test_method_under_false_compilation_condition_is_not_executable(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "final class GoldenGuideUITests {\n"
+            "  #if false\n"
+            "  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "  #endif\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "false condition")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_method_under_platform_compilation_condition_is_not_executable(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "#if os(iOS)\n"
+            "final class GoldenGuideUITests {\n"
+            "  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "}\n"
+            "#endif\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "platform condition")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_method_under_custom_compilation_condition_is_not_executable(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "final class GoldenGuideUITests {\n"
+            "  #if SERPY_GOLDEN_FIXTURE\n"
+            "  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "  #endif\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "custom condition")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_method_in_nested_elseif_or_else_branch_is_not_executable(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "final class GoldenGuideUITests {\n"
+            "  #if OUTER\n"
+            "    #if INNER\n"
+            "    let marker = 1\n"
+            "    #elseif ALTERNATE\n"
+            "    let marker = 2\n"
+            "    #else\n"
+            "    func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "    #endif\n"
+            "  #endif\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "nested condition")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
+    def test_condition_directives_in_noncode_do_not_hide_unconditional_method(self) -> None:
+        source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
+        source.write_text(
+            "// #if false\n"
+            "/* #if os(iOS) */\n"
+            "final class GoldenGuideUITests {\n"
+            '  let ordinary = "#if SERPY_DISABLED"\n'
+            '  let multiline = """\n#if false\n"""\n'
+            '  let raw = ##"#if os(iOS)"##\n'
+            '  let interpolated = "value \\(render(\"#if INNER\"))"\n'
+            "  func test_GT_UF12_001_realAmbientUIShowsMalformedPlanFailure() {}\n"
+            "}\n"
+        )
+        self.git("add", source.relative_to(self.repo_root).as_posix())
+        self.git("-c", "commit.gpgSign=false", "commit", "-qm", "noncode directives")
+        document = deepcopy(self.complete)
+        document["testedCommit"] = self.git("rev-parse", "HEAD").stdout.strip()
+        self.assertNotIn(
+            "xcodeTestIdentifier does not map to an executable GuideCompanionUITests method",
+            self.validate(document),
+        )
+
     def test_claimed_method_must_be_owned_by_the_exact_swift_class(self) -> None:
         source = self.repo_root / "GuideCompanionUITests" / "GoldenGuideUITests.swift"
         source.write_text(
