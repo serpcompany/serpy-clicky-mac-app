@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "runId": "16eb5e0b-1f00-4743-bcca-9bbaca8c7a6d",
+  "sourceCommit": "29baaedbea835d8939bcf2a6177309924dd798b9",
+  "result": "FAILED",
+  "failure": "Temporary diagnostic DispatchWorkItem inherited MainActor isolation and trapped on a background queue",
+  "crashArtifactId": "786c9d86-cdea-495c-a81d-46c82230ff96",
+  "topFrames": ["_dispatch_assert_queue_fail", "dispatch_assert_queue", "_swift_task_checkIsolatedSwift"],
+  "headlessReproduction": "Swift 6 main-actor function creating a non-sendable DispatchWorkItem then dispatching it globally exited 133; explicit @Sendable closure completed",
+  "correction": "Mark only the fixed-name, immutable-capture diagnostic closure @Sendable",
+  "doesNotProve": "Original app startup cause; probe crashed before logging receipts",
+  "consecutiveCleanRuns": 0
+}

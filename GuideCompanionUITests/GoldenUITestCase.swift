@@ -82,7 +82,7 @@ class GoldenUITestCase: XCTestCase {
             }
         }
         let launchProbes = [5, 15, 30].map { delay in
-            let probe = DispatchWorkItem {
+            let probe = DispatchWorkItem { @Sendable in
                 let reached = stages.filter {
                     FileManager.default.fileExists(atPath: diagnosticRoot.appendingPathComponent("launch-stage.\($0)").path)
                 }
