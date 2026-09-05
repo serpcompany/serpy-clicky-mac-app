@@ -61,6 +61,12 @@ Run 17 then returned to launch timeouts in all 18 tests, before validating
 the disclosure correction. See `evidence/issue-13-xcode-cloud-run17-red-proof.json`.
 The next diagnostic records only runner/product activation flags before and
 after launch, without changing production behavior.
+Run 18 captured the failure in both selected tests: the runner remained
+inactive with prohibited activation policy, while the product was regular,
+finished launching, not hidden, and inactive. See
+`evidence/issue-13-xcode-cloud-run18-activation-proof.json`. The next experiment
+requires the runner to become active before yielding, with a five-second
+fail-fast check and restoration of its original policy during teardown.
 Neither cloud fixtures nor headless success satisfy installed
 microphone, insertion, focus, audible speech, or permission acceptance.
 

@@ -24,6 +24,7 @@ class GoldenUITestCase: XCTestCase {
         ).map(\.processIdentifier))
         let application = XCUIApplication()
         self.application = application
+        let originalRunnerPolicy = NSApplication.shared.activationPolicy()
         if sessionRoot == nil {
             do {
                 let environment = ProcessInfo.processInfo.environment
@@ -41,6 +42,7 @@ class GoldenUITestCase: XCTestCase {
         }
         addTeardownBlock {
             if application.state != .notRunning { application.terminate() }
+            NSApplication.shared.setActivationPolicy(originalRunnerPolicy)
             XCTAssertTrue(application.wait(for: .notRunning, timeout: 5))
             let remaining = Set(NSRunningApplication.runningApplications(
                 withBundleIdentifier: self.productBundleIdentifier
@@ -73,6 +75,18 @@ class GoldenUITestCase: XCTestCase {
         // Cooperatively hand the runner's activation to the app it launches.
         // This does not activate the app; its real Settings path still must.
         recordLaunchState("before-yield")
+        NSApplication.shared.setActivationPolicy(.regular)
+        NSApplication.shared.activate()
+        let runnerActivated = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in NSRunningApplication.current.isActive },
+            object: nil
+        )
+        let runnerActivationResult = await XCTWaiter.fulfillment(of: [runnerActivated], timeout: 5)
+        recordLaunchState("runner-activation-checked")
+        guard runnerActivationResult == .completed else {
+            XCTFail("UI runner could not acquire activation before yielding to the product")
+            throw NSError(domain: "GoldenUITestLaunch", code: 1)
+        }
         if #available(macOS 14.0, *) {
             NSApplication.shared.yieldActivation(toApplicationWithBundleIdentifier: productBundleIdentifier)
         }

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "runId": "270ed0be-5c02-4130-9367-07f4a4943db7",
+  "sourceCommit": "80fb7024a43b4e0bdaeaa3d27ecc8c8d73aded50",
+  "result": "FAILED",
+  "logArtifactId": "e5cde167-786c-4d6f-ae23-2442e2ea87e6",
+  "observationsInBothTests": {
+    "beforeLaunch": "foreground=other; runnerActive=false; runnerPolicy=prohibited; product absent",
+    "afterLaunchTimeout": "foreground=other; runnerActive=false; runnerPolicy=prohibited; product present, regular, finished launching, not hidden, inactive"
+  },
+  "interpretation": "Wrong product activation policy is not supported. The prohibited inactive runner did not own activation to yield.",
+  "nextExperiment": "Set runner regular, request activation, require active within five seconds, then yield; restore original runner policy during teardown",
+  "scope": "Diagnostic only; no installed acceptance or clean full-run credit"
+}
