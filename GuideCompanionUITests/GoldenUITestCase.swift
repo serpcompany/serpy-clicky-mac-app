@@ -93,6 +93,11 @@ class GoldenUITestCase: XCTestCase {
             return probe
         }
         defer { launchProbes.forEach { $0.cancel() } }
+        // Cooperatively hand the runner's activation to the app it launches.
+        // This does not activate the app; its real Settings path still must.
+        if #available(macOS 14.0, *) {
+            NSApplication.shared.yieldActivation(toApplicationWithBundleIdentifier: productBundleIdentifier)
+        }
         application.launch()
         XCTAssertTrue(application.wait(for: .runningForeground, timeout: 5))
         let expectedWindow = openTranscript ? "SERPy Voice Transcript" : "SERPy Settings"
